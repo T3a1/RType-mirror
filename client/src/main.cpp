@@ -7,8 +7,8 @@
 
 #include <iostream>
 
-int main(int  /*argc*/, char * /*argv*/[])
+int main(int /*argc*/, char * /*argv*/[])
 {
-  std::cout << "Rtype client" << '\n';
-  return 0;
+    std::cout << "Rtype client" << '\n';
+    return 0;
 }

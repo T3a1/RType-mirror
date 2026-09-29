@@ -109,6 +109,16 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+# ---------- Build the client if missing ----------
+if [[ ! -x "$CLIENT_BIN" ]]; then
+    command -v cmake >/dev/null || error "cmake is not installed, cannot build the client"
+    log "Client binary not found, building it..."
+    cmake -B "$BUILD_DIR" -DBUILD_CLIENT=ON >/dev/null \
+        && cmake --build "$BUILD_DIR" --target r-type_client -j"$(nproc)" \
+        || error "Client build failed"
+    [[ -x "$CLIENT_BIN" ]] || error "Client binary still not found after building: $CLIENT_BIN"
+fi
+
 # ---------- Start the server ----------
 if $NATIVE; then
     [[ -x "$SERVER_BIN" ]] || error "Server binary not found: $SERVER_BIN (did you build the project?)"
@@ -130,8 +140,6 @@ else
 fi
 
 # ---------- Start the clients ----------
-[[ -x "$CLIENT_BIN" ]] || error "Client binary not found: $CLIENT_BIN (did you build the project?)"
-
 for ((i = 1; i <= CLIENTS; i++)); do
     log "Starting client $i/$CLIENTS -> $HOST:$PORT"
     "$CLIENT_BIN" "$HOST" "$PORT" &

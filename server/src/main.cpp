@@ -7,7 +7,7 @@
 
 #include <iostream>
 
-int main(int  /*argc*/, char * /*argv*/[])
+int main(int /*argc*/, char * /*argv*/[])
 {
     std::cout << "Rtype server" << '\n';
     return 0;
