@@ -8,6 +8,8 @@
 #   -c, --clients N     Number of clients to launch (default: 1)
 #   -p, --port PORT     UDP port of the server (default: 4242)
 #   -H, --host HOST     Address the clients connect to (default: 127.0.0.1)
+#   -t, --tidy          Run clang-tidy on the project and exit
+#   -f, --fix           Run clang-tidy, apply its automatic fixes and exit
 #   -h, --help          Show this help
 
 set -euo pipefail
@@ -18,6 +20,8 @@ SERVER_BIN="${SERVER_BIN:-$BUILD_DIR/r-type_server}"
 CLIENT_BIN="${CLIENT_BIN:-$BUILD_DIR/r-type_client}"
 
 NATIVE=false
+TIDY=false
+TIDY_FIX=false
 CLIENTS=1
 PORT=4242
 HOST="127.0.0.1"
@@ -31,7 +35,7 @@ log()   { printf '\033[1;34m[run]\033[0m %s\n' "$*"; }
 error() { printf '\033[1;31m[error]\033[0m %s\n' "$*" >&2; exit 1; }
 
 usage() {
-    sed -n '4,11p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '4,13p' "$0" | sed 's/^# \{0,1\}//'
     exit 0
 }
 
@@ -44,6 +48,8 @@ while [[ $# -gt 0 ]]; do
         -c|--clients) CLIENTS="${2:-}"; shift 2 ;;
         -p|--port)    PORT="${2:-}"; shift 2 ;;
         -H|--host)    HOST="${2:-}"; shift 2 ;;
+        -t|--tidy)    TIDY=true; shift ;;
+        -f|--fix)     TIDY=true; TIDY_FIX=true; shift ;;
         -h|--help)    usage ;;
         *)            error "Unknown option: $1 (see --help)" ;;
     esac
@@ -51,6 +57,38 @@ done
 
 is_number "$CLIENTS" && [[ "$CLIENTS" -ge 1 ]] || error "--clients must be a positive number"
 is_number "$PORT" && [[ "$PORT" -ge 1 && "$PORT" -le 65535 ]] || error "--port must be between 1 and 65535"
+
+# ---------- Static analysis (clang-tidy) ----------
+run_tidy() {
+    command -v clang-tidy >/dev/null || error "clang-tidy is not installed"
+
+    if [[ ! -f "$BUILD_DIR/compile_commands.json" ]]; then
+        command -v cmake >/dev/null || error "cmake is not installed, cannot generate compile_commands.json"
+        log "Generating $BUILD_DIR/compile_commands.json..."
+        cmake -B "$BUILD_DIR" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON >/dev/null \
+            || error "CMake configuration failed, cannot run clang-tidy"
+    fi
+
+    local fix_flag=()
+    $TIDY_FIX && fix_flag=(-fix)
+
+    if command -v run-clang-tidy >/dev/null; then
+        log "Running clang-tidy on every file of the project..."
+        run-clang-tidy -p "$BUILD_DIR" -quiet "${fix_flag[@]}"
+    else
+        log "run-clang-tidy not found, checking files one by one..."
+        local status=0
+        while IFS= read -r -d '' file; do
+            clang-tidy -p "$BUILD_DIR" --quiet "${fix_flag[@]/-fix/--fix}" "$file" || status=1
+        done < <(find client server -name '*.cpp' -print0)
+        return "$status"
+    fi
+}
+
+if $TIDY; then
+    run_tidy
+    exit $?
+fi
 
 # ---------- Cleanup: runs on exit, Ctrl+C, or error ----------
 cleanup() {

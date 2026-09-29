@@ -5,7 +5,10 @@
 ** main
 */
 
-int main(int argc, char *argv[])
+#include <iostream>
+
+int main(int  /*argc*/, char * /*argv*/[])
 {
-    return 0;
+  std::cout << "Rtype client" << '\n';
+  return 0;
 }
