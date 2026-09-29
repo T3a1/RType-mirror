@@ -18,6 +18,8 @@ set -euo pipefail
 BUILD_DIR="${BUILD_DIR:-./build}"
 SERVER_BIN="${SERVER_BIN:-$BUILD_DIR/r-type_server}"
 CLIENT_BIN="${CLIENT_BIN:-$BUILD_DIR/r-type_client}"
+IMAGE="${IMAGE:-rtype-server}"
+CONTAINER="${CONTAINER:-rtype-server}"
 
 NATIVE=false
 TIDY=false
@@ -28,7 +30,7 @@ HOST="127.0.0.1"
 
 SERVER_PID=""
 CLIENT_PIDS=()
-COMPOSE=()
+CONTAINER_STARTED=false
 
 # ---------- Helpers ----------
 log()   { printf '\033[1;34m[run]\033[0m %s\n' "$*"; }
@@ -101,8 +103,8 @@ cleanup() {
 
     if $NATIVE; then
         [[ -n "$SERVER_PID" ]] && kill "$SERVER_PID" 2>/dev/null || true
-    elif [[ ${#COMPOSE[@]} -gt 0 ]]; then
-        "${COMPOSE[@]}" down
+    elif $CONTAINER_STARTED; then
+        docker stop -t 5 "$CONTAINER" >/dev/null 2>&1 || true
     fi
 }
 trap cleanup EXIT INT TERM
@@ -116,16 +118,15 @@ if $NATIVE; then
 else
     command -v docker >/dev/null || error "Docker is not installed (use --native to skip it)"
 
-    if docker compose version >/dev/null 2>&1; then
-        COMPOSE=(docker compose)
-    elif command -v docker-compose >/dev/null; then
-        COMPOSE=(docker-compose)
-    else
-        error "Docker Compose is not available"
-    fi
+    log "Building server image..."
+    docker build -t "$IMAGE" . || error "Docker build failed"
+
+    docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
 
     log "Starting server in Docker on port $PORT/udp..."
-    RTYPE_PORT="$PORT" "${COMPOSE[@]}" up -d --build
+    docker run -d --rm --init --name "$CONTAINER" -p "$PORT:4242/udp" "$IMAGE" >/dev/null \
+        || error "Could not start the server container"
+    CONTAINER_STARTED=true
 fi
 
 # ---------- Start the clients ----------
