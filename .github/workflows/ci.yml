@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    name: Check formatting
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run clang-format
+        run: |
+          find server client tests -name '*.cpp' -o -name '*.hpp' \
+            | xargs -r clang-format --dry-run --Werror
+
+  build-and-test:
+    name: Build, lint and test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends cmake ninja-build libgtest-dev libgmock-dev clang-tidy
+      - name: Configure
+        run: cmake -B build -G Ninja -DBUILD_TESTS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - name: Build
+        run: cmake --build build
+      - name: Run clang-tidy
+        run: |
+          find server client tests -name '*.cpp' \
+            | xargs -r clang-tidy -p build --quiet --warnings-as-errors='*'
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
+
+  docker:
+    name: Build server image
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the Docker image
+        run: docker build -t rtype-server .
