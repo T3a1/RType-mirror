@@ -3,13 +3,14 @@
 # R-Type launcher
 # Starts the server (in Docker by default, or natively) and one or more clients.
 #
-# Usage: ./run.sh [options]
+# Usage: ./rtype.sh [options]
 #   -n, --native        Run the server natively instead of in Docker
 #   -c, --clients N     Number of clients to launch (default: 1)
 #   -p, --port PORT     UDP port of the server (default: 4242)
 #   -H, --host HOST     Address the clients connect to (default: 127.0.0.1)
 #   -t, --tidy          Run clang-tidy on the project and exit
 #   -f, --fix           Run clang-tidy, apply its automatic fixes and exit
+#   -T, --test          Build and run the unit tests (GoogleTest) and exit
 #   -h, --help          Show this help
 
 set -euo pipefail
@@ -24,6 +25,7 @@ CONTAINER="${CONTAINER:-rtype-server}"
 NATIVE=false
 TIDY=false
 TIDY_FIX=false
+TESTS=false
 CLIENTS=1
 PORT=4242
 HOST="127.0.0.1"
@@ -37,7 +39,7 @@ log()   { printf '\033[1;34m[run]\033[0m %s\n' "$*"; }
 error() { printf '\033[1;31m[error]\033[0m %s\n' "$*" >&2; exit 1; }
 
 usage() {
-    sed -n '4,13p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '4,14p' "$0" | sed 's/^# \{0,1\}//'
     exit 0
 }
 
@@ -52,6 +54,7 @@ while [[ $# -gt 0 ]]; do
         -H|--host)    HOST="${2:-}"; shift 2 ;;
         -t|--tidy)    TIDY=true; shift ;;
         -f|--fix)     TIDY=true; TIDY_FIX=true; shift ;;
+        -T|--test)    TESTS=true; shift ;;
         -h|--help)    usage ;;
         *)            error "Unknown option: $1 (see --help)" ;;
     esac
@@ -89,6 +92,22 @@ run_tidy() {
 
 if $TIDY; then
     run_tidy
+    exit $?
+fi
+
+# ---------- Unit tests (GoogleTest + CTest) ----------
+run_tests() {
+    command -v cmake >/dev/null || error "cmake is not installed, cannot build the tests"
+    log "Building the unit tests..."
+    cmake -B "$BUILD_DIR" -DBUILD_TESTS=ON >/dev/null \
+        || error "CMake configuration failed (is GoogleTest installed?)"
+    cmake --build "$BUILD_DIR" --target r-type_tests -j"$(nproc)" || error "Test build failed"
+    log "Running the unit tests..."
+    ctest --test-dir "$BUILD_DIR" --output-on-failure
+}
+
+if $TESTS; then
+    run_tests
     exit $?
 fi
 
