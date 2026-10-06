@@ -9,6 +9,6 @@
 
 int main(int /*argc*/, char * /*argv*/[])
 {
-    std::cout << "Rtype server" << '\n';
+    std::cout << "Let's code the Server" << '\n';
     return 0;
 }
