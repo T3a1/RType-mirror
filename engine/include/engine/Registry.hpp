@@ -12,10 +12,12 @@
 #include "engine/SparseSet.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <typeindex>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace engine {
 
@@ -39,8 +41,9 @@ class Registry {
         }
     }
 
-    // Other member functions and data members for managing entities and
-    // components
+    [[nodiscard]] Entity create();
+    void destroy(Entity entity);
+    bool alive(Entity entity) const;
 
   private:
     template <typename C> SparseSet<C> &storage()
@@ -54,6 +57,8 @@ class Registry {
     }
 
     std::unordered_map<std::type_index, std::unique_ptr<ISparseSet>> m_storages;
+    std::vector<std::uint32_t> m_generations;
+    std::vector<std::uint32_t> m_freeIndices;
 };
 
 } // namespace engine

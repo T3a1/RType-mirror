@@ -6,20 +6,20 @@
 */
 
 #ifndef ENGINE_ENTITY_HPP
-    #define ENGINE_ENTITY_HPP
-    #include <cstdint>
+#define ENGINE_ENTITY_HPP
+#include <cstdint>
 
 namespace engine {
 
-    // using Entity = std::uint32_t;
-    // const Entity MAX_ENTITIES = 5000;
+// using Entity = std::uint32_t;
+// const Entity MAX_ENTITIES = 5000;
 
-    struct Entity {
-        std::uint32_t id;
-        std::uint32_t generation;
+struct Entity {
+    std::uint32_t id;
+    std::uint32_t generation;
 
-        friend constexpr bool operator==(Entity, Entity) = default;
-    };
+    friend constexpr bool operator==(Entity, Entity) = default;
+};
 
 } // namespace engine
 

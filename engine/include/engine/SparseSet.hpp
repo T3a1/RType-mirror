@@ -71,8 +71,7 @@ template <typename C> class SparseSet final : public ISparseSet {
 
     [[nodiscard]] bool contains(Entity entity) const override
     {
-        return entity.id < m_sparse.size() &&
-               m_sparse[entity.id] != NONE &&
+        return entity.id < m_sparse.size() && m_sparse[entity.id] != NONE &&
                m_dense[m_sparse[entity.id]] == entity;
     }
 
@@ -80,7 +79,7 @@ template <typename C> class SparseSet final : public ISparseSet {
 
     C &get(Entity entity)
     {
-        static_assert(contains(entity));
+        assert(contains(entity));
         return m_data[m_sparse[entity.id]];
     }
 

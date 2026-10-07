@@ -6,7 +6,7 @@
 */
 
 #ifndef SERVER_SYSTEMS_MOVEMENTSYSTEM_HPP
-    #define SERVER_SYSTEMS_MOVEMENTSYSTEM_HPP
+#define SERVER_SYSTEMS_MOVEMENTSYSTEM_HPP
 
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"
