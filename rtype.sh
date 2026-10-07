@@ -140,7 +140,14 @@ fi
 
 # ---------- Start the server ----------
 if $NATIVE; then
-    [[ -x "$SERVER_BIN" ]] || error "Server binary not found: $SERVER_BIN (did you build the project?)"
+    if [[ ! -x "$SERVER_BIN" ]]; then
+        command -v cmake >/dev/null || error "cmake is not installed, cannot build the server"
+        log "Server binary not found, building it..."
+        cmake -B "$BUILD_DIR" >/dev/null \
+            && cmake --build "$BUILD_DIR" --target r-type_server -j"$(nproc)" \
+            || error "Server build failed"
+        [[ -x "$SERVER_BIN" ]] || error "Server binary still not found after building: $SERVER_BIN"
+    fi
     log "Starting native server on port $PORT..."
     "$SERVER_BIN" "$PORT" &
     SERVER_PID=$!
