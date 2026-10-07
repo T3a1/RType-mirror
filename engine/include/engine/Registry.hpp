@@ -43,7 +43,7 @@ class Registry {
 
     [[nodiscard]] Entity create();
     void destroy(Entity entity);
-    bool alive(Entity entity) const;
+    [[nodiscard]] bool alive(Entity entity) const;
 
   private:
     template <typename C> SparseSet<C> &storage()
