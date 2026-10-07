@@ -8,7 +8,14 @@
 #ifndef COMMON_COMPONENTS_VELOCITY_HPP
 #define COMMON_COMPONENTS_VELOCITY_HPP
 
+#include "engine/Vec2.hpp"
+
 namespace rtype {
+
+// Speed in playfield units per second.
+struct Velocity {
+    engine::Vec2f value;
+};
 
 } // namespace rtype
 

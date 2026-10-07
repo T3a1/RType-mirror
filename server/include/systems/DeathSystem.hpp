@@ -6,7 +6,7 @@
 */
 
 #ifndef SERVER_SYSTEMS_DEATHSYSTEM_HPP
-#define SERVER_SYSTEMS_DEATHSYSTEM_HPP
+    #define SERVER_SYSTEMS_DEATHSYSTEM_HPP
 
 namespace server {
 
