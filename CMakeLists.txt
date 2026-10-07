@@ -9,6 +9,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 option(BUILD_CLIENT "Build the client (requires the Conan packages)" ON)
 option(BUILD_TESTS "Build the unit tests (requires GoogleTest)" OFF)
 
+add_subdirectory(engine)
+add_subdirectory(common)
 add_subdirectory(server)
 
 if(BUILD_CLIENT)
