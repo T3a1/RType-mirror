@@ -6,6 +6,7 @@
 */
 
 #include "Game.hpp"
+#include "common/components/Health.hpp"
 #include "systems/MovementSystem.hpp"
 #include <algorithm>
 #include <chrono>
@@ -18,6 +19,12 @@ void Game::tick(engine::Duration dt)
     movementSystem(m_registry, dt);
     // Later, in this order: input, AI, collision, damage, death,
     // spawn, snapshot, then m_registry.flush() for deferred destroys.
+}
+
+void Game::init_registry()
+{
+    engine::Entity test = m_registry.create();
+    m_registry.emplace<rtype::Health>(test, rtype::Health{});
 }
 
 void Game::run()

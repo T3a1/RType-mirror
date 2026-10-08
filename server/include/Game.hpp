@@ -21,6 +21,7 @@ class Game {
     void tick(engine::Duration dt);
     engine::Registry m_registry;
     std::atomic<bool> m_running = true;
+    void init_registry();
 
     static_assert(std::atomic<bool>::is_always_lock_free);
 };
