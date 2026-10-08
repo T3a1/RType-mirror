@@ -6,12 +6,15 @@ include(GoogleTest)
 
 set(SOURCE_FILES
     src/sanity_test.cpp
+    src/sparse_set_test.cpp
+    src/registry_test.cpp
+    src/vec2_test.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 target_link_libraries(${PROJECT_NAME}
-    PRIVATE GTest::gtest GTest::gtest_main GTest::gmock
+    PRIVATE r-type_common GTest::gtest GTest::gtest_main GTest::gmock
 )
 
 gtest_discover_tests(${PROJECT_NAME})
