@@ -10,3 +10,7 @@ add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 target_include_directories(${PROJECT_NAME}
     PRIVATE include
 )
+
+target_link_libraries(${PROJECT_NAME}
+    PRIVATE r-type_common
+)
