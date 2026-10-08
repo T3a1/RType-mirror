@@ -31,7 +31,7 @@ int main(int /*argc*/, char * /*argv*/[])
     if (std::signal(SIGINT, onSignal) == SIG_ERR ||
         std::signal(SIGTERM, onSignal) == SIG_ERR) {
         std::cerr << "Failed to install the signal handlers" << '\n';
-        return 1;
+        return 84;
     }
 
     g_game = &game;
