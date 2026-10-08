@@ -29,6 +29,26 @@ class Registry {
         return storage<C>().emplace(entity, std::forward<Args>(args)...);
     }
 
+    template <typename C> C &get(Entity entity)
+    {
+        return storage<C>().get(entity);
+    }
+
+    template <typename C> C *tryGet(Entity entity)
+    {
+        return storage<C>().tryGet(entity);
+    }
+
+    template <typename C> [[nodiscard]] bool has(Entity entity)
+    {
+        return storage<C>().contains(entity);
+    }
+
+    template <typename C> void remove(Entity entity)
+    {
+        storage<C>().remove(entity);
+    }
+
     template <typename First, typename... Others, typename Func>
     void each(Func func)
     {
@@ -42,7 +62,10 @@ class Registry {
     }
 
     [[nodiscard]] Entity create();
+
     void destroy(Entity entity);
+
+    void flush();
     [[nodiscard]] bool alive(Entity entity) const;
 
   private:
@@ -59,6 +82,7 @@ class Registry {
     std::unordered_map<std::type_index, std::unique_ptr<ISparseSet>> m_storages;
     std::vector<std::uint32_t> m_generations;
     std::vector<std::uint32_t> m_freeIndices;
+    std::vector<Entity> m_toDestroy;
 };
 
 } // namespace engine

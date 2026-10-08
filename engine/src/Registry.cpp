@@ -4,7 +4,6 @@
 ** File description:
 ** Registry
 */
-
 #include "engine/Registry.hpp"
 
 #include <cstdint>
@@ -26,14 +25,24 @@ Entity Registry::create()
 
 void Registry::destroy(Entity entity)
 {
-    if (!alive(entity)) {
-        return;
+    if (alive(entity)) {
+        m_toDestroy.push_back(entity);
     }
-    for (auto &[type, set] : m_storages) {
-        set->remove(entity);
+}
+
+void Registry::flush()
+{
+    for (const Entity entity : m_toDestroy) {
+        if (!alive(entity)) {
+            continue;
+        }
+        for (auto &[type, set] : m_storages) {
+            set->remove(entity);
+        }
+        ++m_generations[entity.id];
+        m_freeIndices.push_back(entity.id);
     }
-    ++m_generations[entity.id];
-    m_freeIndices.push_back(entity.id);
+    m_toDestroy.clear();
 }
 
 bool Registry::alive(Entity entity) const
