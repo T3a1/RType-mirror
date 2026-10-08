@@ -11,6 +11,7 @@
 #   -t, --tidy          Run clang-tidy on the project and exit
 #   -f, --fix           Run clang-tidy, apply its automatic fixes and exit
 #   -T, --test          Build and run the unit tests (GoogleTest) and exit
+#   -C, --coverage      Run the unit tests with coverage, write an HTML report and exit
 #   -h, --help          Show this help
 
 set -euo pipefail
@@ -26,6 +27,7 @@ NATIVE=false
 TIDY=false
 TIDY_FIX=false
 TESTS=false
+COVERAGE=false
 CLIENTS=1
 PORT=4242
 HOST="127.0.0.1"
@@ -39,7 +41,7 @@ log()   { printf '\033[1;34m[run]\033[0m %s\n' "$*"; }
 error() { printf '\033[1;31m[error]\033[0m %s\n' "$*" >&2; exit 1; }
 
 usage() {
-    sed -n '4,14p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '4,15p' "$0" | sed 's/^# \{0,1\}//'
     exit 0
 }
 
@@ -55,6 +57,7 @@ while [[ $# -gt 0 ]]; do
         -t|--tidy)    TIDY=true; shift ;;
         -f|--fix)     TIDY=true; TIDY_FIX=true; shift ;;
         -T|--test)    TESTS=true; shift ;;
+        -C|--coverage) COVERAGE=true; shift ;;
         -h|--help)    usage ;;
         *)            error "Unknown option: $1 (see --help)" ;;
     esac
@@ -108,6 +111,34 @@ run_tests() {
 
 if $TESTS; then
     run_tests
+    exit $?
+fi
+
+# ---------- Test coverage (gcov + gcovr) ----------
+# Uses its own build directory: instrumented binaries must not mix with the
+# normal build.
+COVERAGE_DIR="${COVERAGE_DIR:-./build-coverage}"
+
+run_coverage() {
+    command -v cmake >/dev/null || error "cmake is not installed, cannot build the tests"
+    command -v gcovr >/dev/null || error "gcovr is not installed (pip install gcovr, or your package manager)"
+    log "Building the unit tests with coverage..."
+    cmake -B "$COVERAGE_DIR" -DBUILD_TESTS=ON -DENABLE_COVERAGE=ON -DBUILD_CLIENT=OFF >/dev/null \
+        || error "CMake configuration failed (is GoogleTest installed?)"
+    cmake --build "$COVERAGE_DIR" --target r-type_tests -j"$(nproc)" || error "Test build failed"
+    # Counters add up across runs: start from zero.
+    find "$COVERAGE_DIR" -name '*.gcda' -delete
+    log "Running the unit tests..."
+    ctest --test-dir "$COVERAGE_DIR" --output-on-failure || error "Some tests failed"
+    mkdir -p "$COVERAGE_DIR/coverage"
+    gcovr --root . --object-directory "$COVERAGE_DIR" \
+        --filter 'engine/' --filter 'common/' \
+        --html-details "$COVERAGE_DIR/coverage/index.html" --print-summary
+    log "HTML report: $COVERAGE_DIR/coverage/index.html"
+}
+
+if $COVERAGE; then
+    run_coverage
     exit $?
 fi
 

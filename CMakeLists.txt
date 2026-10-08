@@ -8,6 +8,12 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 option(BUILD_CLIENT "Build the client (requires the Conan packages)" ON)
 option(BUILD_TESTS "Build the unit tests (requires GoogleTest)" OFF)
+option(ENABLE_COVERAGE "Instrument the code for test coverage (GCC/Clang)" OFF)
+
+if(ENABLE_COVERAGE)
+    add_compile_options(--coverage -O0 -g)
+    add_link_options(--coverage)
+endif()
 
 add_subdirectory(engine)
 add_subdirectory(common)
