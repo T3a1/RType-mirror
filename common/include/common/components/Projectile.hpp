@@ -8,7 +8,15 @@
 #ifndef COMMON_COMPONENTS_PROJECTILE_HPP
 #define COMMON_COMPONENTS_PROJECTILE_HPP
 
+#include "engine/Clock.hpp"
+#include "engine/Entity.hpp"
+
 namespace rtype {
+
+struct Projectile {
+    engine::Entity owner{};
+    engine::Duration lifetime{3.0F};
+};
 
 } // namespace rtype
 

@@ -10,6 +10,10 @@
 
 namespace rtype {
 
+struct Damage {
+    int points = 1;
+};
+
 } // namespace rtype
 
 #endif // COMMON_COMPONENTS_DAMAGE_HPP
