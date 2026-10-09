@@ -1,4 +1,5 @@
 [requires]
+raylib/5.5
 
 [test_requires]
 gtest/1.15.0
