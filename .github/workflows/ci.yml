@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run clang-format
         run: |
-          find server client tests -name '*.cpp' -o -name '*.hpp' \
+          find engine common server client tests -name '*.cpp' -o -name '*.hpp' \
             | xargs -r clang-format --dry-run --Werror
 
   build-and-test:
@@ -41,7 +41,7 @@ jobs:
         run: cmake --build build
       - name: Run clang-tidy
         run: |
-          find server client tests -name '*.cpp' \
+          find engine common server client tests -name '*.cpp' \
             | xargs -r clang-tidy -p build --quiet --warnings-as-errors='*'
       - name: Run tests
         run: ctest --test-dir build --output-on-failure

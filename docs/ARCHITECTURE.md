@@ -276,35 +276,346 @@ Remote entities are drawn slightly in the past and **interpolated** between the
 two latest snapshots, so their movement looks smooth even with 20 snapshots per
 second.
 
-## 6. Threading
+## 6. Threading and networking
 
-### 6.1 Server
+This section explains how the game loop and the network work together: which
+thread owns what, how messages cross between threads, and how the server sends
+information to every connected client. The byte layout of each packet belongs
+in [PROTOCOL.md](PROTOCOL.md); here, messages are described only by their
+content.
 
+### 6.1 Threads and ownership
+
+The server runs two threads. Each piece of data has exactly one owner:
+
+| Thread | Owns | Never touches |
+|--------|------|---------------|
+| Network thread | The UDP socket, the session table (one entry per connected client), encoding and decoding, reliability, timeouts | The registry |
+
+The two threads share only:
+
+- two **message queues**: inbound (network to game) and outbound (game to
+  network);
+- an atomic `running` flag, used to stop the server (section 6.10).
+
+Because nothing else is shared, there are no locks in the game code and the
+systems are written as single-threaded code.
+
+```mermaid
+flowchart LR
+    subgraph NT[Network thread]
+        Sock[UDP socket]
+        Sess[(Session table)]
+        Codec[Validate / decode<br/>encode]
+        Rel[Reliability<br/>acks, resends]
+    end
+
+    subgraph GT[Game thread]
+        Sys[Systems]
+        Reg[(Registry)]
+    end
+
+    Sock --> Codec --> InQ[[Inbound queue]] --> Sys
+    Sys <--> Reg
+    Sys --> OutQ[[Outbound queue]] --> Codec --> Sock
+    Codec <--> Sess
+    Rel <--> Sess
 ```
-Network thread                                   Game thread
---------------                                   -----------
-receive datagram
-validate size and header  -- drop if invalid
-decode message            -- drop if invalid
-push to inbound queue  ------------------------> drain inbound queue (tick start)
-                                                 run systems
-send datagrams         <------------------------ push to outbound queue (tick end)
-detect client timeouts -> push "client left" --> remove the player's entity, notify others
+
+### 6.2 Message queues
+
+Both queues use the same generic type, `engine::MessageQueue<T>` (standard
+library only):
+
+- A `std::vector<T>` protected by a `std::mutex`.
+- `push(T)` locks, appends and unlocks.
+- `drain()` locks, **swaps** the vector with an empty one and unlocks, then
+  returns all the messages at once. The lock is held for a swap only, so the
+  game thread never waits for the network thread in any meaningful way.
+- The queue has a **capacity**. When it is full, new messages are dropped and
+  counted. A flood of packets can therefore never make the server allocate
+  unbounded memory.
+
+The queues carry **decoded messages** (C++ structs), not raw bytes:
+
+- The game thread never parses packets.
+- The game thread never sees an IP address or a port. A client is identified by
+  a `ClientId` (a 32-bit number given by the network thread when the client
+  connects).
+
+#### Inbound messages (network thread to game thread)
+
+| Message | Content | Pushed when |
+|---------|---------|-------------|
+| `ClientConnected` | `ClientId` | A new client finished the handshake |
+| `ClientDisconnected` | `ClientId`, reason (left, timeout, kicked) | A client said goodbye, stopped answering or broke the protocol |
+| `PlayerInput` | `ClientId`, input sequence number, actions bitmask | A valid, newer input arrived |
+
+Pings, acknowledgments and handshake packets are handled entirely by the
+network thread and never reach the game thread.
+
+#### Outbound messages (game thread to network thread)
+
+Each outbound message has a **recipient**, a **delivery mode** and a payload:
+
+```cpp
+struct Recipient {
+    enum class Kind : std::uint8_t { One, All, AllExcept };
+    Kind kind;
+    ClientId client; // used by One and AllExcept
+};
+
+enum class Delivery : std::uint8_t { Unreliable, Reliable };
+
+struct OutboundMessage {
+    Recipient to;
+    Delivery delivery;
+    std::variant<Welcome, Snapshot, GameEvent> payload;
+};
 ```
 
-- The game thread never touches the socket, and the network thread never touches
-  the registry. The two queues are the only shared data.
-- Draining the inbound queue never waits: if it is empty, the tick continues.
-- Every packet is validated (size limit, header, message type, payload length)
-  before being decoded. Invalid packets are dropped and counted, never trusted.
-- A client that stops sending packets for a few seconds is considered
-  disconnected. Its entity is removed and the other clients are notified.
+| Payload | Recipient | Delivery | Content |
+|---------|-----------|----------|---------|
+| `Welcome` | One (the new player) | Reliable | Player slot, the `NetworkId` of the player's ship, current server tick |
+| `Snapshot` | All | Unreliable | Server tick, state of every visible entity (section 6.7) |
+| `GameEvent` | All, or AllExcept | Reliable | One-off facts: `EntityDestroyed`, `PlayerJoined`, `PlayerLeft`, `PlayerHit`, `GameOver` |
 
-### 6.2 Client
+### 6.3 Sessions
 
-The client uses the same pattern: a network thread with two queues, and the main
-thread for input, simulation and rendering (graphics libraries require rendering
-on the main thread).
+The network thread keeps one **session** per connected client:
+
+| Field | Use |
+|-------|-----|
+| `ClientId` | Identity shared with the game thread |
+| Address and port | Where to send datagrams |
+| Last time a packet was received | Timeout detection |
+| Last input sequence number | Drop old or duplicated inputs |
+| Reliable send state | Next sequence number, messages waiting for an ack |
+| Reliable receive state | Last sequence number received, for acks and duplicates |
+
+- Only a known address can send game packets. A datagram from an unknown
+  address is accepted only if it is a connection request.
+- The server accepts at most **4 sessions**. A fifth client receives a
+  rejection and no session is created.
+
+### 6.4 Receiving: from datagram to component
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant N as Network thread
+    participant Q as Inbound queue
+    participant G as Game thread
+
+    C->>N: datagram (input)
+    N->>N: check size, header, type, payload length
+    N->>N: find the session from the address
+    N->>N: drop if the input sequence is not newer
+    N->>Q: push PlayerInput{clientId, seq, actions}
+    Note over G: start of the next tick
+    G->>Q: drain()
+    G->>G: NetworkInputSystem writes InputState<br/>on the player's ship
+```
+
+1. The network thread reads one datagram into a fixed-size buffer (the maximum
+   packet size). A larger datagram is truncated by the system and rejected.
+2. It validates the packet: size, header (protocol id, version), message type,
+   payload length. Any failure drops the packet and increments a counter. A
+   client that sends too many invalid packets is disconnected.
+3. It decodes the payload field by field (explicit little-endian, never a
+   `memcpy` of a struct) and pushes the message to the inbound queue.
+4. At the start of each tick, the game thread drains the queue. If the queue is
+   empty, the tick continues without waiting.
+5. If several inputs from the same player arrived during one tick, only the
+   newest is kept.
+
+### 6.5 Sending: from the registry to every client
+
+At the end of a tick, the output systems build messages and push them to the
+outbound queue. They do not know how many clients are connected or where they
+are; they only say "to everyone", "to this player" or "to everyone except this
+player".
+
+The network thread then:
+
+1. drains the outbound queue;
+2. **encodes each message once** into a byte buffer;
+3. resolves the recipient against its session table: `All` means every session
+   that exists at that moment;
+4. sends the same buffer to each recipient with `sendto`;
+5. for a reliable message, keeps a copy per recipient until that client
+   acknowledges it (section 6.6).
+
+```mermaid
+sequenceDiagram
+    participant G as Game thread
+    participant Q as Outbound queue
+    participant N as Network thread
+    participant C1 as Client 1
+    participant C2 as Client 2
+    participant C3 as Client 3
+
+    Note over G: end of tick 300 (a snapshot tick)
+    G->>Q: push Snapshot{tick 300} to All
+    G->>Q: push GameEvent{EntityDestroyed 42} to All, reliable
+    N->>Q: drain()
+    N->>N: encode each message once
+    N->>C1: snapshot
+    N->>C2: snapshot
+    N->>C3: snapshot
+    N->>C1: event (seq 17)
+    N->>C2: event (seq 9)
+    N->>C3: event (seq 12)
+    C1-->>N: ack 17
+    C2-->>N: ack 9
+    Note over N: client 3's ack is lost:<br/>the event is sent again later
+```
+
+Encoding once and sending the same bytes to every client keeps the cost low: a
+snapshot is built once per snapshot tick, whatever the number of players. Only
+the reliable header (sequence number) differs per client.
+
+**When does the network thread run?** It loops on a receive with a short
+timeout (about 1 ms). After each wake-up, whether a datagram arrived or the
+timeout expired, it also sends the outbound messages, resends unacknowledged
+reliable messages that are due, and checks timeouts. With Asio, the same work
+is done with asynchronous operations and a timer instead of a loop; the queues
+and messages stay the same.
+
+### 6.6 Delivery: unreliable and reliable
+
+UDP can lose, duplicate and reorder datagrams. Each kind of message deals with
+it in the simplest way that is enough:
+
+| Kind | Messages | Rule |
+|------|----------|------|
+| Unreliable, latest wins | Inputs (client to server), snapshots (server to client) | Each carries a sequence number or tick. The receiver keeps only the newest and ignores older ones. A lost packet does not matter: the next one, a few milliseconds later, replaces it. |
+| Reliable, ordered | Handshake answers, `Welcome`, game events | Each message has a per-session sequence number. The receiver acknowledges it and delivers messages in order, once. The sender resends every unacknowledged message about every 100 ms. |
+
+Limits that keep reliability safe:
+
+- The number of unacknowledged messages per session is capped. A client that
+  never acknowledges (or acknowledges too slowly) is disconnected instead of
+  making the server store messages forever.
+- Acknowledgments are added to the packets already being sent (inputs and
+  snapshots), so they cost almost no extra packets.
+
+### 6.7 Snapshots
+
+A snapshot is the state of every entity the client needs to draw, at a given
+server tick.
+
+- It is built by the `SnapshotSystem` every 3rd tick (20 per second).
+- For each entity with a `NetworkId`, it contains the id, the entity type
+  (which sprite to use), the position and the few values the HUD needs
+  (health, score).
+- A datagram should stay under about **1200 bytes** to avoid IP fragmentation.
+  With about 20 bytes per entity, that is about 60 entities per datagram. A
+  larger snapshot is split into several **parts**; each part is
+  self-contained (tick + list of entities), so losing one part only delays the
+  update of those entities.
+
+How the client uses snapshots:
+
+- An unknown `NetworkId` in a snapshot creates a local entity with the right
+  `Sprite`.
+- A known `NetworkId` updates its target position for interpolation.
+- An entity is **removed** only by the reliable `EntityDestroyed` event, never
+  because it is missing from a snapshot (that part may just have been lost).
+- `NetworkId`s are never reused by the server, and the client remembers
+  recently destroyed ids for a few seconds, so a late snapshot cannot bring a
+  destroyed entity back.
+
+Snapshots also act as a heartbeat: a client that receives nothing from the
+server for a few seconds considers the connection lost.
+
+### 6.8 Connection lifecycle
+
+#### A player joins
+
+```mermaid
+sequenceDiagram
+    participant C as New client
+    participant N as Network thread
+    participant G as Game thread
+    participant O as Other clients
+
+    C->>N: connection request
+    alt 4 sessions already
+        N-->>C: rejected (server full)
+    else
+        N->>N: create session, ClientId 7
+        N-->>C: accepted
+        N->>G: ClientConnected{7}
+        G->>G: create the ship entity,<br/>map ClientId 7 -> entity
+        G->>N: Welcome{slot, ship NetworkId} to One(7)
+        G->>N: PlayerJoined{slot} to AllExcept(7)
+        N-->>C: Welcome
+        N-->>O: PlayerJoined
+        Note over C: from now on, the client<br/>sends inputs and receives snapshots
+    end
+```
+
+#### A player leaves, crashes or misbehaves
+
+All three cases end the same way:
+
+| Case | Detected by |
+|------|-------------|
+| The player quits | The client sends a disconnect message (best effort, not reliable) |
+| The client crashes or the network drops | No packet from that client for **5 seconds** (inputs are sent continuously, so silence means a problem) |
+| The client breaks the protocol | Too many invalid packets, or too many unacknowledged reliable messages |
+
+Then:
+
+1. The network thread removes the session and pushes
+   `ClientDisconnected{id, reason}`.
+2. The game thread destroys the player's ship and pushes `PlayerLeft{slot}` to
+   `All`, reliable.
+3. The remaining clients remove the ship and can show a message.
+
+The game keeps running for the other players during all of this.
+
+### 6.9 Client side
+
+The client uses the same pattern with roles reversed:
+
+| Thread | Job |
+|--------|-----|
+| Main thread | Input, client registry and systems, rendering (graphics libraries require rendering on the main thread) |
+| Network thread | Socket, handshake, validation and decoding, reliable events and acks, server timeout |
+
+- **Outbound:** the input system pushes the **complete** input state (a bitmask
+  of pressed actions) at a fixed rate, about 60 times per second, whatever the
+  frame rate. Sending the full state every time means a lost packet is
+  corrected by the next one, and a key release can never get lost.
+- **Inbound:** the main thread drains snapshots and events each frame. The
+  snapshot system keeps the last few snapshots in a small buffer, and the
+  interpolation system draws remote entities about **100 ms in the past**
+  (two snapshot intervals), between the two snapshots around that time.
+
+### 6.10 Shutdown
+
+- `SIGINT` and `SIGTERM` (sent by `docker stop`) set the atomic `running` flag
+  to `false`. The signal handler does nothing else.
+- The game loop finishes its current tick, pushes a best-effort `ServerClosing`
+  message to `All`, and stops.
+- The network thread sends what is left in the outbound queue, then stops; the
+  game thread joins it.
+- A client closing its window does the same on its side: it sends a disconnect
+  message, stops its network thread and exits.
+
+### 6.11 Summary of network-related systems
+
+| Side | Stage | System | Job |
+|------|-------|--------|-----|
+| Server | Input | `SessionSystem` | `ClientConnected` / `ClientDisconnected`: create or destroy ships, push `Welcome`, `PlayerJoined`, `PlayerLeft` |
+| Server | Input | `NetworkInputSystem` | `PlayerInput`: write `InputState` on the right ship |
+| Server | Output | `SnapshotSystem` | Every 3rd tick, push a `Snapshot` to `All` |
+| Server | Output | `EventBroadcastSystem` | Turn the tick's game events into reliable `GameEvent` messages |
+| Client | Input | `InputSystem` | Read the keyboard and gamepad, push the input state |
+| Client | Simulation | `SnapshotApplySystem` | Create and update entities from snapshots, remove them on `EntityDestroyed` |
+| Client | Simulation | `InterpolationSystem` | Place remote entities between two snapshots |
 
 ## 7. Coordinate system and units
 
@@ -330,6 +641,9 @@ on the main thread).
   socket is needed.
 - Packet decoding is unit tested with valid, truncated and oversized packets,
   and later fuzzed with libFuzzer.
+- The message queue (capacity, drain order) and the reliability logic (acks,
+  resends, duplicates, reordering) are tested without a socket, by feeding
+  them packets directly.
 
 ## 9. Open questions
 
@@ -340,6 +654,10 @@ on the main thread).
 - **Client-side prediction** of the local player's ship, to hide latency. Not
   planned for v1.
 - **Tick and snapshot rates**: 60 and 20 per second are starting values, to be
-  tuned once the prototype runs.
+  tuned once the prototype runs. The same goes for the network values of
+  section 6: 5 s timeout, 100 ms resend interval, 100 ms interpolation delay,
+  1200-byte datagrams, queue capacities.
+- **Lobby and game start**: v1 starts the game as soon as a player joins.
+  Rooms, a lobby or a "ready" step are not designed yet.
 - **Windows support** (issue #6): the design above has no Linux-only parts
   except the sockets, which would be hidden behind the network library.
