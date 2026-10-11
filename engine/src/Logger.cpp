@@ -22,7 +22,6 @@ namespace engine {
 
 namespace {
 
-// Colors only when writing to a real terminal, not to a file or a pipe.
 bool supportsColors(const std::ostream &console)
 {
 #if defined(__unix__) || defined(__APPLE__)
@@ -58,7 +57,6 @@ std::string_view colorFor(LogLevel level)
 
 constexpr std::string_view resetColor = "\033[0m";
 
-// "/home/.../server/src/main.cpp" -> "main.cpp"
 std::string_view fileName(std::string_view path)
 {
     const std::size_t slash = path.find_last_of("/\\");
@@ -108,8 +106,6 @@ bool Logger::start(LogLevel minLevel, const std::filesystem::path &file)
 
     bool fileOpened = true;
     if (!file.empty()) {
-        // No exception: the server image has no writable filesystem, and a
-        // missing log file must not stop the program.
         std::error_code error;
         if (file.has_parent_path()) {
             std::filesystem::create_directories(file.parent_path(), error);
@@ -172,11 +168,9 @@ void Logger::log(LogLevel level, const char *file, int line,
             ++m_dropped;
             return;
         }
-        // Closed by stop() in the meantime: write it directly below.
     }
 
     const std::scoped_lock lock(m_writeMutex);
-    // A failed push leaves the entry untouched.
     // NOLINTNEXTLINE(bugprone-use-after-move)
     write(entry);
     m_console->flush();
@@ -187,8 +181,6 @@ void Logger::log(LogLevel level, const char *file, int line,
 
 void Logger::run()
 {
-    // Writes whatever piled up since the last wake-up in one go, and flushes
-    // once per batch instead of once per line.
     while (std::optional<Entry> first = m_queue.waitPop()) {
         const std::vector<Entry> rest = m_queue.drain();
         const std::scoped_lock lock(m_writeMutex);
@@ -204,7 +196,6 @@ void Logger::run()
     }
 }
 
-// Called with m_writeMutex held.
 void Logger::write(const Entry &entry)
 {
     const std::time_t time = std::chrono::system_clock::to_time_t(entry.time);
@@ -227,7 +218,6 @@ void Logger::write(const Entry &entry)
     }
 }
 
-// Called with m_writeMutex held.
 void Logger::reportDropped()
 {
     const std::uint64_t dropped = m_dropped.exchange(0);
