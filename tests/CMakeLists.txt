@@ -9,6 +9,8 @@ set(SOURCE_FILES
     src/sparse_set_test.cpp
     src/registry_test.cpp
     src/vec2_test.cpp
+    src/movement_system_test.cpp
+    src/player_control_system_test.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
