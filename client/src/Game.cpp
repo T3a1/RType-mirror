@@ -6,9 +6,15 @@
 */
 
 #include "Game.hpp"
+#include "common/components/InputState.hpp"
 #include "common/components/Transform.hpp"
+#include "common/components/Velocity.hpp"
 #include "components/Sprite.hpp"
 #include "systems/RenderSystem.hpp"
+
+#include "common/systems/MovementSystem.hpp"
+#include "common/systems/PlayerControlSystem.hpp"
+#include "systems/InputSystem.hpp"
 
 #include <raylib.h>
 
@@ -51,10 +57,13 @@ void Game::run()
     }
 }
 
-void Game::update(engine::Duration /*dt*/)
+void Game::update(engine::Duration dt)
 {
     // Later, in this order: input, network sync, interpolation, animation,
     // background scrolling.
+    inputSystem(m_registry);
+    rtype::playerControlSystem(m_registry);
+    rtype::movementSystem(m_registry, dt);
 
     m_registry.flush();
 }
@@ -79,6 +88,8 @@ void Game::spawnTestEntities()
                   .tint = {.r = 80, .g = 160, .b = 255, .a = 255},
                   .layer = 1,
               });
+    m_registry.emplace<rtype::InputState>(ship, rtype::InputState{});
+    m_registry.emplace<rtype::Velocity>(ship, rtype::Velocity{});
 
     const engine::Entity enemy = m_registry.create();
     m_registry.emplace<rtype::Transform>(
