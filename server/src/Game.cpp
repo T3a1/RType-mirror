@@ -6,7 +6,7 @@
 */
 
 #include "Game.hpp"
-#include "systems/MovementSystem.hpp"
+#include "common/systems/MovementSystem.hpp"
 #include <algorithm>
 #include <chrono>
 #include <thread>
@@ -15,7 +15,7 @@ namespace server {
 
 void Game::tick(engine::Duration dt)
 {
-    movementSystem(m_registry, dt);
+    rtype::movementSystem(m_registry, dt);
     // Later, in this order: input, AI, collision, damage, death,
     // spawn, snapshot.
 

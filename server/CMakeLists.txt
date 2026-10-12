@@ -9,9 +9,7 @@ set(SOURCE_FILES
     src/systems/DeathSystem.cpp
     src/systems/EnemyAISystem.cpp
     src/systems/EventBroadcastSystem.cpp
-    src/systems/MovementSystem.cpp
     src/systems/NetworkInputSystem.cpp
-    src/systems/PlayerControlSystem.cpp
     src/systems/SessionSystem.cpp
     src/systems/SnapshotSystem.cpp
     src/systems/SpawnSystem.cpp

@@ -1,24 +1,23 @@
 /*
 ** EPITECH PROJECT, 2026
-** r-type_server
+** r-type_common
 ** File description:
 ** MovementSystem
 */
 
-#include "systems/MovementSystem.hpp"
+#include "common/systems/MovementSystem.hpp"
 #include "common/components/Transform.hpp"
 #include "common/components/Velocity.hpp"
 #include "engine/Entity.hpp"
 
-namespace server {
+namespace rtype {
 
 void movementSystem(engine::Registry &registry, engine::Duration dt)
 {
-    registry.each<rtype::Transform, rtype::Velocity>(
-        [dt](engine::Entity, rtype::Transform &transform,
-             rtype::Velocity &velocity) {
+    registry.each<Transform, Velocity>(
+        [dt](engine::Entity, Transform &transform, Velocity &velocity) {
             transform.position += velocity.value * dt.count();
         });
 }
 
-} // namespace server
+} // namespace rtype
