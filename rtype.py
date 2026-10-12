@@ -32,10 +32,13 @@ CONTAINER = os.environ.get("CONTAINER", "rtype-server")
 # What Conan does with missing system packages (X11/OpenGL headers for Raylib):
 # install (with sudo), check (fail if missing) or report (only list them).
 CONAN_SYSTEM_PACKAGES = os.environ.get("CONAN_SYSTEM_PACKAGES", "install")
+# Virtual environment where missing build tools (cmake, conan...) are installed.
+TOOLS_DIR = Path(os.environ.get("TOOLS_DIR", ".venv"))
 
 BUILD_TYPE = "Release"
 JOBS = str(os.cpu_count() or 1)
 EXE = ".exe" if os.name == "nt" else ""
+TOOLS_BIN = TOOLS_DIR.resolve() / ("Scripts" if os.name == "nt" else "bin")
 
 
 # ---------- Helpers ----------
@@ -70,22 +73,63 @@ def run(*args: str | Path, error: str, quiet: bool = False) -> None:
         raise LauncherError(error)
 
 
+def use_tools_dir() -> None:
+    """Makes the tools installed in TOOLS_DIR visible to this script and to the
+    commands it runs. System tools come first."""
+    if TOOLS_BIN.is_dir() and str(TOOLS_BIN) not in os.environ.get("PATH", ""):
+        os.environ["PATH"] = os.environ.get("PATH", "") + os.pathsep + str(TOOLS_BIN)
+
+
 def ensure_tool(tool: str) -> None:
-    """Installs a missing build tool (cmake, conan) from PyPI with pipx: no
-    admin rights needed, same on Linux and Windows."""
+    """Installs a missing Python-packaged tool (cmake, conan, gcovr) from PyPI
+    into the project's virtual environment: no pipx, no admin rights, same on
+    Linux and Windows."""
     if shutil.which(tool):
         return
-    if shutil.which("pipx") is None:
-        raise LauncherError(f"{tool} is not installed (pipx install {tool})")
-    log(f"{tool} not found, installing it with pipx...")
-    run("pipx", "install", tool, error=f"pipx install {tool} failed")
-    # pipx's bin folder may not be in PATH yet: add it for the commands below.
-    bin_dir = subprocess.run(["pipx", "environment", "--value", "PIPX_BIN_DIR"],
-                             capture_output=True, text=True).stdout.strip()
-    if bin_dir:
-        os.environ["PATH"] = bin_dir + os.pathsep + os.environ.get("PATH", "")
+    if not TOOLS_BIN.is_dir():
+        log(f"Creating the tools environment in {TOOLS_DIR}...")
+        run(sys.executable, "-m", "venv", TOOLS_DIR,
+            error="Could not create a Python virtual environment "
+                  "(on Debian/Ubuntu: sudo apt install python3-venv)")
+        use_tools_dir()
+    log(f"{tool} not found, installing it in {TOOLS_DIR}...")
+    python = TOOLS_BIN / f"python{EXE}"
+    run(python, "-m", "pip", "install", "--quiet", "--disable-pip-version-check", tool,
+        error=f"pip install {tool} failed")
     if shutil.which(tool) is None:
-        raise LauncherError(f"{tool} was installed but is not in PATH (run: pipx ensurepath)")
+        raise LauncherError(f"{tool} still not found after installing it in {TOOLS_DIR}")
+
+
+def has_msvc() -> bool:
+    vswhere = (Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"))
+               / "Microsoft Visual Studio" / "Installer" / "vswhere.exe")
+    if not vswhere.is_file():
+        return False
+    found = subprocess.run(
+        [str(vswhere), "-latest", "-products", "*", "-requires",
+         "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", "-property", "installationPath"],
+        capture_output=True, text=True).stdout.strip()
+    return bool(found)
+
+
+def ensure_compiler() -> None:
+    """Windows only: installs the MSVC compiler (Visual Studio Build Tools) with
+    winget if it is missing. Linux distributions ship a compiler."""
+    if os.name != "nt" or shutil.which("cl") or has_msvc():
+        return
+    require("winget", 'install Visual Studio Build Tools with the "Desktop development '
+                      'with C++" workload')
+    log("No C++ compiler found, installing Visual Studio Build Tools "
+        "(several GB, asks for admin rights)...")
+    # Its exit code is not reliable (e.g. already installed without the C++
+    # workload): check the result instead.
+    subprocess.run(["winget", "install", "--id", "Microsoft.VisualStudio.2022.BuildTools",
+                    "--exact", "--accept-package-agreements", "--accept-source-agreements",
+                    "--override", "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools "
+                    "--includeRecommended"])
+    if not has_msvc():
+        raise LauncherError('MSVC still not found: add the "Desktop development with C++" '
+                            "workload in the Visual Studio Installer")
 
 
 def find_binary(name: str, override: str | None) -> Path | None:
@@ -108,6 +152,7 @@ def configure(*cmake_args: str) -> None:
     Conan toolchain. Extra arguments are passed to CMake."""
     ensure_tool("cmake")
     ensure_tool("conan")
+    ensure_compiler()
     # A fresh Conan install has no profile: detect one from the local compiler.
     if subprocess.run(["conan", "profile", "path", "default"],
                       capture_output=True).returncode != 0:
@@ -181,7 +226,7 @@ def run_tests() -> int:
 # normal build.
 def run_coverage() -> int:
     ensure_tool("cmake")
-    require("gcovr", "pip install gcovr, or your package manager")
+    ensure_tool("gcovr")
     log("Building the unit tests with coverage...")
     run("cmake", "-B", COVERAGE_DIR, "-DBUILD_TESTS=ON", "-DENABLE_COVERAGE=ON",
         "-DBUILD_CLIENT=OFF", quiet=True,
@@ -255,7 +300,8 @@ def play(args: argparse.Namespace) -> int:
             client.wait()
         return 0
     finally:
-        log("Shutting down...")
+        if clients or server is not None or container_started:
+            log("Shutting down...")
         for client in clients:
             stop(client)
         if server is not None:
@@ -303,6 +349,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    use_tools_dir()
     # Turns `docker stop`/`kill` of the launcher into a normal exit, so the
     # server and the clients are stopped too.
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(128 + signal.SIGTERM))
