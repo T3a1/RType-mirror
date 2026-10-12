@@ -70,6 +70,24 @@ def run(*args: str | Path, error: str, quiet: bool = False) -> None:
         raise LauncherError(error)
 
 
+def ensure_tool(tool: str) -> None:
+    """Installs a missing build tool (cmake, conan) from PyPI with pipx: no
+    admin rights needed, same on Linux and Windows."""
+    if shutil.which(tool):
+        return
+    if shutil.which("pipx") is None:
+        raise LauncherError(f"{tool} is not installed (pipx install {tool})")
+    log(f"{tool} not found, installing it with pipx...")
+    run("pipx", "install", tool, error=f"pipx install {tool} failed")
+    # pipx's bin folder may not be in PATH yet: add it for the commands below.
+    bin_dir = subprocess.run(["pipx", "environment", "--value", "PIPX_BIN_DIR"],
+                             capture_output=True, text=True).stdout.strip()
+    if bin_dir:
+        os.environ["PATH"] = bin_dir + os.pathsep + os.environ.get("PATH", "")
+    if shutil.which(tool) is None:
+        raise LauncherError(f"{tool} was installed but is not in PATH (run: pipx ensurepath)")
+
+
 def find_binary(name: str, override: str | None) -> Path | None:
     """Single-config generators put binaries in the build folder, multi-config
     ones (Visual Studio) in a per-configuration subfolder."""
@@ -88,8 +106,8 @@ def build(target: str, build_dir: Path = BUILD_DIR) -> None:
 def configure(*cmake_args: str) -> None:
     """Installs the Conan packages into BUILD_DIR, then configures it with the
     Conan toolchain. Extra arguments are passed to CMake."""
-    require("cmake")
-    require("conan", "pipx install conan")
+    ensure_tool("cmake")
+    ensure_tool("conan")
     # A fresh Conan install has no profile: detect one from the local compiler.
     if subprocess.run(["conan", "profile", "path", "default"],
                       capture_output=True).returncode != 0:
@@ -162,7 +180,7 @@ def run_tests() -> int:
 # Uses its own build directory: instrumented binaries must not mix with the
 # normal build.
 def run_coverage() -> int:
-    require("cmake")
+    ensure_tool("cmake")
     require("gcovr", "pip install gcovr, or your package manager")
     log("Building the unit tests with coverage...")
     run("cmake", "-B", COVERAGE_DIR, "-DBUILD_TESTS=ON", "-DENABLE_COVERAGE=ON",
