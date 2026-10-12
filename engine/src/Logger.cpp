@@ -200,7 +200,11 @@ void Logger::write(const Entry &entry)
 {
     const std::time_t time = std::chrono::system_clock::to_time_t(entry.time);
     std::tm local{};
+#ifdef _WIN32
+    localtime_s(&local, &time);
+#else
     localtime_r(&time, &local);
+#endif
 
     std::ostringstream stream;
     stream << std::put_time(&local, "%Y-%m-%d %H:%M:%S") << " ["
