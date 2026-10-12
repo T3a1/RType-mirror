@@ -6,15 +6,16 @@
 */
 
 #include "Game.hpp"
+#include "engine/Logger.hpp"
 
 #include <csignal>
-#include <iostream>
 
 namespace {
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 server::Game *g_game = nullptr;
 
+// Only async-signal-safe work here: no logging, no allocation.
 void onSignal(int signal)
 {
     static_cast<void>(std::signal(signal, SIG_DFL));
@@ -27,17 +28,20 @@ void onSignal(int signal)
 
 int main(int /*argc*/, char * /*argv*/[])
 {
+    engine::Logger::instance().start(engine::LogLevel::Info);
+
     server::Game game;
     if (std::signal(SIGINT, onSignal) == SIG_ERR ||
         std::signal(SIGTERM, onSignal) == SIG_ERR) {
-        std::cerr << "Failed to install the signal handlers" << '\n';
+        BB_FATAL("Failed to install the signal handlers");
         return 84;
     }
 
     g_game = &game;
-    std::cout << "Server running, press Ctrl+C to stop" << '\n';
+    BB_INFO("Server running, press Ctrl+C to stop");
     game.run();
     g_game = nullptr;
-    std::cout << "Server stopped" << '\n';
+    BB_INFO("Server stopped");
+    engine::Logger::instance().stop();
     return 0;
 }
