@@ -150,9 +150,11 @@ def build(target: str, build_dir: Path = BUILD_DIR) -> None:
 def configure(*cmake_args: str) -> None:
     """Installs the Conan packages into BUILD_DIR, then configures it with the
     Conan toolchain. Extra arguments are passed to CMake."""
+    # The compiler comes first: pip builds Conan's dependencies (e.g. PyYAML)
+    # from source when PyPI has no prebuilt wheel for this Python version.
+    ensure_compiler()
     ensure_tool("cmake")
     ensure_tool("conan")
-    ensure_compiler()
     # A fresh Conan install has no profile: detect one from the local compiler.
     if subprocess.run(["conan", "profile", "path", "default"],
                       capture_output=True).returncode != 0:
