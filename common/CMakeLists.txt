@@ -4,6 +4,11 @@ project(r-type_common)
 set(SOURCE_FILES
     src/systems/MovementSystem.cpp
     src/systems/PlayerControlSystem.cpp
+    src/protocol/ByteWriter.cpp
+    src/protocol/ByteReader.cpp
+    src/protocol/PacketHeader.cpp
+    src/protocol/Messages.cpp
+    src/protocol/Packet.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
