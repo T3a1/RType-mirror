@@ -9,6 +9,7 @@ set(SOURCE_FILES
     src/protocol/PacketHeader.cpp
     src/protocol/Messages.cpp
     src/protocol/Packet.cpp
+    src/protocol/ReliableChannel.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})

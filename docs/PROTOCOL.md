@@ -243,7 +243,9 @@ A one-off fact. The body depends on the kind:
 UDP may lose, duplicate and reorder datagrams. Unreliable packets accept
 this: each one carries a newer state (`Input::sequence`, `Snapshot::tick`)
 and the receiver ignores anything older than what it already has. Reliable
-packets use the header fields `sequence` and `ack` as follows.
+packets use the header fields `sequence` and `ack` as follows. The reference
+implementation of this section is `ReliableChannel`
+([`ReliableChannel.hpp`](../common/include/common/protocol/ReliableChannel.hpp)).
 
 ### Two counters
 
