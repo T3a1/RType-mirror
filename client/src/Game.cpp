@@ -9,17 +9,21 @@
 #include "common/components/InputState.hpp"
 #include "common/components/Transform.hpp"
 #include "common/components/Velocity.hpp"
+#include "components/Background.hpp"
 #include "components/Sprite.hpp"
+#include "systems/BackgroundRenderSystem.hpp"
 #include "systems/RenderSystem.hpp"
 
 #include "common/systems/MovementSystem.hpp"
 #include "common/systems/PlayerControlSystem.hpp"
+#include "systems/BackgroundScrollSystem.hpp"
 #include "systems/InputSystem.hpp"
 
 #include <raylib.h>
 
 #include <algorithm>
 #include <chrono>
+#include <string>
 
 namespace client {
 
@@ -28,16 +32,24 @@ namespace {
 constexpr int windowWidth = 1280;
 constexpr int windowHeight = 720;
 
+constexpr const char *backgroundPath = "assets/background.jpg";
+constexpr float backgroundSpeed = 120.0F;
+
 } // namespace
 
 Game::Game()
 {
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
     InitWindow(windowWidth, windowHeight, "R-Type");
+    spawnBackground();
     spawnTestEntities();
 }
 
-Game::~Game() { CloseWindow(); }
+Game::~Game()
+{
+    UnloadTexture(m_backgroundTexture);
+    CloseWindow();
+}
 
 void Game::run()
 {
@@ -59,11 +71,11 @@ void Game::run()
 
 void Game::update(engine::Duration dt)
 {
-    // Later, in this order: input, network sync, interpolation, animation,
-    // background scrolling.
+    // Later, in this order: input, network sync, interpolation, animation
     inputSystem(m_registry);
     rtype::playerControlSystem(m_registry);
     rtype::movementSystem(m_registry, dt);
+    backgroundScrollSystem(m_registry, dt);
 
     m_registry.flush();
 }
@@ -72,11 +84,23 @@ void Game::render()
 {
     BeginDrawing();
     ClearBackground(BLACK);
+    backgroundRenderSystem(m_registry);
     renderSystem(m_registry);
     EndDrawing();
 }
 
-// Temporaire, plus gtard les Entities devront venir du serveur
+void Game::spawnBackground()
+{
+    const std::string path =
+        std::string{GetApplicationDirectory()} + backgroundPath;
+    m_backgroundTexture = LoadTexture(path.c_str());
+    SetTextureFilter(m_backgroundTexture, TEXTURE_FILTER_BILINEAR);
+
+    const engine::Entity background = m_registry.create();
+    m_registry.emplace<Background>(background, Background{.texture = m_backgroundTexture, .speed = backgroundSpeed});
+}
+
+// Temporaire, plus tard les Entities devront venir du serveur
 void Game::spawnTestEntities()
 {
     const engine::Entity ship = m_registry.create();

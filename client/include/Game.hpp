@@ -11,6 +11,8 @@
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"
 
+#include <raylib.h>
+
 namespace client {
 
 // The client game: its own registry (a mirror of the server's world plus
@@ -32,9 +34,17 @@ class Game {
   private:
     void update(engine::Duration dt);
     void render();
+    /**
+     * @brief Loads the background texture and creates the entity scrolling it.
+     *
+     * The texture is loaded from the assets directory next to the executable
+     * and stays owned by the Game, which unloads it in its destructor.
+     */
+    void spawnBackground();
     void spawnTestEntities();
 
     engine::Registry m_registry;
+    Texture2D m_backgroundTexture{};
 };
 
 } // namespace client
