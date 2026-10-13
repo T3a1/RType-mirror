@@ -27,14 +27,19 @@ std::variant<Packet, DecodeError> decodePayload(const PacketHeader &header,
 
 } // namespace
 
-bool encodePacket(const Packet &packet, ByteWriter &out)
+PacketType payloadType(const Payload &payload)
 {
-    PacketHeader header = packet.header;
-    header.type = std::visit(
+    return std::visit(
         [](const auto &message) {
             return std::remove_cvref_t<decltype(message)>::Type;
         },
-        packet.payload);
+        payload);
+}
+
+bool encodePacket(const Packet &packet, ByteWriter &out)
+{
+    PacketHeader header = packet.header;
+    header.type = payloadType(packet.payload);
     header.flags = isReliable(header.type) ? PacketFlag::Reliable : 0;
     header.payloadSize = 0;
     const std::size_t start = out.size();

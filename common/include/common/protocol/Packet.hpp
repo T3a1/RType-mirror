@@ -27,6 +27,8 @@ struct Packet {
     bool operator==(const Packet &) const = default;
 };
 
+[[nodiscard]] PacketType payloadType(const Payload &payload);
+
 // Appends the header then the payload to out. header.type, header.flags
 // and header.payloadSize are taken from the payload, not from
 // packet.header. False if the packet does not fit in MaxPacketSize.

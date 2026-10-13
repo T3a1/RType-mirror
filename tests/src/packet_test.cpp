@@ -29,18 +29,10 @@ std::vector<std::uint8_t> encodeBytes(const Packet &packet)
     return {writer.data().begin(), writer.data().end()};
 }
 
-PacketType typeOf(const Payload &payload)
-{
-    return std::visit(
-        [](const auto &message) {
-            return std::remove_cvref_t<decltype(message)>::Type;
-        },
-        payload);
-}
-
 Side senderOf(const Payload &payload)
 {
-    return canSend(Side::Client, typeOf(payload)) ? Side::Client : Side::Server;
+    return canSend(Side::Client, payloadType(payload)) ? Side::Client
+                                                       : Side::Server;
 }
 
 DecodeError decodeError(const std::vector<std::uint8_t> &bytes, Side sender)
@@ -68,7 +60,7 @@ Packet packetOf(Payload payload)
 // Header values encodePacket fills in, for comparing a decoded packet.
 Packet withComputedHeader(Packet packet, const std::vector<std::uint8_t> &bytes)
 {
-    packet.header.type = typeOf(packet.payload);
+    packet.header.type = payloadType(packet.payload);
     packet.header.flags =
         isReliable(packet.header.type) ? PacketFlag::Reliable : 0;
     packet.header.payloadSize =
