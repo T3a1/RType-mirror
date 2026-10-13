@@ -356,7 +356,9 @@ network thread and never reach the game thread.
 
 #### Outbound messages (game thread to network thread)
 
-Each outbound message has a **recipient**, a **delivery mode** and a payload:
+Each outbound message has a **recipient** and a payload. The delivery mode
+(reliable or not) is fixed by the payload type, as listed in
+[PROTOCOL.md](PROTOCOL.md#5-packet-types), so the game thread never chooses it:
 
 ```cpp
 struct Recipient {
@@ -365,11 +367,8 @@ struct Recipient {
     ClientId client; // used by One and AllExcept
 };
 
-enum class Delivery : std::uint8_t { Unreliable, Reliable };
-
 struct OutboundMessage {
     Recipient to;
-    Delivery delivery;
     std::variant<Welcome, Snapshot, GameEvent> payload;
 };
 ```
@@ -598,8 +597,8 @@ The client uses the same pattern with roles reversed:
 
 - `SIGINT` and `SIGTERM` (sent by `docker stop`) set the atomic `running` flag
   to `false`. The signal handler does nothing else.
-- The game loop finishes its current tick, pushes a best-effort `ServerClosing`
-  message to `All`, and stops.
+- The game loop finishes its current tick and stops. The network thread then
+  sends a best-effort `Disconnect{ServerClosing}` to every client.
 - The network thread sends what is left in the outbound queue, then stops; the
   game thread joins it.
 - A client closing its window does the same on its side: it sends a disconnect
