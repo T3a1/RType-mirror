@@ -250,15 +250,22 @@ def run_coverage() -> int:
 
 # ---------- Server and clients ----------
 def ensure_binary(name: str, override: str | None, *cmake_args: str) -> Path:
-    """Returns the binary, building it first if it is missing."""
+    """Returns the binary, built from the current sources. A binary given by
+    the user (SERVER_BIN, CLIENT_BIN) is used as is."""
+    binary = find_binary(name, override)
+    if binary is not None and override:
+        return binary
+    if binary is None:
+        log(f"{name} not found, configuring the build...")
+        configure(*cmake_args)
+    # Always build: it is almost instant when nothing changed, and a stale
+    # binary would silently ignore the latest changes.
+    ensure_tool("cmake")
+    log(f"Building {name}...")
+    build(name)
     binary = find_binary(name, override)
     if binary is None:
-        log(f"{name} not found, building it...")
-        configure(*cmake_args)
-        build(name)
-        binary = find_binary(name, override)
-        if binary is None:
-            raise LauncherError(f"{name} still not found after building it")
+        raise LauncherError(f"{name} still not found after building it")
     return binary
 
 
