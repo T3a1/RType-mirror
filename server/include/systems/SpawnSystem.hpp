@@ -8,7 +8,36 @@
 #ifndef SERVER_SYSTEMS_SPAWNSYSTEM_HPP
 #define SERVER_SYSTEMS_SPAWNSYSTEM_HPP
 
+#include "common/components/Collider.hpp"
+#include "common/components/Damage.hpp"
+#include "common/components/Enemy.hpp"
+#include "common/components/EntityType.hpp"
+#include "common/components/Health.hpp"
+#include "common/components/NetworkId.hpp"
+#include "common/components/Spawner.hpp"
+#include "common/components/Transform.hpp"
+#include "common/components/Velocity.hpp"
+#include "engine/Clock.hpp"
+#include "engine/Entity.hpp"
+#include "engine/Registry.hpp"
+#include "engine/Vec2.hpp"
+
+#include <random>
+#include <vector>
+
 namespace server {
+
+/**
+* A request to spawn an enemy.
+* @param type The type of the enemy to spawn.
+* @param position The position to spawn the enemy at.
+**/
+struct SpawnRequest {
+    rtype::EnemyType type;
+    engine::Vec2f position;
+};
+
+void spawnSystem(engine::Registry &registry, engine::Duration dt);
 
 } // namespace server
 

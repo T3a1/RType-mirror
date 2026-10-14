@@ -6,7 +6,77 @@
 */
 
 #include "systems/SpawnSystem.hpp"
+#include "engine/Logger.hpp"
 
 namespace server {
+
+#define SPAWN_X 1980.0F
+#define MIN_Y 60.0F
+#define MAX_Y 1020.0F
+#define ENEMY_SPEED 200.0F
+
+/**
+* Generates a random delay for the next spawn.
+* @param spawner The spawner to generate the delay for.
+* @return A random delay.
+**/
+engine::Duration randomDelay(rtype::Spawner &spawner)
+{
+    std::uniform_real_distribution<float> delay(spawner.minDelay.count(), spawner.maxDelay.count());
+
+    return engine::Duration{delay(spawner.randomGenerator)};
+}
+
+/**
+* Generates a random spawn request.
+* @param spawner The spawner to generate the request for.
+* @return A random spawn request.
+**/
+SpawnRequest randomRequest(rtype::Spawner &spawner)
+{
+    std::uniform_real_distribution<float> y(MIN_Y, MAX_Y);
+
+    return {.type = rtype::EnemyType::Basic,
+            .position = {.x = SPAWN_X, .y = y(spawner.randomGenerator)}};
+}
+
+/**
+* Spawns an enemy based on a spawn request.
+* @param registry The registry to spawn the enemy in.
+* @param request The spawn request containing the enemy type and position.
+**/
+void spawnEnemy(engine::Registry &registry, const SpawnRequest &request)
+{
+    const engine::Entity enemy = registry.create();
+
+    registry.emplace<rtype::Transform>(enemy, rtype::Transform{.position = request.position});
+    registry.emplace<rtype::Velocity>(enemy, rtype::Velocity{.value = {.x = -ENEMY_SPEED, .y = 0.0F}});
+    registry.emplace<rtype::Collider>(enemy,
+        rtype::Collider{.size = {.x = 64.0F, .y = 64.0F},
+                        .layer = rtype::CollisionLayer::Enemy,
+                        .mask = rtype::CollisionLayer::Player | rtype::CollisionLayer::PlayerProjectile});
+    registry.emplace<rtype::Health>(enemy, rtype::Health{.current = 100, .max = 100});
+    registry.emplace<rtype::Damage>(enemy);
+    registry.emplace<rtype::Enemy>(enemy, rtype::Enemy{.type = request.type});
+    registry.emplace<rtype::EntityType>(enemy, rtype::EntityType::EnemyBasic);
+    BB_INFO("Enemy spawned at y=" << request.position.y);
+}
+
+void spawnSystem(engine::Registry &registry, engine::Duration dt)
+{
+    std::vector<SpawnRequest> spawnRequests;
+
+    registry.each<rtype::Spawner>(
+        [&](engine::Entity, rtype::Spawner &spawner) {
+            spawner.timeUntilNextSpawn -= dt;
+            while (spawner.timeUntilNextSpawn.count() <= 0.0F) {
+                spawnRequests.push_back(randomRequest(spawner));
+                spawner.timeUntilNextSpawn += randomDelay(spawner);
+            }
+        });
+    for (const SpawnRequest &request : spawnRequests) {
+        spawnEnemy(registry, request);
+    }
+}
 
 } // namespace server

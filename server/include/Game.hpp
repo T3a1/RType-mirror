@@ -7,9 +7,15 @@
 
 #ifndef SERVER_GAME_HPP
 #define SERVER_GAME_HPP
+#include "common/components/Spawner.hpp"
+#include "common/systems/MovementSystem.hpp"
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"
+#include "systems/SpawnSystem.hpp"
+#include <algorithm>
 #include <atomic>
+#include <chrono>
+#include <thread>
 
 namespace server {
 class Game {
