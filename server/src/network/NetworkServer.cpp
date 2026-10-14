@@ -49,8 +49,9 @@ void NetworkServer::handleDatagram(std::size_t size)
     }
     auto it = m_sessions.find(m_remote);
     if (it == m_sessions.end()) {
-        if (std::holds_alternative<rtype::protocol::Connect>(packet->payload))
+        if (std::holds_alternative<rtype::protocol::Connect>(packet->payload)) {
             handleNewPeer();
+        }
         return;
     }
     handleSessionPacket(it->second);

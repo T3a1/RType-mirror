@@ -17,7 +17,7 @@
 namespace server {
 
 enum class Recipients : std::uint8_t { All, AllExcept, One };
-enum class InboundKind { Connected, Disconnected, In };
+enum class InboundKind : std::uint8_t { Connected, Disconnected, In };
 
 struct InboundMessage {
     std::uint32_t clientId;

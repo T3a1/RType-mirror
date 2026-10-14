@@ -24,7 +24,7 @@ namespace server {
 struct Session {
     std::uint32_t id{};
     rtype::protocol::ReliableChannel channel;
-    rtype::protocol::ReliableChannel::TimePoint lastHeard{};
+    rtype::protocol::ReliableChannel::TimePoint lastHeard;
 };
 
 class NetworkServer {
@@ -32,11 +32,14 @@ class NetworkServer {
     NetworkServer(engine::MessageQueue<InboundMessage> &inbound,
                   engine::MessageQueue<OutboundMessage> &outbound,
                   std::uint16_t port = rtype::protocol::DefaultPort)
-        : m_io(),
-          m_socket(m_io, asio::ip::udp::endpoint(asio::ip::udp::v4(), port)),
+        : m_socket(m_io, asio::ip::udp::endpoint(asio::ip::udp::v4(), port)),
           m_inbound(inbound), m_outbound(outbound)
     {
     }
+    NetworkServer(const NetworkServer &) = delete;
+    NetworkServer &operator=(const NetworkServer &) = delete;
+    NetworkServer(NetworkServer &&) = delete;
+    NetworkServer &operator=(NetworkServer &&) = delete;
     ~NetworkServer() { stop(); };
 
     void start();
@@ -50,14 +53,14 @@ class NetworkServer {
     std::thread m_serverThread;
     std::array<std::uint8_t, rtype::protocol::MaxPacketSize> m_buffer{};
     asio::ip::udp::endpoint m_remote;
-    std::map<asio::ip::udp::endpoint, Session> m_sessions{};
+    std::map<asio::ip::udp::endpoint, Session> m_sessions;
     std::uint32_t m_newCliendId = 1;
 
     void receive();
     void onReceive(const asio::error_code &error, std::size_t size);
     void handleDatagram(std::size_t size);
     void handleNewPeer();
-    void handleSessionPacket(Session &session);
+    static void handleSessionPacket(Session &session);
 };
 } // namespace server
 
