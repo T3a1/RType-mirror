@@ -34,7 +34,9 @@ class NetworkServer {
                   std::uint16_t port = rtype::protocol::DefaultPort)
         : m_io(),
           m_socket(m_io, asio::ip::udp::endpoint(asio::ip::udp::v4(), port)),
-          m_inbound(inbound), m_outbound(outbound) {};
+          m_inbound(inbound), m_outbound(outbound)
+    {
+    }
     ~NetworkServer() { stop(); };
 
     void start();
