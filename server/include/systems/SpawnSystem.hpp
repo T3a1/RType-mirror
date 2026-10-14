@@ -22,6 +22,7 @@
 #include "engine/Registry.hpp"
 #include "engine/Vec2.hpp"
 #include "SpawnRequests.hpp"
+#include "EnemyDefs.hpp"
 
 #include <random>
 #include <vector>

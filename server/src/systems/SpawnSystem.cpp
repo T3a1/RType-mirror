@@ -10,10 +10,9 @@
 
 namespace server {
 
-#define SPAWN_X 1980.0F
-#define MIN_Y 60.0F
-#define MAX_Y 1020.0F
-#define ENEMY_SPEED 200.0F
+constexpr float SPAWN_X = 1980.0F;
+constexpr float MIN_Y = 60.0F;
+constexpr float MAX_Y = 1020.0F;
 
 /**
 * Generates a random delay for the next spawn.
@@ -47,20 +46,24 @@ SpawnEnemy randomRequest(rtype::Spawner &spawner)
 **/
 void spawnEnemy(engine::Registry &registry, const SpawnEnemy &request)
 {
+    const EnemyDef &def = enemyDef(request.type);
     const engine::Entity enemy = registry.create();
 
     registry.emplace<rtype::Transform>(enemy, rtype::Transform{.position = request.position});
-    registry.emplace<rtype::Velocity>(enemy, rtype::Velocity{.value = {.x = -ENEMY_SPEED, .y = 0.0F}});
-    registry.emplace<rtype::Collider>(enemy,
-        rtype::Collider{.size = {.x = 64.0F, .y = 64.0F},
-                        .layer = rtype::CollisionLayer::Enemy,
-                        .mask = rtype::CollisionLayer::Player | rtype::CollisionLayer::PlayerProjectile});
-    registry.emplace<rtype::Health>(enemy, rtype::Health{.current = 100, .max = 100});
+    registry.emplace<rtype::Velocity>(enemy, rtype::Velocity{.value = {.x = -def.speed, .y = 0.0F}});
+    registry.emplace<rtype::Health>(enemy, rtype::Health{.current = def.health, .max = def.health});
     registry.emplace<rtype::Damage>(enemy);
     registry.emplace<rtype::Enemy>(enemy, rtype::Enemy{.type = request.type});
-    registry.emplace<rtype::EntityType>(enemy, rtype::EntityType::EnemyBasic);
-    BB_INFO("Enemy spawned at y=" << request.position.y);
+    registry.emplace<rtype::EntityType>(enemy, def.entityType);
+
+    registry.emplace<rtype::Collider>(enemy,
+        rtype::Collider{.size = def.size,
+                        .layer = rtype::CollisionLayer::Enemy,
+                        .mask = rtype::CollisionLayer::Player | rtype::CollisionLayer::PlayerProjectile});
+
+    BB_INFO("Enemy " << static_cast<int>(request.type) << " spawned at y=" << request.position.y);
 }
+
 
 void spawnSystem(engine::Registry &registry, engine::Duration dt)
 {
