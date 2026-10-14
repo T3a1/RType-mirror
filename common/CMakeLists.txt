@@ -18,6 +18,15 @@ target_include_directories(${PROJECT_NAME}
     PUBLIC include
 )
 
+find_package(Threads REQUIRED)
+find_package(asio CONFIG QUIET)
+if(NOT asio_FOUND)
+    find_path(ASIO_INCLUDE_DIR asio.hpp REQUIRED)
+    add_library(asio::asio INTERFACE IMPORTED)
+    target_include_directories(asio::asio INTERFACE ${ASIO_INCLUDE_DIR})
+    target_compile_definitions(asio::asio INTERFACE ASIO_STANDALONE)
+endif()
+
 target_link_libraries(${PROJECT_NAME}
-    PUBLIC r-type_engine
+    PUBLIC r-type_engine asio::asio Threads::Threads
 )
