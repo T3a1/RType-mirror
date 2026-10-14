@@ -26,6 +26,7 @@ enum class PacketType : std::uint8_t {
     GameEvent = 0x22,
 };
 
+
 inline constexpr std::array AllPacketTypes{
     PacketType::Connect,    PacketType::Accept,  PacketType::Reject,
     PacketType::Disconnect, PacketType::Ack,     PacketType::Input,

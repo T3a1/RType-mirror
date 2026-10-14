@@ -23,11 +23,8 @@ class ReliableChannel {
   public:
     using TimePoint = std::chrono::steady_clock::time_point;
 
-    // Fills the header but payloadSize. False if the peer has too many
-    // unacknowledged reliable packets: it must be disconnected.
     [[nodiscard]] bool prepare(Packet &packet, TimePoint now);
 
-    // False if the packet must be dropped (duplicate or out of order).
     [[nodiscard]] bool receive(const PacketHeader &header);
 
     [[nodiscard]] std::vector<Packet> resendsDue(TimePoint now);
