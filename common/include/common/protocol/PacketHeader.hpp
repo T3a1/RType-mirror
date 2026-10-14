@@ -15,6 +15,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <string_view>
 #include <variant>
 
 namespace rtype::protocol {
@@ -52,6 +53,33 @@ enum class DecodeError : std::uint8_t {
     WrongSender,
     BadPayload,
 };
+
+constexpr std::string_view toString(DecodeError error)
+{
+    switch (error) {
+    case DecodeError::TooShort:
+        return "Packet is too short";
+    case DecodeError::TooLarge:
+        return "Packet is too large";
+    case DecodeError::BadMagic:
+        return "Bad magic number";
+    case DecodeError::BadVersion:
+        return "Bad protocol version";
+    case DecodeError::UnknownType:
+        return "Unknown packet type";
+    case DecodeError::BadFlags:
+        return "Bad packet flags";
+    case DecodeError::BadReserved:
+        return "Bad reserved bytes";
+    case DecodeError::BadPayloadSize:
+        return "Bad payload size";
+    case DecodeError::WrongSender:
+        return "Wrong sender";
+    case DecodeError::BadPayload:
+        return "Bad payload";
+    }
+    return {};
+}
 
 void encodeHeader(const PacketHeader &header, ByteWriter &out);
 [[nodiscard]] std::variant<PacketHeader, DecodeError>
