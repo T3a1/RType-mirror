@@ -21,21 +21,12 @@
 #include "engine/Entity.hpp"
 #include "engine/Registry.hpp"
 #include "engine/Vec2.hpp"
+#include "SpawnRequests.hpp"
 
 #include <random>
 #include <vector>
 
 namespace server {
-
-/**
-* A request to spawn an enemy.
-* @param type The type of the enemy to spawn.
-* @param position The position to spawn the enemy at.
-**/
-struct SpawnRequest {
-    rtype::EnemyType type;
-    engine::Vec2f position;
-};
 
 void spawnSystem(engine::Registry &registry, engine::Duration dt);
 

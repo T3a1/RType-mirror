@@ -28,11 +28,11 @@ engine::Duration randomDelay(rtype::Spawner &spawner)
 }
 
 /**
-* Generates a random spawn request.
+* Generates a random enemy spawn request.
 * @param spawner The spawner to generate the request for.
 * @return A random spawn request.
 **/
-SpawnRequest randomRequest(rtype::Spawner &spawner)
+SpawnEnemy randomRequest(rtype::Spawner &spawner)
 {
     std::uniform_real_distribution<float> y(MIN_Y, MAX_Y);
 
@@ -45,7 +45,7 @@ SpawnRequest randomRequest(rtype::Spawner &spawner)
 * @param registry The registry to spawn the enemy in.
 * @param request The spawn request containing the enemy type and position.
 **/
-void spawnEnemy(engine::Registry &registry, const SpawnRequest &request)
+void spawnEnemy(engine::Registry &registry, const SpawnEnemy &request)
 {
     const engine::Entity enemy = registry.create();
 
@@ -64,7 +64,7 @@ void spawnEnemy(engine::Registry &registry, const SpawnRequest &request)
 
 void spawnSystem(engine::Registry &registry, engine::Duration dt)
 {
-    std::vector<SpawnRequest> spawnRequests;
+    std::vector<SpawnEnemy> spawnRequests;
 
     registry.each<rtype::Spawner>(
         [&](engine::Entity, rtype::Spawner &spawner) {
@@ -74,7 +74,7 @@ void spawnSystem(engine::Registry &registry, engine::Duration dt)
                 spawner.timeUntilNextSpawn += randomDelay(spawner);
             }
         });
-    for (const SpawnRequest &request : spawnRequests) {
+    for (const SpawnEnemy &request : spawnRequests) {
         spawnEnemy(registry, request);
     }
 }
