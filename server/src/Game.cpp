@@ -13,7 +13,7 @@
 
 namespace server {
 
-void Game::tick(engine::Duration dt)
+void Game::tick(engine::Duration /*dt*/)
 {
     // const auto messages = m_inbound.drain();
     // sessionSystem()

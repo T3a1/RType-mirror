@@ -97,7 +97,7 @@ void NetworkServer::handleDatagram(std::size_t size)
                  << rtype::protocol::toString(error));
         return;
     }
-    auto it = m_sessions.find(m_remote);
+    auto const it = m_sessions.find(m_remote);
     if (it == m_sessions.end()) {
         if (std::holds_alternative<rtype::protocol::Connect>(packet->payload)) {
             handleNewPeer(now);
@@ -111,9 +111,11 @@ void NetworkServer::removeSession(SessionIterator it,
                                   rtype::protocol::DisconnectReason reason)
 {
     BB_INFO("Client " << it->second.id << " disconnected");
-    pushInbound({.clientId = it->second.id,
-                 .kind = InboundKind::Disconnected,
-                 .reason = reason});
+    pushInbound({
+        .clientId = it->second.id,
+        .kind = InboundKind::Disconnected,
+        .reason = reason,
+    });
     m_sessions.erase(it);
 }
 
@@ -129,8 +131,11 @@ void NetworkServer::send(SessionIterator it,
         sendPacket(
             it->first,
             rtype::protocol::Packet{
-                .payload = rtype::protocol::Disconnect{
-                    .reason = rtype::protocol::DisconnectReason::Kicked}});
+                .payload =
+                    rtype::protocol::Disconnect{
+                        .reason = rtype::protocol::DisconnectReason::Kicked,
+                    },
+            });
         it->second.kicked = true;
         return;
     }
@@ -167,8 +172,11 @@ void NetworkServer::handleNewPeer(TimePoint now)
         sendPacket(
             m_remote,
             rtype::protocol::Packet{
-                .payload = rtype::protocol::Reject{
-                    .reason = rtype::protocol::RejectReason::ServerFull}});
+                .payload =
+                    rtype::protocol::Reject{
+                        .reason = rtype::protocol::RejectReason::ServerFull,
+                    },
+            });
         return;
     }
     const auto [it, inserted] = m_sessions.try_emplace(
@@ -188,10 +196,12 @@ void NetworkServer::handleSessionPacket(SessionIterator it,
     }
     if (const auto *input =
             std::get_if<rtype::protocol::Input>(&packet.payload)) {
-        pushInbound({.clientId = it->second.id,
-                     .kind = InboundKind::Input,
-                     .sequence = input->sequence,
-                     .actions = input->actions});
+        pushInbound({
+            .clientId = it->second.id,
+            .kind = InboundKind::Input,
+            .sequence = input->sequence,
+            .actions = input->actions,
+        });
     } else if (std::holds_alternative<rtype::protocol::Disconnect>(
                    packet.payload)) {
         removeSession(it, rtype::protocol::DisconnectReason::Left);
@@ -202,11 +212,14 @@ void NetworkServer::stop()
 {
     asio::post(m_io, [this] {
         for (const auto &[endpoint, session] : m_sessions) {
-            sendPacket(
-                endpoint,
-                {.payload = rtype::protocol::Disconnect{
-                     .reason =
-                         rtype::protocol::DisconnectReason::ServerClosing}});
+            sendPacket(endpoint,
+                       {
+                           .payload =
+                               rtype::protocol::Disconnect{
+                                   .reason = rtype::protocol::DisconnectReason::
+                                       ServerClosing,
+                               },
+                       });
         }
         m_io.stop();
     });
