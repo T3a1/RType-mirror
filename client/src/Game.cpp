@@ -32,7 +32,7 @@ namespace {
 constexpr int windowWidth = 1280;
 constexpr int windowHeight = 720;
 
-constexpr const char *backgroundPath = "assets/background.jpg";
+constexpr const char *backgroundPath = "assets/bg.jpg";
 constexpr float backgroundSpeed = 120.0F;
 
 } // namespace
