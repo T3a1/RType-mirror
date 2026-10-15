@@ -21,11 +21,16 @@
 
 namespace server {
 
+using TimePoint = rtype::protocol::ReliableChannel::TimePoint;
+
 struct Session {
     std::uint32_t id{};
     rtype::protocol::ReliableChannel channel;
-    rtype::protocol::ReliableChannel::TimePoint lastHeard;
+    TimePoint lastHeard;
+    bool kicked = false;
 };
+
+using SessionIterator = std::map<asio::ip::udp::endpoint, Session>::iterator;
 
 class NetworkServer {
   public:
@@ -40,7 +45,7 @@ class NetworkServer {
     NetworkServer &operator=(const NetworkServer &) = delete;
     NetworkServer(NetworkServer &&) = delete;
     NetworkServer &operator=(NetworkServer &&) = delete;
-    ~NetworkServer() { stop(); };
+    ~NetworkServer() { stop(); }
 
     void start();
     void stop();
@@ -55,12 +60,26 @@ class NetworkServer {
     asio::ip::udp::endpoint m_remote;
     std::map<asio::ip::udp::endpoint, Session> m_sessions;
     std::uint32_t m_newCliendId = 1;
+    asio::steady_timer m_timer{m_io};
 
     void receive();
     void onReceive(const asio::error_code &error, std::size_t size);
     void handleDatagram(std::size_t size);
-    void handleNewPeer();
-    static void handleSessionPacket(Session &session);
+    void handleNewPeer(TimePoint now);
+    void handleSessionPacket(SessionIterator it,
+                             const rtype::protocol::Packet &packet,
+                             TimePoint now);
+    void send(SessionIterator it, const rtype::protocol::Payload &payload,
+              TimePoint now);
+    void sendPacket(const asio::ip::udp::endpoint &endpoint,
+                    const rtype::protocol::Packet &packet);
+    void pushInbound(InboundMessage message);
+    void removeSession(SessionIterator it,
+                       rtype::protocol::DisconnectReason reason);
+    void scheduleUpdate();
+    void update(TimePoint now);
+    static bool isRecipient(const OutboundMessage &message,
+                            std::uint32_t clientId);
 };
 } // namespace server
 

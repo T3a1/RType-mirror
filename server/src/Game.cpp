@@ -9,14 +9,16 @@
 
 namespace server {
 
-void Game::tick(engine::Duration dt)
+void Game::tick(engine::Duration /*dt*/)
 {
     server::spawnSystem(m_registry, m_factory, dt);
     rtype::movementSystem(m_registry, dt);
+
     // Later, in this order: input, AI, collision, damage, death,
     // spawn, snapshot.
-
+    // rtype::movementSystem(m_registry, dt);
     m_registry.flush();
+    // ++m_tick;
 }
 
 void Game::run()
