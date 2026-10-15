@@ -20,6 +20,5 @@ Checks: >
   -readability-identifier-length,
   -readability-magic-numbers
 WarningsAsErrors: ''
-HeaderFilterRegex: '.*'
-ExcludeHeaderFilterRegex: '.*/build/.*'
+HeaderFilterRegex: '.*/((engine|common|server|client)/include|tests)/.*'
 FormatStyle: file

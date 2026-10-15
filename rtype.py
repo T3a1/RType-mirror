@@ -17,6 +17,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import urllib.request
 from pathlib import Path
 
 # ---------- Defaults (can be overridden by environment variables) ----------
@@ -39,6 +40,7 @@ BUILD_TYPE = "Release"
 JOBS = str(os.cpu_count() or 1)
 EXE = ".exe" if os.name == "nt" else ""
 TOOLS_BIN = TOOLS_DIR.resolve() / ("Scripts" if os.name == "nt" else "bin")
+PIP_PYZ_URL = "https://bootstrap.pypa.io/pip/pip.pyz"
 
 
 # ---------- Helpers ----------
@@ -80,20 +82,51 @@ def use_tools_dir() -> None:
         os.environ["PATH"] = os.environ.get("PATH", "") + os.pathsep + str(TOOLS_BIN)
 
 
+def has_pip(python: Path) -> bool:
+    return subprocess.run([str(python), "-m", "pip", "--version"],
+                          capture_output=True).returncode == 0
+
+
+def ensure_tools_env() -> Path:
+    """Creates TOOLS_DIR if needed and makes sure it has pip (also repairs an
+    environment left without pip). Returns its Python interpreter."""
+    python = TOOLS_BIN / f"python{EXE}"
+    if not python.is_file():
+        log(f"Creating the tools environment in {TOOLS_DIR}...")
+        # Without pip: Debian/Ubuntu strip ensurepip unless python3-venv is
+        # installed, and venv fails halfway when it is missing.
+        run(sys.executable, "-m", "venv", "--without-pip", TOOLS_DIR,
+            error="Could not create a Python virtual environment")
+        use_tools_dir()
+    if has_pip(python):
+        return python
+    log(f"Installing pip in {TOOLS_DIR}...")
+    if subprocess.run([str(python), "-m", "ensurepip", "--default-pip"],
+                      capture_output=True).returncode != 0:
+        # No ensurepip: use the official standalone pip to install pip.
+        pip_pyz = TOOLS_DIR / "pip.pyz"
+        try:
+            urllib.request.urlretrieve(PIP_PYZ_URL, pip_pyz)
+        except OSError as error:
+            raise LauncherError(f"Could not download {PIP_PYZ_URL}: {error}") from error
+        try:
+            run(python, pip_pyz, "install", "--quiet", "--disable-pip-version-check", "pip",
+                error="Could not install pip in the tools environment")
+        finally:
+            pip_pyz.unlink(missing_ok=True)
+    if not has_pip(python):
+        raise LauncherError(f"pip still not found in {TOOLS_DIR}")
+    return python
+
+
 def ensure_tool(tool: str) -> None:
     """Installs a missing Python-packaged tool (cmake, conan, gcovr) from PyPI
     into the project's virtual environment: no pipx, no admin rights, same on
     Linux and Windows."""
     if shutil.which(tool):
         return
-    if not TOOLS_BIN.is_dir():
-        log(f"Creating the tools environment in {TOOLS_DIR}...")
-        run(sys.executable, "-m", "venv", TOOLS_DIR,
-            error="Could not create a Python virtual environment "
-                  "(on Debian/Ubuntu: sudo apt install python3-venv)")
-        use_tools_dir()
+    python = ensure_tools_env()
     log(f"{tool} not found, installing it in {TOOLS_DIR}...")
-    python = TOOLS_BIN / f"python{EXE}"
     run(python, "-m", "pip", "install", "--quiet", "--disable-pip-version-check", tool,
         error=f"pip install {tool} failed")
     if shutil.which(tool) is None:
@@ -147,8 +180,8 @@ def build(target: str, build_dir: Path = BUILD_DIR) -> None:
         "--parallel", JOBS, error=f"{target} build failed")
 
 
-def configure(*cmake_args: str) -> None:
-    """Installs the Conan packages into BUILD_DIR, then configures it with the
+def configure(*cmake_args: str, build_dir: Path = BUILD_DIR) -> None:
+    """Installs the Conan packages into build_dir, then configures it with the
     Conan toolchain. Extra arguments are passed to CMake."""
     # The compiler comes first: pip builds Conan's dependencies (e.g. PyYAML)
     # from source when PyPI has no prebuilt wheel for this Python version.
@@ -162,12 +195,12 @@ def configure(*cmake_args: str) -> None:
         run("conan", "profile", "detect", quiet=True, error="conan profile detect failed")
 
     log("Installing the Conan packages...")
-    BUILD_DIR.mkdir(parents=True, exist_ok=True)
-    conan_log = BUILD_DIR / "conan-install.log"
+    build_dir.mkdir(parents=True, exist_ok=True)
+    conan_log = build_dir / "conan-install.log"
     with conan_log.open("w") as output:
         # Conan asks for the sudo password only if a system package is missing.
         status = subprocess.run(
-            ["conan", "install", ".", f"--output-folder={BUILD_DIR}", "--build=missing",
+            ["conan", "install", ".", f"--output-folder={build_dir}", "--build=missing",
              "-s", "compiler.cppstd=20", "-s", f"build_type={BUILD_TYPE}",
              "-c", f"tools.system.package_manager:mode={CONAN_SYSTEM_PACKAGES}",
              "-c", "tools.system.package_manager:sudo=True"],
@@ -180,12 +213,12 @@ def configure(*cmake_args: str) -> None:
     # CMake only reads the toolchain on a build folder's first configure: a
     # folder first configured without it must be configured from scratch.
     fresh = []
-    if (BUILD_DIR / "CMakeCache.txt").is_file() and not any(
+    if (build_dir / "CMakeCache.txt").is_file() and not any(
             "conan_toolchain.cmake" in path.read_text(errors="replace")
-            for path in BUILD_DIR.glob("CMakeFiles/*/CMakeSystem.cmake")):
-        log(f"{BUILD_DIR} was configured without Conan, reconfiguring it from scratch...")
+            for path in build_dir.glob("CMakeFiles/*/CMakeSystem.cmake")):
+        log(f"{build_dir} was configured without Conan, reconfiguring it from scratch...")
         fresh = ["--fresh"]
-    run("cmake", *fresh, "-B", BUILD_DIR, "-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake",
+    run("cmake", *fresh, "-B", build_dir, "-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake",
         f"-DCMAKE_BUILD_TYPE={BUILD_TYPE}", "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON", *cmake_args,
         quiet=True, error="CMake configuration failed")
 
@@ -242,9 +275,8 @@ def run_coverage() -> int:
     ensure_tool("cmake")
     ensure_tool("gcovr")
     log("Building the unit tests with coverage...")
-    run("cmake", "-B", COVERAGE_DIR, "-DBUILD_TESTS=ON", "-DENABLE_COVERAGE=ON",
-        "-DBUILD_CLIENT=OFF", quiet=True,
-        error="CMake configuration failed (is GoogleTest installed?)")
+    configure("-DBUILD_TESTS=ON", "-DENABLE_COVERAGE=ON", "-DBUILD_CLIENT=OFF",
+              build_dir=COVERAGE_DIR)
     build("r-type_tests", COVERAGE_DIR)
     # Counters add up across runs: start from zero.
     for counters in COVERAGE_DIR.rglob("*.gcda"):

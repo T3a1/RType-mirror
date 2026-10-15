@@ -32,6 +32,7 @@ constexpr int windowHeight = 720;
 
 Game::Game()
 {
+    SetTraceLogLevel(LOG_NONE);
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
     InitWindow(windowWidth, windowHeight, "R-Type");
     spawnTestEntities();

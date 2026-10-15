@@ -6,20 +6,19 @@
 */
 
 #include "Game.hpp"
-#include "common/systems/MovementSystem.hpp"
-#include <algorithm>
-#include <chrono>
-#include <thread>
 
 namespace server {
 
 void Game::tick(engine::Duration dt)
 {
+    server::spawnSystem(m_registry, m_factory, dt);
     rtype::movementSystem(m_registry, dt);
+    server::boundarySystem(m_registry);
+
     // Later, in this order: input, AI, collision, damage, death,
     // spawn, snapshot.
-
     m_registry.flush();
+    // ++m_tick;
 }
 
 void Game::run()
@@ -32,6 +31,9 @@ void Game::run()
 
     Clock::duration accumulator{0};
     Clock::time_point previous = Clock::now();
+
+    const engine::Entity world = m_registry.create();
+    m_registry.emplace<rtype::Spawner>(world);
 
     while (m_running) {
         const Clock::time_point now = Clock::now();
