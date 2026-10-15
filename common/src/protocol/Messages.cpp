@@ -166,7 +166,7 @@ bool decode(ByteReader &in, SnapshotPart &message)
     for (std::uint16_t i = 0; i < entityCount; ++i) {
         EntityState entity;
         entity.networkId = in.u32();
-        if (!readEnum(in, EntityType::EnemyMissile, entity.type)) {
+        if (!readEnum(in, EntityType::EnemyLarge, entity.type)) {
             return false;
         }
         entity.flags = in.u8();

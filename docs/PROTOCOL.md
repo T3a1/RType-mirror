@@ -220,6 +220,9 @@ right edge) but **MUST** be finite: NaN and infinities are invalid.
 | 3 | EnemyWave |
 | 4 | EnemyShooter |
 | 5 | EnemyMissile |
+| 6 | EnemySmall |
+| 7 | EnemyMedium |
+| 8 | EnemyLarge |
 
 ### `GameEvent` (0x22)
 
