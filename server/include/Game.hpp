@@ -12,6 +12,8 @@
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"
 #include "systems/SpawnSystem.hpp"
+#include "EntityFactory.hpp"
+
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -26,6 +28,7 @@ class Game {
   private:
     void tick(engine::Duration dt);
     engine::Registry m_registry;
+    EntityFactory m_factory;
     std::atomic<bool> m_running = true;
 
     static_assert(std::atomic<bool>::is_always_lock_free);
