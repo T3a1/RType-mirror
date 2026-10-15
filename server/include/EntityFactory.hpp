@@ -15,7 +15,9 @@
 #include "common/components/Enemy.hpp"
 #include "common/components/EntityType.hpp"
 #include "common/components/Health.hpp"
+#include "common/components/InputState.hpp"
 #include "common/components/NetworkId.hpp"
+#include "common/components/Player.hpp"
 #include "common/components/Transform.hpp"
 #include "common/components/Velocity.hpp"
 #include "engine/Entity.hpp"
@@ -35,6 +37,8 @@ class EntityFactory {
   public:
     engine::Entity create(engine::Registry &registry,
                           const SpawnEnemy &request);
+    engine::Entity create(engine::Registry &registry,
+                          const SpawnPlayer &request);
 
   private:
     std::uint32_t m_nextNetworkId = 1;

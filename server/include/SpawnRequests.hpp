@@ -11,6 +11,8 @@
 #include "common/components/Enemy.hpp"
 #include "engine/Vec2.hpp"
 
+#include <cstdint>
+
 namespace server {
 
 /**
@@ -20,6 +22,16 @@ namespace server {
  **/
 struct SpawnEnemy {
     rtype::EnemyType type = rtype::EnemyType::Basic;
+    engine::Vec2f position{};
+};
+
+/**
+ * A request to spawn a player.
+ * @param slot The slot of the player to spawn.
+ * @param position The position to spawn the player at.
+ **/
+struct SpawnPlayer {
+    std::uint8_t slot = 1;
     engine::Vec2f position{};
 };
 
