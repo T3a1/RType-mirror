@@ -20,6 +20,8 @@
 #include "common/components/Player.hpp"
 #include "common/components/Transform.hpp"
 #include "common/components/Velocity.hpp"
+#include "components/DestroyOffScreen.hpp"
+#include "components/KeepInPlayfield.hpp"
 #include "engine/Entity.hpp"
 #include "engine/Logger.hpp"
 #include "engine/Registry.hpp"
