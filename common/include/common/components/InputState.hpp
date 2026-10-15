@@ -19,6 +19,7 @@ inline constexpr std::uint8_t Down = 1U << 1U;
 inline constexpr std::uint8_t Left = 1U << 2U;
 inline constexpr std::uint8_t Right = 1U << 3U;
 inline constexpr std::uint8_t Fire = 1U << 4U;
+inline constexpr std::uint8_t All = 0x1F; // every bit above
 } // namespace Action
 
 // Actions held by a player during this tick, written from the network

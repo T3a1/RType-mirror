@@ -13,6 +13,10 @@ set(SOURCE_FILES
     src/player_control_system_test.cpp
     src/message_queue_test.cpp
     src/logger_test.cpp
+    src/byte_io_test.cpp
+    src/packet_test.cpp
+    src/packet_fuzz_test.cpp
+    src/reliable_channel_test.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
