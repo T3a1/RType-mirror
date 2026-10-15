@@ -62,8 +62,8 @@ jobs:
         run: cmake --build build
       - name: Run clang-tidy
         run: |
-          find engine common server client tests -name '*.cpp' \
-            | xargs -r clang-tidy -p build --quiet --warnings-as-errors='*'
+          "$(command -v run-clang-tidy || command -v run-clang-tidy-18)" \
+            -p build -quiet -j "$(nproc)" -warnings-as-errors='*'
       - name: Run tests
         run: ctest --test-dir build --output-on-failure
 

@@ -14,6 +14,7 @@ set(SOURCE_FILES
     src/systems/SnapshotSystem.cpp
     src/systems/SpawnSystem.cpp
     src/EntityFactory.cpp
+    src/network/NetworkServer.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})

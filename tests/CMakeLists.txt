@@ -16,6 +16,7 @@ set(SOURCE_FILES
     src/byte_io_test.cpp
     src/packet_test.cpp
     src/packet_fuzz_test.cpp
+    src/reliable_channel_test.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})

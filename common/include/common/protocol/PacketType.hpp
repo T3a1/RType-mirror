@@ -23,7 +23,7 @@ enum class PacketType : std::uint8_t {
     Input = 0x10,
     Snapshot = 0x20,
     Welcome = 0x21,
-    GameEvent = 0x22,
+    GameEvent = 0x22
 };
 
 inline constexpr std::array AllPacketTypes{

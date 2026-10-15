@@ -2,7 +2,7 @@
 
 # ---------- Build: fully static binary with musl (Alpine) ----------
 FROM alpine:3 AS build
-RUN apk add --no-cache build-base cmake linux-headers
+RUN apk add --no-cache build-base cmake linux-headers asio-dev
 WORKDIR /app
 COPY . .
 RUN cmake -B build \
