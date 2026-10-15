@@ -6,6 +6,7 @@
 */
 
 #include "Game.hpp"
+#include "Window.hpp"
 #include "common/components/InputState.hpp"
 #include "common/components/Transform.hpp"
 #include "common/components/Velocity.hpp"
@@ -17,6 +18,7 @@
 #include "common/systems/MovementSystem.hpp"
 #include "common/systems/PlayerControlSystem.hpp"
 #include "systems/BackgroundScrollSystem.hpp"
+#include "systems/DebugSpawnSystem.hpp"
 #include "systems/InputSystem.hpp"
 
 #include <raylib.h>
@@ -28,9 +30,6 @@
 namespace client {
 
 namespace {
-
-constexpr int windowWidth = 1280;
-constexpr int windowHeight = 720;
 
 constexpr const char *backgroundPath = "assets/bg.jpg";
 constexpr float backgroundSpeed = 120.0F;
@@ -74,6 +73,7 @@ void Game::update(engine::Duration dt)
 {
     // Later, in this order: input, network sync, interpolation, animation
     inputSystem(m_registry);
+    debugSpawnSystem(m_registry, m_random);
     rtype::playerControlSystem(m_registry);
     rtype::movementSystem(m_registry, dt);
     backgroundScrollSystem(m_registry, dt);

@@ -6,8 +6,10 @@ find_package(raylib REQUIRED)
 set(SOURCE_FILES
     src/main.cpp
     src/Game.cpp
+    src/EnemyFactory.cpp
     src/systems/BackgroundRenderSystem.cpp
     src/systems/BackgroundScrollSystem.cpp
+    src/systems/DebugSpawnSystem.cpp
     src/systems/InputSystem.cpp
     src/systems/RenderSystem.cpp
 )

@@ -13,6 +13,8 @@
 
 #include <raylib.h>
 
+#include <random>
+
 namespace client {
 
 // The client game: its own registry (a mirror of the server's world plus
@@ -45,6 +47,7 @@ class Game {
 
     engine::Registry m_registry;
     Texture2D m_backgroundTexture{};
+    std::mt19937 m_random{std::random_device{}()};
 };
 
 } // namespace client
