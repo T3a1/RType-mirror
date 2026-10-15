@@ -41,6 +41,8 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
                         .mask = rtype::CollisionLayer::Player |
                                 rtype::CollisionLayer::PlayerProjectile});
 
+    registry.emplace<DestroyOffScreen>(enemy);
+
     BB_DEBUG("Enemy " << static_cast<int>(request.type) << " spawned with id "
                       << networkId << " at y=" << request.position.y);
 
@@ -76,6 +78,8 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
                                 .mask = rtype::CollisionLayer::Enemy |
                                         rtype::CollisionLayer::EnemyProjectile |
                                         rtype::CollisionLayer::Obstacle});
+
+    registry.emplace<KeepInPlayfield>(player);
 
     BB_DEBUG("Player " << static_cast<int>(request.slot) << " spawned with id "
                        << networkId);

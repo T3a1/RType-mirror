@@ -12,6 +12,7 @@
 #include "common/systems/MovementSystem.hpp"
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"
+#include "systems/BoundarySystem.hpp"
 #include "systems/SpawnSystem.hpp"
 
 #include <algorithm>
