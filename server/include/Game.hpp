@@ -7,6 +7,7 @@
 
 #ifndef SERVER_GAME_HPP
 #define SERVER_GAME_HPP
+
 #include "EntityFactory.hpp"
 #include "common/components/Spawner.hpp"
 #include "common/systems/MovementSystem.hpp"
@@ -17,8 +18,8 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
-#include <thread>
 #include <cstdint>
+#include <thread>
 
 namespace server {
 
