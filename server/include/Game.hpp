@@ -7,9 +7,18 @@
 
 #ifndef SERVER_GAME_HPP
 #define SERVER_GAME_HPP
+#include "EntityFactory.hpp"
+#include "common/components/Spawner.hpp"
+#include "common/systems/MovementSystem.hpp"
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"
+#include "systems/BoundarySystem.hpp"
+#include "systems/SpawnSystem.hpp"
+
+#include <algorithm>
 #include <atomic>
+#include <chrono>
+#include <thread>
 
 namespace server {
 class Game {
@@ -20,6 +29,7 @@ class Game {
   private:
     void tick(engine::Duration dt);
     engine::Registry m_registry;
+    EntityFactory m_factory;
     std::atomic<bool> m_running = true;
 
     static_assert(std::atomic<bool>::is_always_lock_free);

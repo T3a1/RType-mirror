@@ -17,6 +17,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import urllib.request
 from pathlib import Path
 
 # ---------- Defaults (can be overridden by environment variables) ----------
@@ -39,6 +40,7 @@ BUILD_TYPE = "Release"
 JOBS = str(os.cpu_count() or 1)
 EXE = ".exe" if os.name == "nt" else ""
 TOOLS_BIN = TOOLS_DIR.resolve() / ("Scripts" if os.name == "nt" else "bin")
+PIP_PYZ_URL = "https://bootstrap.pypa.io/pip/pip.pyz"
 
 
 # ---------- Helpers ----------
@@ -80,20 +82,51 @@ def use_tools_dir() -> None:
         os.environ["PATH"] = os.environ.get("PATH", "") + os.pathsep + str(TOOLS_BIN)
 
 
+def has_pip(python: Path) -> bool:
+    return subprocess.run([str(python), "-m", "pip", "--version"],
+                          capture_output=True).returncode == 0
+
+
+def ensure_tools_env() -> Path:
+    """Creates TOOLS_DIR if needed and makes sure it has pip (also repairs an
+    environment left without pip). Returns its Python interpreter."""
+    python = TOOLS_BIN / f"python{EXE}"
+    if not python.is_file():
+        log(f"Creating the tools environment in {TOOLS_DIR}...")
+        # Without pip: Debian/Ubuntu strip ensurepip unless python3-venv is
+        # installed, and venv fails halfway when it is missing.
+        run(sys.executable, "-m", "venv", "--without-pip", TOOLS_DIR,
+            error="Could not create a Python virtual environment")
+        use_tools_dir()
+    if has_pip(python):
+        return python
+    log(f"Installing pip in {TOOLS_DIR}...")
+    if subprocess.run([str(python), "-m", "ensurepip", "--default-pip"],
+                      capture_output=True).returncode != 0:
+        # No ensurepip: use the official standalone pip to install pip.
+        pip_pyz = TOOLS_DIR / "pip.pyz"
+        try:
+            urllib.request.urlretrieve(PIP_PYZ_URL, pip_pyz)
+        except OSError as error:
+            raise LauncherError(f"Could not download {PIP_PYZ_URL}: {error}") from error
+        try:
+            run(python, pip_pyz, "install", "--quiet", "--disable-pip-version-check", "pip",
+                error="Could not install pip in the tools environment")
+        finally:
+            pip_pyz.unlink(missing_ok=True)
+    if not has_pip(python):
+        raise LauncherError(f"pip still not found in {TOOLS_DIR}")
+    return python
+
+
 def ensure_tool(tool: str) -> None:
     """Installs a missing Python-packaged tool (cmake, conan, gcovr) from PyPI
     into the project's virtual environment: no pipx, no admin rights, same on
     Linux and Windows."""
     if shutil.which(tool):
         return
-    if not TOOLS_BIN.is_dir():
-        log(f"Creating the tools environment in {TOOLS_DIR}...")
-        run(sys.executable, "-m", "venv", TOOLS_DIR,
-            error="Could not create a Python virtual environment "
-                  "(on Debian/Ubuntu: sudo apt install python3-venv)")
-        use_tools_dir()
+    python = ensure_tools_env()
     log(f"{tool} not found, installing it in {TOOLS_DIR}...")
-    python = TOOLS_BIN / f"python{EXE}"
     run(python, "-m", "pip", "install", "--quiet", "--disable-pip-version-check", tool,
         error=f"pip install {tool} failed")
     if shutil.which(tool) is None:
