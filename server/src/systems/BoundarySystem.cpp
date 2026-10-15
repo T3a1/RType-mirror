@@ -9,6 +9,8 @@
 
 namespace server {
 
+namespace {
+
 constexpr float OFFSCREEN_MARGIN = 200.0F;
 
 /** @brief Checks if a position is offscreen.
@@ -22,6 +24,8 @@ bool isOffScreen(const engine::Vec2f &position)
            position.y < -OFFSCREEN_MARGIN ||
            position.y > rtype::PlayfieldHeight + OFFSCREEN_MARGIN;
 }
+
+} // namespace
 
 /**
  * Applies the playfield edges: destroys the DestroyOffScreen entities that

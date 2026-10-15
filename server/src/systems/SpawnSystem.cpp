@@ -9,6 +9,8 @@
 
 namespace server {
 
+namespace {
+
 constexpr float SPAWN_X = 1980.0F;
 constexpr float MIN_Y = 60.0F;
 constexpr float MAX_Y = 1020.0F;
@@ -38,6 +40,8 @@ SpawnEnemy randomRequest(rtype::Spawner &spawner)
     return {.type = rtype::EnemyType::Basic,
             .position = {.x = SPAWN_X, .y = y(spawner.randomGenerator)}};
 }
+
+} // namespace
 
 void spawnSystem(engine::Registry &registry, EntityFactory &factory,
                  engine::Duration dt)

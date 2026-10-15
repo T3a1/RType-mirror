@@ -5,8 +5,8 @@
 ** BoundarySystem
 */
 
-#ifndef SERVER_BOUNDARY_SYSTEM_HPP
-#define SERVER_BOUNDARY_SYSTEM_HPP
+#ifndef SERVER_SYSTEMS_BOUNDARYSYSTEM_HPP
+#define SERVER_SYSTEMS_BOUNDARYSYSTEM_HPP
 
 #include "common/Playfield.hpp"
 #include "common/components/Collider.hpp"
@@ -25,4 +25,4 @@ void boundarySystem(engine::Registry &registry);
 
 } // namespace server
 
-#endif // SERVER_BOUNDARY_SYSTEM_HPP
+#endif // SERVER_SYSTEMS_BOUNDARYSYSTEM_HPP
