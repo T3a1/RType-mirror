@@ -7,12 +7,12 @@
 
 #ifndef SERVER_GAME_HPP
 #define SERVER_GAME_HPP
+#include "EntityFactory.hpp"
 #include "common/components/Spawner.hpp"
 #include "common/systems/MovementSystem.hpp"
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"
 #include "systems/SpawnSystem.hpp"
-#include "EntityFactory.hpp"
 
 #include <algorithm>
 #include <atomic>

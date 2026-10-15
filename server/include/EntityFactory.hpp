@@ -27,13 +27,14 @@
 namespace server {
 
 /**
-* Builds every gameplay entity of the server.
-* Each create() assembles a complete entity from a spawn request
-* and gives it a unique NetworkId.
-**/
+ * Builds every gameplay entity of the server.
+ * Each create() assembles a complete entity from a spawn request
+ * and gives it a unique NetworkId.
+ **/
 class EntityFactory {
   public:
-    engine::Entity create(engine::Registry &registry, const SpawnEnemy &request);
+    engine::Entity create(engine::Registry &registry,
+                          const SpawnEnemy &request);
 
   private:
     std::uint32_t m_nextNetworkId = 1;

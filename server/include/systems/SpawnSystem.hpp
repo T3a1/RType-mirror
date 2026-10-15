@@ -22,7 +22,8 @@
 
 namespace server {
 
-void spawnSystem(engine::Registry &registry, EntityFactory &factory, engine::Duration dt);
+void spawnSystem(engine::Registry &registry, EntityFactory &factory,
+                 engine::Duration dt);
 
 } // namespace server
 

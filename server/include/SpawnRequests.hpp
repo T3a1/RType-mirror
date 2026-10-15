@@ -14,13 +14,13 @@
 namespace server {
 
 /**
-* A request to spawn an enemy.
-* @param type The type of the enemy to spawn.
-* @param position The position to spawn the enemy at.
-**/
+ * A request to spawn an enemy.
+ * @param type The type of the enemy to spawn.
+ * @param position The position to spawn the enemy at.
+ **/
 struct SpawnEnemy {
-    rtype::EnemyType type;
-    engine::Vec2f position;
+    rtype::EnemyType type = rtype::EnemyType::Basic;
+    engine::Vec2f position{};
 };
 
 } // namespace server
