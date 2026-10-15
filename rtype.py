@@ -281,6 +281,14 @@ def run_coverage() -> int:
 
 
 # ---------- Server and clients ----------
+def conan_outdated(build_dir: Path = BUILD_DIR) -> bool:
+    """True if conanfile.txt is newer than the last Conan install: a build
+    would then miss the newly required packages."""
+    conan_log = build_dir / "conan-install.log"
+    return (not conan_log.is_file()
+            or (ROOT / "conanfile.txt").stat().st_mtime > conan_log.stat().st_mtime)
+
+
 def ensure_binary(name: str, override: str | None, *cmake_args: str) -> Path:
     """Returns the binary, built from the current sources. A binary given by
     the user (SERVER_BIN, CLIENT_BIN) is used as is."""
@@ -289,6 +297,9 @@ def ensure_binary(name: str, override: str | None, *cmake_args: str) -> Path:
         return binary
     if binary is None:
         log(f"{name} not found, configuring the build...")
+        configure(*cmake_args)
+    elif conan_outdated():
+        log("conanfile.txt changed since the last Conan install, configuring the build...")
         configure(*cmake_args)
     # Always build: it is almost instant when nothing changed, and a stale
     # binary would silently ignore the latest changes.
