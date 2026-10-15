@@ -15,12 +15,8 @@
 
 namespace rtype::protocol {
 
-// Largest datagram either side sends or accepts, header included. Below
-// the usual 1280-byte IPv6 minimum MTU, so packets are never fragmented.
 inline constexpr std::size_t MaxPacketSize = 1200;
 
-// Appends numbers to a fixed buffer in little-endian order. A write that
-// does not fit sets ok() to false for good, and nothing more is written.
 class ByteWriter {
   public:
     void u8(std::uint8_t value);

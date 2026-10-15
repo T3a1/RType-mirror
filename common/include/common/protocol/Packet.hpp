@@ -27,14 +27,10 @@ struct Packet {
     bool operator==(const Packet &) const = default;
 };
 
-// Appends the header then the payload to out. header.type, header.flags
-// and header.payloadSize are taken from the payload, not from
-// packet.header. False if the packet does not fit in MaxPacketSize.
+[[nodiscard]] PacketType payloadType(const Payload &payload);
+
 [[nodiscard]] bool encodePacket(const Packet &packet, ByteWriter &out);
 
-// The only entry point for received bytes: checks the header and that
-// sender may send this type, then decodes the payload, which must use
-// every byte.
 [[nodiscard]] std::variant<Packet, DecodeError>
 decodePacket(std::span<const std::uint8_t> datagram, Side sender);
 
