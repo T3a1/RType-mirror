@@ -15,11 +15,14 @@ namespace server {
 
 void Game::tick(engine::Duration dt)
 {
-    rtype::movementSystem(m_registry, dt);
+    // const auto messages = m_inbound.drain();
+    // sessionSystem()
+
     // Later, in this order: input, AI, collision, damage, death,
     // spawn, snapshot.
-
+    // rtype::movementSystem(m_registry, dt);
     m_registry.flush();
+    // ++m_tick;
 }
 
 void Game::run()
