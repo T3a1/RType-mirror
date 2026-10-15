@@ -201,16 +201,28 @@ def run_tidy(fix: bool) -> int:
     if shutil.which("run-clang-tidy"):
         log("Running clang-tidy on every file of the project...")
         command = ["run-clang-tidy", "-p", str(BUILD_DIR), "-quiet"] + (["-fix"] if fix else [])
-        return subprocess.run(command).returncode
+        status = subprocess.run(command).returncode
+    else:
+        log("run-clang-tidy not found, checking files one by one...")
+        files = sorted({entry["file"] for entry in json.loads(compile_commands.read_text())})
+        status = 0
+        for file in files:
+            command = ["clang-tidy", "-p", str(BUILD_DIR), "--quiet"] + (["--fix"] if fix else [])
+            if subprocess.run(command + [file]).returncode != 0:
+                status = 1
 
-    log("run-clang-tidy not found, checking files one by one...")
-    files = sorted({entry["file"] for entry in json.loads(compile_commands.read_text())})
-    status = 0
-    for file in files:
-        command = ["clang-tidy", "-p", str(BUILD_DIR), "--quiet"] + (["--fix"] if fix else [])
-        if subprocess.run(command + [file]).returncode != 0:
-            status = 1
+    if fix:
+        run_format()
     return status
+
+
+# Same files as the CI's formatting check.
+def run_format() -> None:
+    require("clang-format")
+    files = sorted(path for folder in ("engine", "common", "server", "client", "tests")
+                   for pattern in ("*.cpp", "*.hpp") for path in Path(folder).rglob(pattern))
+    log("Running clang-format on every file of the project...")
+    run("clang-format", "-i", *files, error="clang-format failed")
 
 
 # ---------- Unit tests (GoogleTest + CTest) ----------
@@ -341,7 +353,7 @@ def parse_args() -> argparse.Namespace:
     mode.add_argument("-t", "--tidy", action="store_true",
                       help="run clang-tidy on the project and exit")
     mode.add_argument("-f", "--fix", action="store_true",
-                      help="run clang-tidy, apply its automatic fixes and exit")
+                      help="apply the clang-tidy automatic fixes, run clang-format and exit")
     mode.add_argument("-T", "--test", action="store_true",
                       help="build and run the unit tests (GoogleTest) and exit")
     mode.add_argument("-C", "--coverage", action="store_true",
