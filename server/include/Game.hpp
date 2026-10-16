@@ -21,6 +21,7 @@
 #include "systems/SessionSystem.hpp"
 #include "systems/ShootSystem.hpp"
 #include "systems/SpawnSystem.hpp"
+#include "systems/SnapshotSystem.hpp"
 
 #include <algorithm>
 #include <atomic>
