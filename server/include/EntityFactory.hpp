@@ -18,8 +18,10 @@
 #include "common/components/InputState.hpp"
 #include "common/components/NetworkId.hpp"
 #include "common/components/Player.hpp"
+#include "common/components/Projectile.hpp"
 #include "common/components/Transform.hpp"
 #include "common/components/Velocity.hpp"
+#include "common/components/Weapon.hpp"
 #include "components/DestroyOffScreen.hpp"
 #include "components/KeepInPlayfield.hpp"
 #include "engine/Entity.hpp"
@@ -41,6 +43,8 @@ class EntityFactory {
                           const SpawnEnemy &request);
     engine::Entity create(engine::Registry &registry,
                           const SpawnPlayer &request);
+    engine::Entity create(engine::Registry &registry,
+                          const SpawnProjectile &request);
 
   private:
     std::uint32_t m_nextNetworkId = 1;

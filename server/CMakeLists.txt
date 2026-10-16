@@ -14,6 +14,7 @@ set(SOURCE_FILES
     src/systems/SnapshotSystem.cpp
     src/systems/SpawnSystem.cpp
     src/systems/BoundarySystem.cpp
+    src/systems/ShootSystem.cpp
     src/EntityFactory.cpp
     src/network/NetworkServer.cpp
 )

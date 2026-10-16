@@ -11,9 +11,11 @@
 #include "EntityFactory.hpp"
 #include "common/components/Spawner.hpp"
 #include "common/systems/MovementSystem.hpp"
+#include "common/systems/PlayerControlSystem.hpp"
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"
 #include "systems/BoundarySystem.hpp"
+#include "systems/ShootSystem.hpp"
 #include "systems/SpawnSystem.hpp"
 
 #include <algorithm>

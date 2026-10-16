@@ -9,6 +9,7 @@
 #define SERVER_SPAWNREQUESTS_HPP
 
 #include "common/components/Enemy.hpp"
+#include "engine/Entity.hpp"
 #include "engine/Vec2.hpp"
 
 #include <cstdint>
@@ -33,6 +34,20 @@ struct SpawnEnemy {
 struct SpawnPlayer {
     std::uint8_t slot = 1;
     engine::Vec2f position{};
+};
+
+/**
+ * A request to spawn a projectile.
+ * @param owner The entity that owns the projectile.
+ * @param position The position to spawn the projectile at.
+ * @param velocity The velocity of the projectile.
+ * @param fromPlayer Whether the projectile was fired by a player or an enemy.
+ **/
+struct SpawnProjectile {
+    engine::Entity owner{};
+    engine::Vec2f position{};
+    engine::Vec2f velocity{};
+    bool fromPlayer = true;
 };
 
 } // namespace server
