@@ -8,6 +8,7 @@
 #ifndef SERVER_NETWORKMESSAGES_HPP
 #define SERVER_NETWORKMESSAGES_HPP
 #include "common/protocol/Packet.hpp"
+#include "engine/MessageQueue.hpp"
 #include <cstdint>
 
 namespace server {
@@ -29,6 +30,9 @@ struct OutboundMessage {
     std::uint32_t cliendId = 0;
     rtype::protocol::Payload payload = rtype::protocol::Accept{};
 };
+
+using Inbound = engine::MessageQueue<InboundMessage>;
+using Outbound = engine::MessageQueue<OutboundMessage>;
 
 } // namespace server
 

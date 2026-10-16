@@ -47,7 +47,7 @@ int main(int /*argc*/, char * /*argv*/[])
         return ExitError;
     }
 
-    server::Game game;
+    server::Game game(inbound, outbound);
     if (std::signal(SIGINT, onSignal) == SIG_ERR ||
         std::signal(SIGTERM, onSignal) == SIG_ERR) {
         BB_FATAL("Failed to install the signal handlers");

@@ -9,4 +9,11 @@
 
 namespace server {
 
+void sessionSystem(engine::Registry const &registry,
+                   const std::vector<InboundMessage> &messages,
+                   Players const &players, EntityFactory const &factory,
+                   Outbound const &outbound, std::uint32_t tick)
+{
+}
+
 } // namespace server

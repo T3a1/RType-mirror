@@ -34,20 +34,28 @@ struct EnemyDef {
 /**
  * An array of all enemy definitions.
  **/
-inline constexpr std::array<EnemyDef, 3> ENEMY_DEFS = {{
-    {.speed = 200.0F,
-     .health = 100,
-     .size = {.x = 64.0F, .y = 64.0F},
-     .entityType = rtype::EntityType::EnemyBasic},
-    {.speed = 250.0F,
-     .health = 50,
-     .size = {.x = 64.0F, .y = 64.0F},
-     .entityType = rtype::EntityType::EnemyWave},
-    {.speed = 100.0F,
-     .health = 100,
-     .size = {.x = 64.0F, .y = 64.0F},
-     .entityType = rtype::EntityType::EnemyShooter},
-}};
+inline constexpr std::array<EnemyDef, 3> ENEMY_DEFS = {
+    {
+        {
+            .speed = 200.0F,
+            .health = 100,
+            .size = {.x = 64.0F, .y = 64.0F},
+            .entityType = rtype::EntityType::EnemyBasic,
+        },
+        {
+            .speed = 250.0F,
+            .health = 50,
+            .size = {.x = 64.0F, .y = 64.0F},
+            .entityType = rtype::EntityType::EnemyWave,
+        },
+        {
+            .speed = 100.0F,
+            .health = 100,
+            .size = {.x = 64.0F, .y = 64.0F},
+            .entityType = rtype::EntityType::EnemyShooter,
+        },
+    },
+};
 
 /**
  * Get the definition of an enemy by its type.

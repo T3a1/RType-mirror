@@ -37,8 +37,10 @@ SpawnEnemy randomRequest(rtype::Spawner &spawner)
 {
     std::uniform_real_distribution<float> y(MIN_Y, MAX_Y);
 
-    return {.type = rtype::EnemyType::Basic,
-            .position = {.x = SPAWN_X, .y = y(spawner.randomGenerator)}};
+    return {
+        .type = rtype::EnemyType::Basic,
+        .position = {.x = SPAWN_X, .y = y(spawner.randomGenerator)},
+    };
 }
 
 } // namespace
