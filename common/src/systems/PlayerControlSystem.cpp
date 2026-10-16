@@ -49,4 +49,15 @@ void playerControlSystem(engine::Registry &registry)
         });
 }
 
+/**
+ * Arms the weapon of each player holding the Fire action.
+ **/
+void playerFireSystem(engine::Registry &registry)
+{
+    registry.each<Weapon, rtype::InputState>(
+        [](engine::Entity, Weapon &weapon, const rtype::InputState &input) {
+            weapon.triggered = (input.actions & rtype::Action::Fire) != 0;
+        });
+}
+
 } // namespace rtype
