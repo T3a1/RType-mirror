@@ -17,6 +17,7 @@
 #include "network/NetworkMessages.hpp"
 #include "systems/BoundarySystem.hpp"
 #include "systems/LifetimeSystem.hpp"
+#include "systems/NetworkInputSystem.hpp"
 #include "systems/SessionSystem.hpp"
 #include "systems/ShootSystem.hpp"
 #include "systems/SpawnSystem.hpp"

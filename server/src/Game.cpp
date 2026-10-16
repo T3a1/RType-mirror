@@ -14,6 +14,7 @@ void Game::tick(engine::Duration dt)
     const auto messages = m_inbound.drain();
     server::sessionSystem(m_registry, messages, m_players, m_factory,
                           m_outbound, m_tick);
+    server::networkInputSystem(m_registry, messages, m_players);
     rtype::playerFireSystem(m_registry);
     server::spawnSystem(m_registry, m_factory, dt);
     server::shootSystem(m_registry, m_factory, dt);
