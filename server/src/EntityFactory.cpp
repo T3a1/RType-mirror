@@ -107,8 +107,7 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
         projectile, rtype::Velocity{.value = request.velocity});
     registry.emplace<rtype::Projectile>(
         projectile, rtype::Projectile{.owner = request.owner});
-    registry.emplace<rtype::Damage>(projectile,
-                                    rtype::Damage{.points = 50});
+    registry.emplace<rtype::Damage>(projectile, rtype::Damage{.points = 50});
 
     if (request.fromPlayer) {
         registry.emplace<rtype::EntityType>(projectile,
