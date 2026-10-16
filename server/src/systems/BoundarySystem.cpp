@@ -55,8 +55,6 @@ void boundarySystem(engine::Registry &registry)
             transform.position.y =
                 std::clamp(transform.position.y, halfHeight,
                            rtype::PlayfieldHeight - halfHeight);
-            BB_DEBUG("Clamped to " << transform.position.x << ", "
-                                   << transform.position.y);
         });
 }
 
