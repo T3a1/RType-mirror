@@ -15,6 +15,7 @@ void Game::tick(engine::Duration dt)
     server::spawnSystem(m_registry, m_factory, dt);
     server::shootSystem(m_registry, m_factory, dt);
     rtype::movementSystem(m_registry, dt);
+    server::lifetimeSystem(m_registry, dt);
     server::boundarySystem(m_registry);
 
     // Later, in this order: input, AI, collision, damage, death,

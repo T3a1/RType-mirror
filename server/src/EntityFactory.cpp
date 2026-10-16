@@ -130,6 +130,7 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
                                     rtype::CollisionLayer::Obstacle});
     }
 
+    registry.emplace<rtype::Lifetime>(projectile);
     registry.emplace<DestroyOffScreen>(projectile);
 
     BB_DEBUG("Projectile spawned with id " << networkId

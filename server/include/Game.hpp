@@ -15,6 +15,7 @@
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"
 #include "systems/BoundarySystem.hpp"
+#include "systems/LifetimeSystem.hpp"
 #include "systems/ShootSystem.hpp"
 #include "systems/SpawnSystem.hpp"
 

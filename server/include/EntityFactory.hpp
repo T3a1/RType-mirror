@@ -16,6 +16,7 @@
 #include "common/components/EntityType.hpp"
 #include "common/components/Health.hpp"
 #include "common/components/InputState.hpp"
+#include "common/components/Lifetime.hpp"
 #include "common/components/NetworkId.hpp"
 #include "common/components/Player.hpp"
 #include "common/components/Projectile.hpp"
