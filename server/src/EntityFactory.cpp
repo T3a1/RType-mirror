@@ -80,10 +80,61 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
                                         rtype::CollisionLayer::Obstacle});
 
     registry.emplace<KeepInPlayfield>(player);
+    registry.emplace<rtype::Weapon>(player);
 
     BB_DEBUG("Player " << static_cast<int>(request.slot) << " spawned with id "
                        << networkId);
     return player;
+}
+
+/**
+ * Creates a projectile from a spawn request.
+ * @param registry The registry to create the projectile in.
+ * @param request The owner, position, velocity and side of the projectile.
+ * @return The created entity.
+ **/
+engine::Entity EntityFactory::create(engine::Registry &registry,
+                                     const SpawnProjectile &request)
+{
+    const engine::Entity projectile = registry.create();
+    const std::uint32_t networkId = m_nextNetworkId++;
+
+    registry.emplace<rtype::NetworkId>(projectile,
+                                       rtype::NetworkId{.value = networkId});
+    registry.emplace<rtype::Transform>(
+        projectile, rtype::Transform{.position = request.position});
+    registry.emplace<rtype::Velocity>(
+        projectile, rtype::Velocity{.value = request.velocity});
+    registry.emplace<rtype::Projectile>(
+        projectile, rtype::Projectile{.owner = request.owner});
+    registry.emplace<rtype::Damage>(projectile, rtype::Damage{.points = 50});
+
+    if (request.fromPlayer) {
+        registry.emplace<rtype::EntityType>(projectile,
+                                            rtype::EntityType::PlayerMissile);
+        registry.emplace<rtype::Collider>(
+            projectile,
+            rtype::Collider{.size = {.x = 16.0F, .y = 8.0F},
+                            .layer = rtype::CollisionLayer::PlayerProjectile,
+                            .mask = rtype::CollisionLayer::Enemy |
+                                    rtype::CollisionLayer::Obstacle});
+    } else {
+        registry.emplace<rtype::EntityType>(projectile,
+                                            rtype::EntityType::EnemyMissile);
+        registry.emplace<rtype::Collider>(
+            projectile,
+            rtype::Collider{.size = {.x = 16.0F, .y = 8.0F},
+                            .layer = rtype::CollisionLayer::EnemyProjectile,
+                            .mask = rtype::CollisionLayer::Player |
+                                    rtype::CollisionLayer::Obstacle});
+    }
+
+    registry.emplace<rtype::Lifetime>(projectile);
+    registry.emplace<DestroyOffScreen>(projectile);
+
+    BB_DEBUG("Projectile spawned with id " << networkId
+                                           << " at x=" << request.position.x);
+    return projectile;
 }
 
 } // namespace server
