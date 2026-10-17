@@ -7,8 +7,6 @@
 
 #include "systems/DamageSystem.hpp"
 
-#include "systems/DamageSystem.hpp"
-
 namespace server {
 
 namespace {
