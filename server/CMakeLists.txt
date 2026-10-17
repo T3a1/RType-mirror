@@ -4,6 +4,7 @@ project(r-type_server)
 set(SOURCE_FILES
     src/main.cpp
     src/Game.cpp
+    src/Despawn.cpp
     src/systems/CollisionSystem.cpp
     src/systems/DamageSystem.cpp
     src/systems/DeathSystem.cpp

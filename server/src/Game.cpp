@@ -11,17 +11,25 @@ namespace server {
 
 void Game::tick(engine::Duration dt)
 {
+    const auto messages = m_inbound.drain();
+    server::sessionSystem(m_registry, messages, m_players, m_factory,
+                          m_outbound, m_tick);
+    server::networkInputSystem(m_registry, messages, m_players);
     rtype::playerFireSystem(m_registry);
     server::spawnSystem(m_registry, m_factory, dt);
     server::shootSystem(m_registry, m_factory, dt);
+    rtype::playerControlSystem(m_registry);
     rtype::movementSystem(m_registry, dt);
-    server::lifetimeSystem(m_registry, dt);
-    server::boundarySystem(m_registry);
+    server::lifetimeSystem(m_registry, dt, m_outbound);
+    server::boundarySystem(m_registry, m_outbound);
 
     // Later, in this order: input, AI, collision, damage, death,
     // spawn, snapshot.
     m_registry.flush();
-    // ++m_tick;
+    if (m_tick % 3 == 0) {
+        server::snapshotSystem(m_registry, m_players, m_outbound, m_tick);
+    }
+    ++m_tick;
 }
 
 void Game::run()

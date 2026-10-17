@@ -23,11 +23,16 @@ SpawnProjectile shotRequest(engine::Entity shooter,
 {
     const float direction = fromPlayer ? 1.0F : -1.0F;
 
-    return {.owner = shooter,
-            .position = {.x = transform.position.x + (direction * 40.0F),
-                         .y = transform.position.y},
-            .velocity = {.x = direction * 100.0F, .y = 0.0F},
-            .fromPlayer = fromPlayer};
+    return {
+        .owner = shooter,
+        .position =
+            {
+                .x = transform.position.x + (direction * 40.0F),
+                .y = transform.position.y,
+            },
+        .velocity = {.x = direction * 100.0F, .y = 0.0F},
+        .fromPlayer = fromPlayer,
+    };
 }
 
 } // namespace

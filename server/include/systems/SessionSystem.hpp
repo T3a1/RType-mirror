@@ -7,8 +7,17 @@
 
 #ifndef SERVER_SYSTEMS_SESSIONSYSTEM_HPP
 #define SERVER_SYSTEMS_SESSIONSYSTEM_HPP
+#include "EntityFactory.hpp"
+#include "Players.hpp"
+#include "engine/Registry.hpp"
+#include "network/NetworkMessages.hpp"
 
 namespace server {
+
+void sessionSystem(engine::Registry &registry,
+                   const std::vector<InboundMessage> &messages,
+                   Players &players, EntityFactory &factory, Outbound &outbound,
+                   std::uint32_t tick);
 
 } // namespace server
 

@@ -31,15 +31,16 @@ bool isOffScreen(const engine::Vec2f &position)
  * Applies the playfield edges: destroys the DestroyOffScreen entities that
  * left it, and clamps the KeepInPlayfield ones inside it.
  * @param registry The registry to update.
+ * @param outbound Where the destructions are announced to the clients.
  **/
-void boundarySystem(engine::Registry &registry)
+void boundarySystem(engine::Registry &registry, Outbound &outbound)
 {
     registry.each<DestroyOffScreen, rtype::Transform>(
         [&](engine::Entity entity, const DestroyOffScreen &,
             const rtype::Transform &transform) {
             if (isOffScreen(transform.position)) {
                 BB_DEBUG("Destroyed off-screen at x=" << transform.position.x);
-                registry.destroy(entity);
+                despawn(registry, entity, outbound);
             }
         });
 

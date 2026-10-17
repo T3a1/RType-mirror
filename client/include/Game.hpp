@@ -10,6 +10,11 @@
 
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"
+#include "network/NetworkClient.hpp"
+#include "systems/NetworkSyncSystem.hpp"
+
+#include <cstdint>
+#include <string>
 
 namespace client {
 
@@ -18,7 +23,8 @@ namespace client {
 // per displayed frame with a variable time step.
 class Game {
   public:
-    Game();
+    // Throws if the server address cannot be resolved.
+    Game(const std::string &host, std::uint16_t port);
     ~Game();
 
     Game(const Game &) = delete;
@@ -30,11 +36,13 @@ class Game {
     void run();
 
   private:
-    void update(engine::Duration dt);
+    void update();
     void render();
-    void spawnTestEntities();
+    void drawStatus() const;
 
+    NetworkClient m_network;
     engine::Registry m_registry;
+    SyncState m_sync;
 };
 
 } // namespace client

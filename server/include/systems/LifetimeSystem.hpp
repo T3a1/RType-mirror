@@ -8,6 +8,7 @@
 #ifndef SERVER_SYSTEMS_LIFETIMESYSTEM_HPP
 #define SERVER_SYSTEMS_LIFETIMESYSTEM_HPP
 
+#include "Despawn.hpp"
 #include "common/components/Lifetime.hpp"
 #include "engine/Clock.hpp"
 #include "engine/Entity.hpp"
@@ -16,7 +17,8 @@
 
 namespace server {
 
-void lifetimeSystem(engine::Registry &registry, engine::Duration dt);
+void lifetimeSystem(engine::Registry &registry, engine::Duration dt,
+                    Outbound &outbound);
 
 } // namespace server
 

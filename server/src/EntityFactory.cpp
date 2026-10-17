@@ -35,11 +35,12 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
     registry.emplace<rtype::EntityType>(enemy, stat.entityType);
 
     registry.emplace<rtype::Collider>(
-        enemy,
-        rtype::Collider{.size = stat.size,
-                        .layer = rtype::CollisionLayer::Enemy,
-                        .mask = rtype::CollisionLayer::Player |
-                                rtype::CollisionLayer::PlayerProjectile});
+        enemy, rtype::Collider{
+                   .size = stat.size,
+                   .layer = rtype::CollisionLayer::Enemy,
+                   .mask = rtype::CollisionLayer::Player |
+                           rtype::CollisionLayer::PlayerProjectile,
+               });
 
     registry.emplace<DestroyOffScreen>(enemy);
 
@@ -73,11 +74,13 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
                                     rtype::Health{.current = 100, .max = 100});
     registry.emplace<rtype::EntityType>(player, rtype::EntityType::PlayerShip);
     registry.emplace<rtype::Collider>(
-        player, rtype::Collider{.size = {.x = 64.0F, .y = 64.0F},
-                                .layer = rtype::CollisionLayer::Player,
-                                .mask = rtype::CollisionLayer::Enemy |
-                                        rtype::CollisionLayer::EnemyProjectile |
-                                        rtype::CollisionLayer::Obstacle});
+        player, rtype::Collider{
+                    .size = {.x = 64.0F, .y = 64.0F},
+                    .layer = rtype::CollisionLayer::Player,
+                    .mask = rtype::CollisionLayer::Enemy |
+                            rtype::CollisionLayer::EnemyProjectile |
+                            rtype::CollisionLayer::Obstacle,
+                });
 
     registry.emplace<KeepInPlayfield>(player);
     registry.emplace<rtype::Weapon>(player);
@@ -113,20 +116,22 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
         registry.emplace<rtype::EntityType>(projectile,
                                             rtype::EntityType::PlayerMissile);
         registry.emplace<rtype::Collider>(
-            projectile,
-            rtype::Collider{.size = {.x = 16.0F, .y = 8.0F},
+            projectile, rtype::Collider{
+                            .size = {.x = 16.0F, .y = 8.0F},
                             .layer = rtype::CollisionLayer::PlayerProjectile,
                             .mask = rtype::CollisionLayer::Enemy |
-                                    rtype::CollisionLayer::Obstacle});
+                                    rtype::CollisionLayer::Obstacle,
+                        });
     } else {
         registry.emplace<rtype::EntityType>(projectile,
                                             rtype::EntityType::EnemyMissile);
         registry.emplace<rtype::Collider>(
-            projectile,
-            rtype::Collider{.size = {.x = 16.0F, .y = 8.0F},
+            projectile, rtype::Collider{
+                            .size = {.x = 16.0F, .y = 8.0F},
                             .layer = rtype::CollisionLayer::EnemyProjectile,
                             .mask = rtype::CollisionLayer::Player |
-                                    rtype::CollisionLayer::Obstacle});
+                                    rtype::CollisionLayer::Obstacle,
+                        });
     }
 
     registry.emplace<rtype::Lifetime>(projectile);
