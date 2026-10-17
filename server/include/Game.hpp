@@ -17,6 +17,7 @@
 #include "network/NetworkMessages.hpp"
 #include "systems/BoundarySystem.hpp"
 #include "systems/CollisionSystem.hpp"
+#include "systems/DamageSystem.hpp"
 #include "systems/LifetimeSystem.hpp"
 #include "systems/NetworkInputSystem.hpp"
 #include "systems/SessionSystem.hpp"

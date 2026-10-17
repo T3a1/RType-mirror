@@ -22,6 +22,7 @@ void Game::tick(engine::Duration dt)
     rtype::movementSystem(m_registry, dt);
     const std::vector<Collision> collisions =
         server::collisionSystem(m_registry);
+    server::damageSystem(m_registry, collisions, m_outbound);
     server::lifetimeSystem(m_registry, dt, m_outbound);
     server::boundarySystem(m_registry, m_outbound);
     // Later, in this order: input, AI, collision, damage, death,
