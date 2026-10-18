@@ -10,6 +10,11 @@
 
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"
+#include "network/NetworkClient.hpp"
+#include "systems/NetworkSyncSystem.hpp"
+
+#include <cstdint>
+#include <string>
 
 #include <raylib.h>
 
@@ -20,7 +25,8 @@ namespace client {
 // per displayed frame with a variable time step.
 class Game {
   public:
-    Game();
+    // Throws if the server address cannot be resolved.
+    Game(const std::string &host, std::uint16_t port);
     ~Game();
 
     Game(const Game &) = delete;
@@ -41,10 +47,12 @@ class Game {
      * and stays owned by the Game, which unloads it in its destructor.
      */
     void spawnBackground();
-    void spawnTestEntities();
+    void drawStatus() const;
 
+    NetworkClient m_network;
     engine::Registry m_registry;
     Texture2D m_backgroundTexture{};
+    SyncState m_sync;
 };
 
 } // namespace client

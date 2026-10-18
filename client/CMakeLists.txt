@@ -8,7 +8,10 @@ set(SOURCE_FILES
     src/Game.cpp
     src/systems/BackgroundRenderSystem.cpp
     src/systems/BackgroundScrollSystem.cpp
+    src/network/NetworkClient.cpp
+    src/systems/HudSystem.cpp
     src/systems/InputSystem.cpp
+    src/systems/NetworkSyncSystem.cpp
     src/systems/RenderSystem.cpp
 )
 

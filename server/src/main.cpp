@@ -35,9 +35,9 @@ void onSignal(int signal)
 
 int main(int /*argc*/, char * /*argv*/[])
 {
-    engine::Logger::instance().start(engine::LogLevel::Debug);
+    engine::Logger::instance().start(engine::LogLevel::Info);
 
-    engine::MessageQueue<server::InboundMessage> inbound;
+    engine::MessageQueue<server::InboundMessage> inbound(1024);
     engine::MessageQueue<server::OutboundMessage> outbound;
     std::unique_ptr<server::NetworkServer> network;
     try {
@@ -47,7 +47,7 @@ int main(int /*argc*/, char * /*argv*/[])
         return ExitError;
     }
 
-    server::Game game;
+    server::Game game(inbound, outbound);
     if (std::signal(SIGINT, onSignal) == SIG_ERR ||
         std::signal(SIGTERM, onSignal) == SIG_ERR) {
         BB_FATAL("Failed to install the signal handlers");

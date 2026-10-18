@@ -9,12 +9,6 @@
 
 namespace server {
 
-/**
- * Creates an enemy from a spawn request.
- * @param registry The registry to create the enemy in.
- * @param request The type and position of the enemy.
- * @return The created entity.
- **/
 engine::Entity EntityFactory::create(engine::Registry &registry,
                                      const SpawnEnemy &request)
 {
@@ -35,13 +29,18 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
     registry.emplace<rtype::EntityType>(enemy, stat.entityType);
 
     registry.emplace<rtype::Collider>(
-        enemy,
-        rtype::Collider{.size = stat.size,
-                        .layer = rtype::CollisionLayer::Enemy,
-                        .mask = rtype::CollisionLayer::Player |
-                                rtype::CollisionLayer::PlayerProjectile});
+        enemy, rtype::Collider{
+                   .size = stat.size,
+                   .layer = rtype::CollisionLayer::Enemy,
+                   .mask = rtype::CollisionLayer::Player |
+                           rtype::CollisionLayer::PlayerProjectile,
+               });
 
     registry.emplace<DestroyOffScreen>(enemy);
+    if (stat.fireInterval.count() > 0.0F) {
+        registry.emplace<rtype::Weapon>(
+            enemy, rtype::Weapon{.fireInterval = stat.fireInterval});
+    }
 
     BB_DEBUG("Enemy " << static_cast<int>(request.type) << " spawned with id "
                       << networkId << " at y=" << request.position.y);
@@ -49,12 +48,6 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
     return enemy;
 }
 
-/**
- * Creates a player from a spawn request.
- * @param registry The registry to create the player in.
- * @param request The slot and position of the player.
- * @return The created entity.
- **/
 engine::Entity EntityFactory::create(engine::Registry &registry,
                                      const SpawnPlayer &request)
 {
@@ -70,20 +63,72 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
         player, rtype::Transform{.position = request.position});
     registry.emplace<rtype::Velocity>(player);
     registry.emplace<rtype::Health>(player,
-                                    rtype::Health{.current = 100, .max = 100});
+                                    rtype::Health{
+                                        .current = rtype::PlayerMaxHealth,
+                                        .max = rtype::PlayerMaxHealth,
+                                    });
     registry.emplace<rtype::EntityType>(player, rtype::EntityType::PlayerShip);
     registry.emplace<rtype::Collider>(
-        player, rtype::Collider{.size = {.x = 64.0F, .y = 64.0F},
-                                .layer = rtype::CollisionLayer::Player,
-                                .mask = rtype::CollisionLayer::Enemy |
-                                        rtype::CollisionLayer::EnemyProjectile |
-                                        rtype::CollisionLayer::Obstacle});
+        player, rtype::Collider{
+                    .size = {.x = 64.0F, .y = 64.0F},
+                    .layer = rtype::CollisionLayer::Player,
+                    .mask = rtype::CollisionLayer::Enemy |
+                            rtype::CollisionLayer::EnemyProjectile |
+                            rtype::CollisionLayer::Obstacle,
+                });
 
     registry.emplace<KeepInPlayfield>(player);
+    registry.emplace<rtype::Weapon>(player);
 
     BB_DEBUG("Player " << static_cast<int>(request.slot) << " spawned with id "
                        << networkId);
     return player;
+}
+
+engine::Entity EntityFactory::create(engine::Registry &registry,
+                                     const SpawnProjectile &request)
+{
+    const engine::Entity projectile = registry.create();
+    const std::uint32_t networkId = m_nextNetworkId++;
+
+    registry.emplace<rtype::NetworkId>(projectile,
+                                       rtype::NetworkId{.value = networkId});
+    registry.emplace<rtype::Transform>(
+        projectile, rtype::Transform{.position = request.position});
+    registry.emplace<rtype::Velocity>(
+        projectile, rtype::Velocity{.value = request.velocity});
+    registry.emplace<rtype::Projectile>(
+        projectile, rtype::Projectile{.owner = request.owner});
+    registry.emplace<rtype::Damage>(projectile, rtype::Damage{.points = 50});
+
+    if (request.fromPlayer) {
+        registry.emplace<rtype::EntityType>(projectile,
+                                            rtype::EntityType::PlayerMissile);
+        registry.emplace<rtype::Collider>(
+            projectile, rtype::Collider{
+                            .size = {.x = 16.0F, .y = 8.0F},
+                            .layer = rtype::CollisionLayer::PlayerProjectile,
+                            .mask = rtype::CollisionLayer::Enemy |
+                                    rtype::CollisionLayer::Obstacle,
+                        });
+    } else {
+        registry.emplace<rtype::EntityType>(projectile,
+                                            rtype::EntityType::EnemyMissile);
+        registry.emplace<rtype::Collider>(
+            projectile, rtype::Collider{
+                            .size = {.x = 16.0F, .y = 8.0F},
+                            .layer = rtype::CollisionLayer::EnemyProjectile,
+                            .mask = rtype::CollisionLayer::Player |
+                                    rtype::CollisionLayer::Obstacle,
+                        });
+    }
+
+    registry.emplace<rtype::Lifetime>(projectile);
+    registry.emplace<DestroyOffScreen>(projectile);
+
+    BB_DEBUG("Projectile spawned with id " << networkId
+                                           << " at x=" << request.position.x);
+    return projectile;
 }
 
 } // namespace server

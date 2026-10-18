@@ -18,9 +18,20 @@ namespace rtype::protocol {
 
 namespace {
 
+/**
+ * @brief Checks a player slot read from the network.
+ * @param slot The slot to check.
+ * @return `true` if it is between 1 and MaxPlayers.
+ **/
 bool isValidSlot(std::uint8_t slot) { return slot >= 1 && slot <= MaxPlayers; }
 
-// Reads a one-byte enum whose values run from 0 to last.
+/**
+ * @brief Reads a one-byte enum whose values run from 0 to `last`.
+ * @param in The reader to read from.
+ * @param last The highest valid value of the enum.
+ * @param out Set to the value read if it is valid.
+ * @return `true` if the byte is a valid value.
+ **/
 template <typename Enum> bool readEnum(ByteReader &in, Enum last, Enum &out)
 {
     const std::uint8_t value = in.u8();

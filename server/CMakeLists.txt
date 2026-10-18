@@ -4,6 +4,7 @@ project(r-type_server)
 set(SOURCE_FILES
     src/main.cpp
     src/Game.cpp
+    src/Despawn.cpp
     src/systems/CollisionSystem.cpp
     src/systems/DamageSystem.cpp
     src/systems/DeathSystem.cpp
@@ -14,6 +15,8 @@ set(SOURCE_FILES
     src/systems/SnapshotSystem.cpp
     src/systems/SpawnSystem.cpp
     src/systems/BoundarySystem.cpp
+    src/systems/ShootSystem.cpp
+    src/systems/LifetimeSystem.cpp
     src/EntityFactory.cpp
     src/network/NetworkServer.cpp
 )

@@ -8,11 +8,12 @@
 #ifndef CLIENT_SYSTEMS_INPUTSYSTEM_HPP
 #define CLIENT_SYSTEMS_INPUTSYSTEM_HPP
 
-#include "engine/Registry.hpp"
+#include <cstdint>
 
 namespace client {
 
-void inputSystem(engine::Registry &registry);
+// Actions held this frame, as Action bits.
+[[nodiscard]] std::uint8_t inputSystem();
 
 } // namespace client
 

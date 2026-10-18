@@ -8,6 +8,7 @@
 #ifndef SERVER_SYSTEMS_BOUNDARYSYSTEM_HPP
 #define SERVER_SYSTEMS_BOUNDARYSYSTEM_HPP
 
+#include "Despawn.hpp"
 #include "common/Playfield.hpp"
 #include "common/components/Collider.hpp"
 #include "common/components/Transform.hpp"
@@ -21,7 +22,7 @@
 
 namespace server {
 
-void boundarySystem(engine::Registry &registry);
+void boundarySystem(engine::Registry &registry, Outbound &outbound);
 
 } // namespace server
 
