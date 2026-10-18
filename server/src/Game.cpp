@@ -16,6 +16,7 @@ void Game::tick(engine::Duration dt)
                           m_outbound, m_tick);
     server::networkInputSystem(m_registry, messages, m_players);
     rtype::playerFireSystem(m_registry);
+    server::enemyAISystem(m_registry);
     server::spawnSystem(m_registry, m_factory, dt);
     server::shootSystem(m_registry, m_factory, dt);
     rtype::playerControlSystem(m_registry);

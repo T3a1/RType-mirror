@@ -19,6 +19,7 @@
 #include "systems/CollisionSystem.hpp"
 #include "systems/DamageSystem.hpp"
 #include "systems/DeathSystem.hpp"
+#include "systems/EnemyAISystem.hpp"
 #include "systems/LifetimeSystem.hpp"
 #include "systems/NetworkInputSystem.hpp"
 #include "systems/SessionSystem.hpp"
@@ -35,10 +36,33 @@
 
 namespace server {
 
+/**
+ * @class Game
+ * @brief Runs the authoritative game simulation of the server.
+ *
+ * The game owns the registry, the entity factory and the connected players.
+ * It talks to the network thread only through the inbound and outbound
+ * queues, and runs every system once per fixed 60 Hz tick.
+ **/
 class Game {
   public:
+    /**
+     * @brief Runs the game loop at a fixed 60 Hz tick until stop() is
+     * called.
+     **/
     void run();
+
+    /**
+     * @brief Asks the game loop to stop after the current tick; safe to
+     * call from another thread or a signal handler.
+     **/
     void stop();
+
+    /**
+     * @brief Creates a game connected to the network queues.
+     * @param inbound The messages received from the clients.
+     * @param outbound The messages to send to the clients.
+     **/
     Game(Inbound &inbound, Outbound &outbound)
         : m_inbound(inbound), m_outbound(outbound)
     {
