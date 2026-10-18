@@ -7,7 +7,6 @@
 
 #include "systems/InputSystem.hpp"
 #include "common/components/InputState.hpp"
-#include "engine/Entity.hpp"
 
 #include <raylib.h>
 
@@ -33,22 +32,15 @@ constexpr std::array bindings{
 
 } // namespace
 
-void inputSystem(engine::Registry &registry)
+std::uint8_t inputSystem()
 {
-    // IsKeyDown is true on every frame while the key is held: we want the
-    // full state, not the press/release events.
     std::uint8_t actions = 0;
     for (const KeyBinding &binding : bindings) {
         if (IsKeyDown(binding.key)) {
             actions |= binding.action;
         }
     }
-
-    // Only the local player has an InputState on the client.
-    registry.each<rtype::InputState>(
-        [actions](engine::Entity, rtype::InputState &input) {
-            input.actions = actions;
-        });
+    return actions;
 }
 
 } // namespace client

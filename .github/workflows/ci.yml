@@ -4,13 +4,12 @@ on:
   push:
     branches: ['**']
     tags: ['*']
-  pull_request:
-    branches: [main, dev]
   workflow_dispatch:
 
 env:
   EPITECH_REPO: git@github.com:EpitechPGE3-2026/G-ING-500-LIL-5-1-rtype-3.git
 
+# Every job is skipped on the Epitech repo: the forward job pushes this file there too.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -18,6 +17,7 @@ concurrency:
 jobs:
   format:
     name: Check formatting
+    if: github.repository != 'EpitechPGE3-2026/G-ING-500-LIL-5-1-rtype-3'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -27,45 +27,51 @@ jobs:
             | xargs -r clang-format --dry-run --Werror
 
   build-and-test:
-    name: Build, lint and test
+    name: Build and test
+    if: github.repository != 'EpitechPGE3-2026/G-ING-500-LIL-5-1-rtype-3'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends cmake ninja-build libgtest-dev libgmock-dev clang-tidy
-      - name: Install Conan
-        run: |
-          pipx install conan
-          conan profile detect
-      - name: Cache the Conan packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.conan2/p
-          key: conan-${{ runner.os }}-${{ hashFiles('conanfile.txt') }}
-      - name: Install the Conan packages
-        # Raylib needs the X11/OpenGL system headers: let Conan install them with apt.
-        run: |
-          conan install . --output-folder=build --build=missing \
-            -s compiler.cppstd=20 -s build_type=Release \
-            -c tools.system.package_manager:mode=install \
-            -c tools.system.package_manager:sudo=True
-      - name: Configure
-        run: |
-          cmake -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake \
-            -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - uses: ./.github/actions/setup
       - name: Build
         run: cmake --build build
-      - name: Run clang-tidy
-        run: |
-          find engine common server client tests -name '*.cpp' \
-            | xargs -r clang-tidy -p build --quiet --warnings-as-errors='*'
       - name: Run tests
         run: ctest --test-dir build --output-on-failure
 
+  # clang-tidy only needs compile_commands.json, not the build: split it over 4 runners.
+  lint:
+    name: Lint (${{ matrix.shard }}/4)
+    if: github.repository != 'EpitechPGE3-2026/G-ING-500-LIL-5-1-rtype-3'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Run clang-tidy
+        # Each shard takes one file out of four; xargs fails if any clang-tidy run fails.
+        run: |
+          jq -r '.[].file' build/compile_commands.json | sort \
+            | awk -v k=${{ matrix.shard }} 'NR % 4 == k - 1' \
+            | xargs -r -P "$(nproc)" -n 1 clang-tidy -p build -quiet --warnings-as-errors='*'
+
+  # Keeps the check name required by the "Protect main" ruleset.
+  gate:
+    name: Build, lint and test
+    needs: [build-and-test, lint]
+    if: ${{ !cancelled() && github.repository != 'EpitechPGE3-2026/G-ING-500-LIL-5-1-rtype-3' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check the build, test and lint results
+        run: |
+          test "${{ needs.build-and-test.result }}" = success
+          test "${{ needs.lint.result }}" = success
+
   docker:
     name: Build server image
+    if: github.repository != 'EpitechPGE3-2026/G-ING-500-LIL-5-1-rtype-3'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -74,9 +80,9 @@ jobs:
 
   forward:
     name: Push to the Epitech repo
-    needs: [format, build-and-test, docker]
-    # Only from the mirror, only on pushes (not PRs), and only when every job above passed.
-    if: github.event_name == 'push' && github.repository != 'EpitechPGE3-2026/G-ING-500-LIL-5-1-rtype-3'
+    needs: [format, gate, docker]
+    # Only on pushes (not manual runs), and only when every job above passed (so never on the Epitech repo).
+    if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     concurrency:
       group: forward-${{ github.ref }}

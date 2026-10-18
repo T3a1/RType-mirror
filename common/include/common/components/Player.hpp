@@ -12,6 +12,8 @@
 
 namespace rtype {
 
+inline constexpr int PlayerMaxHealth = 100;
+
 struct Player {
     std::uint8_t slot = 0;
     std::uint32_t score = 0;

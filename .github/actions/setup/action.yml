@@ -1,0 +1,33 @@
+name: Set up the build
+description: Install Conan and its packages, then configure CMake.
+runs:
+  using: composite
+  steps:
+    - name: Install dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends cmake ninja-build clang-tidy
+    - name: Install Conan
+      shell: bash
+      run: |
+        pipx install conan
+        conan profile detect
+    - name: Cache the Conan packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.conan2/p
+        key: conan-${{ runner.os }}-${{ hashFiles('conanfile.txt') }}
+    - name: Install the Conan packages
+      # Raylib needs the X11/OpenGL system headers: let Conan install them with apt.
+      shell: bash
+      run: |
+        conan install . --output-folder=build --build=missing \
+          -s compiler.cppstd=20 -s build_type=Release \
+          -c tools.system.package_manager:mode=install \
+          -c tools.system.package_manager:sudo=True
+    - name: Configure
+      shell: bash
+      run: |
+        cmake -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake \
+          -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
