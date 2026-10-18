@@ -21,9 +21,11 @@ namespace client {
 struct Background {
     /** @brief Image to scroll, its right edge must match its left edge. */
     Texture2D texture{};
-    /** @brief Scroll speed in texture pixels per second, positive scrolls to the left. */
+    /** @brief Scroll speed in texture pixels per second, positive scrolls to
+     * the left. */
     float speed = 0.0F;
-    /** @brief Texture column drawn at the left edge of the window, in [0, width). */
+    /** @brief Texture column drawn at the left edge of the window, in [0,
+     * width). */
     float offset = 0.0F;
 };
 
