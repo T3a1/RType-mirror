@@ -71,7 +71,10 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
         player, rtype::Transform{.position = request.position});
     registry.emplace<rtype::Velocity>(player);
     registry.emplace<rtype::Health>(player,
-                                    rtype::Health{.current = 100, .max = 100});
+                                    rtype::Health{
+                                        .current = rtype::PlayerMaxHealth,
+                                        .max = rtype::PlayerMaxHealth,
+                                    });
     registry.emplace<rtype::EntityType>(player, rtype::EntityType::PlayerShip);
     registry.emplace<rtype::Collider>(
         player, rtype::Collider{

@@ -14,6 +14,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 
 namespace server {
 
@@ -23,12 +24,14 @@ namespace server {
  * @param health The health of the enemy.
  * @param size The size of the enemy.
  * @param entityType The entity type of the enemy (Basic, Wave, Shooter...).
+ * @param score The points earned by the player who destroys it.
  **/
 struct EnemyDef {
     float speed = 0.0F;
     int health = 0;
     engine::Vec2f size{};
     rtype::EntityType entityType = rtype::EntityType::EnemyBasic;
+    std::uint32_t score = 0;
 };
 
 /**
@@ -41,18 +44,21 @@ inline constexpr std::array<EnemyDef, 3> ENEMY_DEFS = {
             .health = 100,
             .size = {.x = 64.0F, .y = 64.0F},
             .entityType = rtype::EntityType::EnemyBasic,
+            .score = 100,
         },
         {
             .speed = 250.0F,
             .health = 50,
             .size = {.x = 64.0F, .y = 64.0F},
             .entityType = rtype::EntityType::EnemyWave,
+            .score = 50,
         },
         {
             .speed = 100.0F,
             .health = 100,
             .size = {.x = 64.0F, .y = 64.0F},
             .entityType = rtype::EntityType::EnemyShooter,
+            .score = 150,
         },
     },
 };

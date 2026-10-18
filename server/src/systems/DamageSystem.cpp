@@ -12,6 +12,26 @@ namespace server {
 namespace {
 
 /**
+ * Gives the points of a destroyed enemy to the player who fired the
+ * projectile that destroyed it.
+ * @param registry The registry holding both entities.
+ * @param projectile The projectile that dealt the last hit.
+ * @param target The destroyed entity.
+ **/
+void awardKill(engine::Registry &registry, engine::Entity projectile,
+               engine::Entity target)
+{
+    const auto *shot = registry.tryGet<rtype::Projectile>(projectile);
+    const auto *enemy = registry.tryGet<rtype::Enemy>(target);
+    if (shot == nullptr || enemy == nullptr) {
+        return;
+    }
+    if (auto *shooter = registry.tryGet<rtype::Player>(shot->owner)) {
+        shooter->score += enemyDef(enemy->type).score;
+    }
+}
+
+/**
  * Applies the Damage of an attacker to the Health of a target.
  * @param registry The registry holding both entities.
  * @param attacker The entity that deals the damage.
@@ -32,6 +52,9 @@ void hit(engine::Registry &registry, engine::Entity attacker,
     }
     health->current -= damage->points;
     BB_DEBUG("Entity " << target.id << " hit - Health " << health->current);
+    if (health->current <= 0) {
+        awardKill(registry, attacker, target);
+    }
 
     if (registry.has<rtype::Projectile>(attacker)) {
         alreadyHit.push_back(attacker);

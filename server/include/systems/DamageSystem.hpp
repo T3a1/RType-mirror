@@ -9,8 +9,11 @@
 #define SERVER_SYSTEMS_DAMAGESYSTEM_HPP
 
 #include "Despawn.hpp"
+#include "EnemyDefs.hpp"
 #include "common/components/Damage.hpp"
+#include "common/components/Enemy.hpp"
 #include "common/components/Health.hpp"
+#include "common/components/Player.hpp"
 #include "common/components/Projectile.hpp"
 #include "engine/Entity.hpp"
 #include "engine/Logger.hpp"
