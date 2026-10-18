@@ -24,6 +24,13 @@ using namespace rtype::protocol;
 
 constexpr std::uint32_t DestroyedMemory = 300;
 
+/**
+ * @brief Builds an opaque raylib color.
+ * @param red The red component, 0 to 255.
+ * @param green The green component, 0 to 255.
+ * @param blue The blue component, 0 to 255.
+ * @return The color.
+ **/
 constexpr Color rgb(unsigned char red, unsigned char green, unsigned char blue)
 {
     return {.r = red, .g = green, .b = blue, .a = 255};
@@ -33,6 +40,12 @@ constexpr engine::Vec2f ShipSize{.x = 64.0F, .y = 32.0F};
 constexpr engine::Vec2f EnemySize{.x = 64.0F, .y = 64.0F};
 constexpr engine::Vec2f MissileSize{.x = 16.0F, .y = 8.0F};
 
+/**
+ * @brief Returns how an entity type is drawn.
+ * @param type The type of the entity.
+ * @param local Whether it is the local player's ship.
+ * @return Its size in playfield units, color and layer.
+ **/
 Sprite spriteOf(rtype::EntityType type, bool local)
 {
     switch (type) {
@@ -56,6 +69,13 @@ Sprite spriteOf(rtype::EntityType type, bool local)
     return {.size = EnemySize};
 }
 
+/**
+ * @brief Creates or updates the local copy of one snapshot entity, unless
+ * it was destroyed recently.
+ * @param registry The client's registry.
+ * @param entity The entity record from the snapshot.
+ * @param state The sync state.
+ **/
 void applyEntity(engine::Registry &registry, const EntityState &entity,
                  SyncState &state)
 {
@@ -86,6 +106,13 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
     state.entities.emplace(entity.networkId, created);
 }
 
+/**
+ * @brief Applies one snapshot part if it is not older than the last one,
+ * and forgets destroyed ids older than DestroyedMemory ticks.
+ * @param registry The client's registry.
+ * @param snapshot The snapshot part.
+ * @param state The sync state.
+ **/
 void applySnapshot(engine::Registry &registry, const SnapshotPart &snapshot,
                    SyncState &state)
 {
@@ -104,6 +131,13 @@ void applySnapshot(engine::Registry &registry, const SnapshotPart &snapshot,
     });
 }
 
+/**
+ * @brief Applies a game event: destroys the entity of EntityDestroyed and
+ * logs the player events.
+ * @param registry The client's registry.
+ * @param event The event.
+ * @param state The sync state.
+ **/
 void applyEvent(engine::Registry &registry, const GameEvent &event,
                 SyncState &state)
 {
@@ -129,6 +163,13 @@ void applyEvent(engine::Registry &registry, const GameEvent &event,
     }
 }
 
+/**
+ * @brief Records the local player's ship and slot, and recolors the ship
+ * if it already exists.
+ * @param registry The client's registry.
+ * @param welcome The Welcome payload.
+ * @param state The sync state.
+ **/
 void applyWelcome(engine::Registry &registry, const Welcome &welcome,
                   SyncState &state)
 {

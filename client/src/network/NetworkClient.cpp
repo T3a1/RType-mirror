@@ -25,6 +25,15 @@ constexpr std::chrono::milliseconds AckDelay{50};
 
 } // namespace
 
+/**
+ * @struct NetworkClient::Impl
+ * @brief The Asio objects of the client, kept out of the header.
+ * @param io The context the socket belongs to; never run.
+ * @param socket The non-blocking UDP socket.
+ * @param server The server's address; datagrams from elsewhere are dropped.
+ * @param channel The reliability state of the connection.
+ * @param buffer Receives one datagram at a time.
+ **/
 struct NetworkClient::Impl {
     asio::io_context io;
     asio::ip::udp::socket socket{io};

@@ -21,6 +21,12 @@ namespace server {
 
 namespace {
 
+/**
+ * @brief Returns the health of an entity as sent in a snapshot.
+ * @param registry The registry holding the entity.
+ * @param entity The entity.
+ * @return Its health points clamped to 0..65535, or 0 if it has no Health.
+ **/
 std::uint16_t healthOf(engine::Registry &registry, engine::Entity entity)
 {
     const auto *health = registry.tryGet<rtype::Health>(entity);
@@ -31,6 +37,12 @@ std::uint16_t healthOf(engine::Registry &registry, engine::Entity entity)
         health->current, 0, int{std::numeric_limits<std::uint16_t>::max()}));
 }
 
+/**
+ * @brief Builds the snapshot record of every networked entity.
+ * @param registry The registry to read.
+ * @return One record per entity with a NetworkId, an EntityType and a
+ * Transform.
+ **/
 std::vector<rtype::protocol::EntityState>
 entityStates(engine::Registry &registry)
 {
@@ -49,6 +61,12 @@ entityStates(engine::Registry &registry)
     return states;
 }
 
+/**
+ * @brief Builds the players block of a snapshot.
+ * @param registry The registry holding the ships, for the scores.
+ * @param players The connected players.
+ * @return One record per player; the score is 0 if its ship is gone.
+ **/
 std::vector<rtype::protocol::PlayerInfo> playerInfos(engine::Registry &registry,
                                                      const Players &players)
 {

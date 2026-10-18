@@ -15,6 +15,15 @@
 
 namespace server {
 
+/**
+ * @brief Writes the newest input of each player into the InputState of its
+ * ship. Inputs from unknown clients, or not newer than the last one applied,
+ * are dropped. Runs right after sessionSystem, before the systems that read
+ * InputState.
+ * @param registry The registry the ships live in.
+ * @param messages The inbound messages of this tick; only Input is read.
+ * @param players The connected players; lastSequence is updated.
+ **/
 void networkInputSystem(engine::Registry &registry,
                         const std::vector<InboundMessage> &messages,
                         Players &players);

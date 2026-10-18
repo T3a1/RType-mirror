@@ -17,6 +17,11 @@ namespace server {
 
 namespace {
 
+/**
+ * @brief Finds the lowest slot no connected player uses.
+ * @param players The connected players.
+ * @return A slot from 1 to MaxPlayers, or nothing if all are taken.
+ **/
 std::optional<std::uint8_t> freeSlot(const Players &players)
 {
     for (std::uint8_t slot = 1; slot <= rtype::protocol::MaxPlayers; slot++) {
@@ -31,6 +36,12 @@ std::optional<std::uint8_t> freeSlot(const Players &players)
     return std::nullopt;
 }
 
+/**
+ * @brief Returns where the ship of a slot appears: on the left, spread
+ * evenly over the playfield height.
+ * @param slot The player's slot, from 1 to MaxPlayers.
+ * @return The position of the ship's center, in playfield units.
+ **/
 engine::Vec2f spawnPosition(std::uint8_t slot)
 {
     constexpr float SpawnX = 200.0F;
@@ -41,6 +52,15 @@ engine::Vec2f spawnPosition(std::uint8_t slot)
     };
 }
 
+/**
+ * @brief Spawns the ship of a new client and announces it.
+ * @param registry The registry to create the ship in.
+ * @param clientId The client that connected; ignored if already a player.
+ * @param players The connected players.
+ * @param factory Creates the ship.
+ * @param outbound The queue Welcome and PlayerJoined are pushed to.
+ * @param tick The current server tick, sent in Welcome.
+ **/
 void onConnected(engine::Registry &registry, std::uint32_t clientId,
                  Players &players, EntityFactory &factory, Outbound &outbound,
                  std::uint32_t tick)
@@ -81,6 +101,13 @@ void onConnected(engine::Registry &registry, std::uint32_t clientId,
     });
 }
 
+/**
+ * @brief Removes the ship of a client that left and announces it.
+ * @param registry The registry holding the ship.
+ * @param clientId The client that left; ignored if unknown.
+ * @param players The connected players.
+ * @param outbound The queue PlayerLeft is pushed to.
+ **/
 void onDisconnected(engine::Registry &registry, std::uint32_t clientId,
                     Players &players, Outbound &outbound)
 {

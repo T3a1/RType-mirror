@@ -14,7 +14,14 @@
 
 namespace server {
 
-// Destroys an entity and, if the clients know it, tells them.
+/**
+ * @brief Destroys an entity at the end of the tick and, if it has a
+ * NetworkId, sends GameEvent{EntityDestroyed} to every client. Every system
+ * that removes an entity goes through it.
+ * @param registry The registry holding the entity.
+ * @param entity The entity to destroy; a dead entity is ignored.
+ * @param outbound The queue the event is pushed to.
+ **/
 void despawn(engine::Registry &registry, engine::Entity entity,
              Outbound &outbound);
 
