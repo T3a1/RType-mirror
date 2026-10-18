@@ -6,6 +6,8 @@ find_package(raylib REQUIRED)
 set(SOURCE_FILES
     src/main.cpp
     src/Game.cpp
+    src/systems/BackgroundRenderSystem.cpp
+    src/systems/BackgroundScrollSystem.cpp
     src/network/NetworkClient.cpp
     src/systems/HudSystem.cpp
     src/systems/InputSystem.cpp
@@ -21,4 +23,11 @@ target_include_directories(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE r-type_common raylib
+)
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/assets
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets
+    COMMENT "Copying the client assets"
 )
