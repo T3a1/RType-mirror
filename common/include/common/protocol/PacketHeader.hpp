@@ -31,6 +31,17 @@ inline constexpr std::uint8_t Reliable = 1U << 0U;
 inline constexpr std::uint8_t All = Reliable;
 } // namespace PacketFlag
 
+/**
+ * @struct PacketHeader
+ * @brief The 12-byte header that starts every packet.
+ * @param type The type of the payload.
+ * @param flags PacketFlag bits; Reliable must match isReliable(type).
+ * @param sequence The sender's reliable or unreliable counter for this
+ * packet.
+ * @param ack The last reliable sequence received in order from the peer
+ * (0 when nothing has been received).
+ * @param payloadSize The size of the payload, in bytes.
+ **/
 struct PacketHeader {
     PacketType type = PacketType::Ack;
     std::uint8_t flags = 0;
@@ -41,6 +52,21 @@ struct PacketHeader {
     bool operator==(const PacketHeader &) const = default;
 };
 
+/**
+ * @enum DecodeError
+ * @brief Why a received datagram was rejected, in validation order.
+ * @param TooShort Smaller than a header.
+ * @param TooLarge Larger than MaxPacketSize.
+ * @param BadMagic Does not start with "RT".
+ * @param BadVersion Another protocol version.
+ * @param UnknownType The type byte is not a PacketType.
+ * @param BadFlags Unknown flag bits, or a Reliable flag that does not match
+ * the type.
+ * @param BadReserved The reserved byte is not 0.
+ * @param BadPayloadSize payloadSize does not match the datagram size.
+ * @param WrongSender This side may not send this type.
+ * @param BadPayload The payload is truncated, too long or out of range.
+ **/
 enum class DecodeError : std::uint8_t {
     TooShort,
     TooLarge,
@@ -54,6 +80,11 @@ enum class DecodeError : std::uint8_t {
     BadPayload,
 };
 
+/**
+ * @brief Describes a decode error for the logs.
+ * @param error The error to describe.
+ * @return A short English description.
+ **/
 constexpr std::string_view toString(DecodeError error)
 {
     switch (error) {
@@ -81,10 +112,29 @@ constexpr std::string_view toString(DecodeError error)
     return {};
 }
 
+/**
+ * @brief Writes a header (HeaderSize bytes) with the magic, the protocol
+ * version and a zero reserved byte.
+ * @param header The fields to write.
+ * @param out The writer to append to.
+ **/
 void encodeHeader(const PacketHeader &header, ByteWriter &out);
+
+/**
+ * @brief Reads and validates the header of a datagram.
+ * @param datagram The whole received datagram, header and payload.
+ * @return The header, or the first validation error found.
+ **/
 [[nodiscard]] std::variant<PacketHeader, DecodeError>
 decodeHeader(std::span<const std::uint8_t> datagram);
 
+/**
+ * @brief Compares two 16-bit sequences with serial number arithmetic, so
+ * that the comparison stays right when the counter wraps from 65535 to 0.
+ * @param a The sequence to test.
+ * @param b The reference sequence.
+ * @return `true` if `a` is between 1 and 32767 steps after `b`.
+ **/
 [[nodiscard]] constexpr bool isNewer(std::uint16_t a, std::uint16_t b)
 {
     const auto distance = static_cast<std::uint16_t>(a - b);

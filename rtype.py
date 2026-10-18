@@ -292,6 +292,30 @@ def run_coverage() -> int:
     return 0
 
 
+# ---------- Documentation (Doxygen) ----------
+# Settings come from the Doxyfile; the diagrams are turned off when Graphviz is
+# missing instead of failing. Warnings go to a log file, not to the terminal.
+def run_docs() -> int:
+    require("doxygen", "winget install DimitriVanHeesch.Doxygen, or your package manager")
+    output = (BUILD_DIR / "docs").resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    warnings = output / "doxygen-warnings.log"
+    config = Path("Doxyfile").read_text(encoding="utf-8")
+    config += (f'\nOUTPUT_DIRECTORY = "{output.as_posix()}"\n'
+               f'WARN_LOGFILE = "{warnings.as_posix()}"\nQUIET = YES\n')
+    if shutil.which("dot") is None:
+        log("Graphviz (dot) not found, generating the documentation without diagrams...")
+        config += "HAVE_DOT = NO\n"
+    log("Generating the documentation...")
+    if subprocess.run(["doxygen", "-"], input=config, text=True).returncode != 0:
+        raise LauncherError(f"doxygen failed (warnings and errors: {warnings})")
+    count = warnings.read_text(errors="replace").count("warning:") if warnings.is_file() else 0
+    if count:
+        log(f"{count} Doxygen warnings, see {warnings}")
+    log(f"HTML documentation: {output / 'html' / 'index.html'}")
+    return 0
+
+
 # ---------- Server and clients ----------
 def ensure_binary(name: str, override: str | None, *cmake_args: str) -> Path:
     """Returns the binary, building it first if it is missing."""
@@ -390,6 +414,8 @@ def parse_args() -> argparse.Namespace:
                       help="build and run the unit tests (GoogleTest) and exit")
     mode.add_argument("-C", "--coverage", action="store_true",
                       help="run the unit tests with coverage, write an HTML report and exit")
+    mode.add_argument("-d", "--docs", action="store_true",
+                      help="generate the HTML documentation with Doxygen and exit")
     return parser.parse_args()
 
 
@@ -406,6 +432,8 @@ def main() -> int:
             return run_tests()
         if args.coverage:
             return run_coverage()
+        if args.docs:
+            return run_docs()
         return play(args)
     except LauncherError as error:
         print_error(str(error))
