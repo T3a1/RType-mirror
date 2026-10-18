@@ -35,9 +35,11 @@ std::vector<Body> collect(engine::Registry &registry)
     registry.each<rtype::Collider, rtype::Transform>(
         [&](engine::Entity entity, const rtype::Collider &collider,
             const rtype::Transform &transform) {
-            bodies.push_back({.entity = entity,
-                              .position = transform.position,
-                              .collider = collider});
+            bodies.push_back({
+                .entity = entity,
+                .position = transform.position,
+                .collider = collider,
+            });
         });
     return bodies;
 }
