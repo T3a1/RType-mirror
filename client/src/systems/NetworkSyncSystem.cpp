@@ -7,7 +7,9 @@
 
 #include "systems/NetworkSyncSystem.hpp"
 #include "common/components/EntityType.hpp"
+#include "common/components/Health.hpp"
 #include "common/components/NetworkId.hpp"
+#include "common/components/Player.hpp"
 #include "common/components/Transform.hpp"
 #include "components/Sprite.hpp"
 #include "engine/Logger.hpp"
@@ -66,6 +68,7 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
             .x = entity.x,
             .y = entity.y,
         };
+        registry.get<rtype::Health>(it->second).current = entity.health;
         return;
     }
     const engine::Entity created = registry.create();
@@ -74,6 +77,10 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
     registry.emplace<rtype::EntityType>(created, entity.type);
     registry.emplace<rtype::Transform>(
         created, rtype::Transform{.position = {.x = entity.x, .y = entity.y}});
+    registry.emplace<rtype::Health>(created, rtype::Health{
+                                                 .current = entity.health,
+                                                 .max = rtype::PlayerMaxHealth,
+                                             });
     registry.emplace<Sprite>(
         created, spriteOf(entity.type, entity.networkId == state.localShip));
     state.entities.emplace(entity.networkId, created);
@@ -86,6 +93,9 @@ void applySnapshot(engine::Registry &registry, const SnapshotPart &snapshot,
         return;
     }
     state.lastTick = snapshot.tick;
+    if (snapshot.part == 0) {
+        state.players = snapshot.players;
+    }
     for (const EntityState &entity : snapshot.entities) {
         applyEntity(registry, entity, state);
     }
@@ -124,6 +134,7 @@ void applyWelcome(engine::Registry &registry, const Welcome &welcome,
 {
     BB_INFO("Playing as player " << static_cast<int>(welcome.slot));
     state.localShip = welcome.shipId;
+    state.localSlot = welcome.slot;
     const auto it = state.entities.find(welcome.shipId);
     if (it != state.entities.end()) {
         registry.get<Sprite>(it->second) =

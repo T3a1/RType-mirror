@@ -7,6 +7,7 @@ set(SOURCE_FILES
     src/main.cpp
     src/Game.cpp
     src/network/NetworkClient.cpp
+    src/systems/HudSystem.cpp
     src/systems/InputSystem.cpp
     src/systems/NetworkSyncSystem.cpp
     src/systems/RenderSystem.cpp

@@ -23,6 +23,8 @@ struct SyncState {
     std::unordered_map<std::uint32_t, std::uint32_t> destroyed;
     std::uint32_t lastTick = 0;
     std::uint32_t localShip = 0;
+    std::uint8_t localSlot = 0;
+    std::vector<rtype::protocol::PlayerInfo> players;
 };
 
 void networkSyncSystem(engine::Registry &registry,

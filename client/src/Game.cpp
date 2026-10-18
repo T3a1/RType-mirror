@@ -7,6 +7,7 @@
 
 #include "Game.hpp"
 #include "common/Playfield.hpp"
+#include "systems/HudSystem.hpp"
 #include "systems/InputSystem.hpp"
 #include "systems/RenderSystem.hpp"
 
@@ -67,7 +68,9 @@ void Game::render()
         .zoom = zoom,
     });
     renderSystem(m_registry);
+    healthBarSystem(m_registry);
     EndMode2D();
+    hudSystem(m_sync);
     drawStatus();
     EndDrawing();
 }
@@ -91,7 +94,7 @@ void Game::drawStatus() const
         text = "Disconnected by the server";
         break;
     }
-    DrawText(text, 20, 20, 30, RAYWHITE);
+    DrawText(text, 20, GetScreenHeight() - 50, 30, RAYWHITE);
 }
 
 } // namespace client
