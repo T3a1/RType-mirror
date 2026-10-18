@@ -11,6 +11,8 @@
 
 #include <raylib.h>
 
+#include <cmath>
+
 namespace client {
 
 void backgroundRenderSystem(engine::Registry &registry)
@@ -28,8 +30,11 @@ void backgroundRenderSystem(engine::Registry &registry)
             }
             const float scale = screenHeight / height;
             const float tileWidth = width * scale;
-            for (float x = -background.offset * scale; x < screenWidth;
-                 x += tileWidth) {
+            const float start = -background.offset * scale;
+            const auto tiles =
+                static_cast<int>(std::ceil((screenWidth - start) / tileWidth));
+            for (int i = 0; i < tiles; ++i) {
+                const float x = start + (static_cast<float>(i) * tileWidth);
                 DrawTexturePro(background.texture,
                                Rectangle{
                                    .x = 0.0F,
