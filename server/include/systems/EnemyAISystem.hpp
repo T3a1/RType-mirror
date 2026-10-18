@@ -16,7 +16,6 @@
 #include "engine/Registry.hpp"
 
 namespace server {
-    
 /**
  * @brief Decides what each enemy does this tick.
  *
