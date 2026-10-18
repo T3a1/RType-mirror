@@ -30,7 +30,7 @@ SpawnProjectile shotRequest(engine::Entity shooter,
                 .x = transform.position.x + (direction * 40.0F),
                 .y = transform.position.y,
             },
-        .velocity = {.x = direction * 100.0F, .y = 0.0F},
+        .velocity = {.x = direction * 300.0F, .y = 0.0F},
         .fromPlayer = fromPlayer,
     };
 }
