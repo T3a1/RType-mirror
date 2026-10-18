@@ -9,12 +9,6 @@
 
 namespace server {
 
-/**
- * Creates an enemy from a spawn request.
- * @param registry The registry to create the enemy in.
- * @param request The type and position of the enemy.
- * @return The created entity.
- **/
 engine::Entity EntityFactory::create(engine::Registry &registry,
                                      const SpawnEnemy &request)
 {
@@ -43,6 +37,10 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
                });
 
     registry.emplace<DestroyOffScreen>(enemy);
+    if (stat.fireInterval.count() > 0.0F) {
+        registry.emplace<rtype::Weapon>(
+            enemy, rtype::Weapon{.fireInterval = stat.fireInterval});
+    }
 
     BB_DEBUG("Enemy " << static_cast<int>(request.type) << " spawned with id "
                       << networkId << " at y=" << request.position.y);
@@ -50,12 +48,6 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
     return enemy;
 }
 
-/**
- * Creates a player from a spawn request.
- * @param registry The registry to create the player in.
- * @param request The slot and position of the player.
- * @return The created entity.
- **/
 engine::Entity EntityFactory::create(engine::Registry &registry,
                                      const SpawnPlayer &request)
 {
@@ -93,12 +85,6 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
     return player;
 }
 
-/**
- * Creates a projectile from a spawn request.
- * @param registry The registry to create the projectile in.
- * @param request The owner, position, velocity and side of the projectile.
- * @return The created entity.
- **/
 engine::Entity EntityFactory::create(engine::Registry &registry,
                                      const SpawnProjectile &request)
 {
