@@ -16,6 +16,8 @@
 #include <cstdint>
 #include <string>
 
+#include <raylib.h>
+
 namespace client {
 
 // The client game: its own registry (a mirror of the server's world plus
@@ -36,12 +38,20 @@ class Game {
     void run();
 
   private:
-    void update();
+    void update(engine::Duration dt);
     void render();
+    /**
+     * @brief Loads the background texture and creates the entity scrolling it.
+     *
+     * The texture is loaded from the assets directory next to the executable
+     * and stays owned by the Game, which unloads it in its destructor.
+     */
+    void spawnBackground();
     void drawStatus() const;
 
     NetworkClient m_network;
     engine::Registry m_registry;
+    Texture2D m_backgroundTexture{};
     SyncState m_sync;
 };
 
