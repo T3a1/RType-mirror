@@ -22,7 +22,7 @@ void backgroundScrollSystem(engine::Registry &registry, engine::Duration dt)
         }
 
         background.offset = std::fmod(
-            background.offset + background.speed * dt.count(), width);
+            background.offset + (background.speed * dt.count()), width);
         if (background.offset < 0.0F) {
             background.offset += width;
         }

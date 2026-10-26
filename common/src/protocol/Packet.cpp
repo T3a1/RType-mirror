@@ -14,6 +14,13 @@ namespace rtype::protocol {
 
 namespace {
 
+/**
+ * @brief Decodes a payload of a given type and builds the packet.
+ * @param header The validated header of the packet.
+ * @param in The reader positioned at the start of the payload.
+ * @return The packet, or BadPayload if the payload is invalid, truncated or
+ * followed by extra bytes.
+ **/
 template <typename Message>
 std::variant<Packet, DecodeError> decodePayload(const PacketHeader &header,
                                                 ByteReader &in)

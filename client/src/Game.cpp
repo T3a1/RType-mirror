@@ -6,20 +6,13 @@
 */
 
 #include "Game.hpp"
-#include "Window.hpp"
-#include "common/components/InputState.hpp"
-#include "common/components/Transform.hpp"
-#include "common/components/Velocity.hpp"
+#include "common/Playfield.hpp"
 #include "components/Background.hpp"
-#include "components/Sprite.hpp"
 #include "systems/BackgroundRenderSystem.hpp"
-#include "systems/RenderSystem.hpp"
-
-#include "common/systems/MovementSystem.hpp"
-#include "common/systems/PlayerControlSystem.hpp"
 #include "systems/BackgroundScrollSystem.hpp"
-#include "systems/DebugSpawnSystem.hpp"
+#include "systems/HudSystem.hpp"
 #include "systems/InputSystem.hpp"
+#include "systems/RenderSystem.hpp"
 
 #include <raylib.h>
 
@@ -36,13 +29,12 @@ constexpr float backgroundSpeed = 120.0F;
 
 } // namespace
 
-Game::Game()
+Game::Game(const std::string &host, std::uint16_t port) : m_network(host, port)
 {
     SetTraceLogLevel(LOG_NONE);
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
     InitWindow(windowWidth, windowHeight, "R-Type");
     spawnBackground();
-    spawnTestEntities();
 }
 
 Game::~Game()
@@ -71,22 +63,36 @@ void Game::run()
 
 void Game::update(engine::Duration dt)
 {
-    // Later, in this order: input, network sync, interpolation, animation
-    inputSystem(m_registry);
-    debugSpawnSystem(m_registry, m_random);
-    rtype::playerControlSystem(m_registry);
-    rtype::movementSystem(m_registry, dt);
+    // Later: interpolation, animation.
     backgroundScrollSystem(m_registry, dt);
+    const auto now = std::chrono::steady_clock::now();
+    networkSyncSystem(m_registry, m_network.update(now), m_sync);
+    m_network.sendInput(inputSystem(), now);
 
     m_registry.flush();
 }
 
 void Game::render()
 {
+    // The world is in playfield units: scale it to fit the window.
+    const float zoom = std::min(
+        static_cast<float>(GetScreenWidth()) / rtype::PlayfieldWidth,
+        static_cast<float>(GetScreenHeight()) / rtype::PlayfieldHeight);
+
     BeginDrawing();
     ClearBackground(BLACK);
     backgroundRenderSystem(m_registry);
+    BeginMode2D(Camera2D{
+        .offset = {.x = 0.0F, .y = 0.0F},
+        .target = {.x = 0.0F, .y = 0.0F},
+        .rotation = 0.0F,
+        .zoom = zoom,
+    });
     renderSystem(m_registry);
+    healthBarSystem(m_registry);
+    EndMode2D();
+    hudSystem(m_sync);
+    drawStatus();
     EndDrawing();
 }
 
@@ -98,33 +104,31 @@ void Game::spawnBackground()
     SetTextureFilter(m_backgroundTexture, TEXTURE_FILTER_BILINEAR);
 
     const engine::Entity background = m_registry.create();
-    m_registry.emplace<Background>(background, Background{.texture = m_backgroundTexture, .speed = backgroundSpeed});
+    m_registry.emplace<Background>(
+        background,
+        Background{.texture = m_backgroundTexture, .speed = backgroundSpeed});
 }
 
-// Temporaire, plus tard les Entities devront venir du serveur
-void Game::spawnTestEntities()
+void Game::drawStatus() const
 {
-    const engine::Entity ship = m_registry.create();
-    m_registry.emplace<rtype::Transform>(
-        ship, rtype::Transform{.position = {.x = 200.0F, .y = 360.0F}});
-    m_registry.emplace<Sprite>(
-        ship, Sprite{
-                  .size = {.x = 64.0F, .y = 32.0F},
-                  .tint = {.r = 80, .g = 160, .b = 255, .a = 255},
-                  .layer = 1,
-              });
-    m_registry.emplace<rtype::InputState>(ship, rtype::InputState{});
-    m_registry.emplace<rtype::Velocity>(ship, rtype::Velocity{});
-
-    const engine::Entity enemy = m_registry.create();
-    m_registry.emplace<rtype::Transform>(
-        enemy, rtype::Transform{.position = {.x = 1000.0F, .y = 300.0F}});
-    m_registry.emplace<Sprite>(
-        enemy, Sprite{
-                   .size = {.x = 48.0F, .y = 48.0F},
-                   .tint = {.r = 230, .g = 60, .b = 60, .a = 255},
-                   .layer = 1,
-               });
+    const char *text = nullptr;
+    switch (m_network.state()) {
+    case NetworkClient::State::Connecting:
+        text = "Connecting...";
+        break;
+    case NetworkClient::State::Connected:
+        return;
+    case NetworkClient::State::Rejected:
+        text = "Connection refused by the server";
+        break;
+    case NetworkClient::State::Lost:
+        text = "Connection to the server lost";
+        break;
+    case NetworkClient::State::Closed:
+        text = "Disconnected by the server";
+        break;
+    }
+    DrawText(text, 20, GetScreenHeight() - 50, 30, RAYWHITE);
 }
 
 } // namespace client

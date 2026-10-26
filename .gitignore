@@ -54,6 +54,7 @@ core
 *.gcda
 *.gcno
 *.gcov
+*.log
 
 # IDEs and editors
 .vscode/

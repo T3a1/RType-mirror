@@ -1,0 +1,5 @@
+---
+# Same checks as the root config, minus the static analyzer: it is slow on the
+# GoogleTest macros and finds little in test code.
+InheritParentConfig: true
+Checks: -clang-analyzer-*
