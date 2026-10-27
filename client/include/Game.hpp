@@ -50,7 +50,6 @@ class Game {
      */
     void spawnBackground();
     void drawStatus() const;
-
     NetworkClient m_network;
     engine::Registry m_registry;
     Texture2D m_backgroundTexture{};
