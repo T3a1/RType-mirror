@@ -6,6 +6,7 @@
 */
 
 #include "Game.hpp"
+#include "Window.hpp"
 #include "common/Playfield.hpp"
 #include "components/Background.hpp"
 #include "systems/BackgroundRenderSystem.hpp"
