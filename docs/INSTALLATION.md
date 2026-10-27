@@ -82,6 +82,8 @@ that is missing:
 | `-C`, `--coverage` | Runs the unit tests with coverage and writes an HTML report. |
 | `-t`, `--tidy` | Runs clang-tidy on the project. |
 | `-f`, `--fix` | Applies the clang-tidy fixes, then runs clang-format. |
+| `-F`, `--format` | Runs clang-format on the project (same version as the CI). |
+| `--check-format [FILE...]` | Checks the formatting like the CI, without changing anything. |
 | `-d`, `--docs` | Generates the HTML code documentation with Doxygen. |
 
 > The server currently always listens on port 4242. In Docker mode, `--port`
@@ -164,7 +166,17 @@ that machine's firewall.
 | `./rtype.py --coverage` | Coverage report in `build-coverage/coverage/index.html`. |
 | `./rtype.py --tidy` | clang-tidy, with the same rules as the CI. |
 | `./rtype.py --fix` | clang-tidy fixes, then clang-format. |
+| `./rtype.py --format` | clang-format only. |
 | `./rtype.py --docs` | Code documentation in `build/docs/html/index.html`. |
+
+Every clang-format version formats a little differently, so the launcher, the
+pre-commit hook and the CI all use clang-format 18.1.3, installed from PyPI
+into `.venv/`. Your system clang-format is never used.
+
+The first run of `rtype.py` enables the project's Git hooks
+(`git config core.hooksPath .githooks`). The pre-commit hook refuses a commit
+whose C++ files are badly formatted: run `./rtype.py --format`, `git add` the
+files again and commit. Use `git commit --no-verify` to skip it once.
 
 `--docs` needs Doxygen (`winget install DimitriVanHeesch.Doxygen` on Windows,
 or your package manager on Linux). Install Graphviz too

@@ -22,9 +22,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run clang-format
-        run: |
-          find engine common server client tests -name '*.cpp' -o -name '*.hpp' \
-            | xargs -r clang-format --dry-run --Werror
+        # Same pinned clang-format as the launcher and the pre-commit hook.
+        run: python3 rtype.py --check-format
 
   build-and-test:
     name: Build and test
