@@ -35,7 +35,8 @@ void debugSpawnSystem(engine::Registry &registry, std::mt19937 &random)
         return;
     }
 
-    std::uniform_int_distribution<std::size_t> pickType{0, enemyTypes.size() - 1};
+    std::uniform_int_distribution<std::size_t> pickType{0,
+                                                        enemyTypes.size() - 1};
     const rtype::EntityType type = enemyTypes.at(pickType(random));
     const std::optional<Sprite> sprite = enemySprite(type);
     if (!sprite) {
