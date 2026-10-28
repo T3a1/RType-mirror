@@ -14,8 +14,6 @@
 #include "systems/InputSystem.hpp"
 #include "systems/RenderSystem.hpp"
 
-#include <raylib.h>
-
 #include <algorithm>
 #include <chrono>
 #include <string>
@@ -30,21 +28,23 @@ constexpr int windowHeight = 720;
 constexpr const char *backgroundPath = "assets/bg.jpg";
 constexpr float backgroundSpeed = 120.0F;
 
+constexpr float statusX = 20.0F;
+constexpr float statusBottomMargin = 50.0F;
+constexpr int statusFontSize = 30;
+
 } // namespace
 
-Game::Game(const std::string &host, std::uint16_t port) : m_network(host, port)
+Game::Game(const std::string &host, std::uint16_t port)
+    : m_network(host, port), m_graphics(gfx::createGraphics({
+                                 .width = windowWidth,
+                                 .height = windowHeight,
+                                 .title = "R-Type",
+                             }))
 {
-    SetTraceLogLevel(LOG_NONE);
-    SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
-    InitWindow(windowWidth, windowHeight, "R-Type");
     spawnBackground();
 }
 
-Game::~Game()
-{
-    UnloadTexture(m_backgroundTexture);
-    CloseWindow();
-}
+Game::~Game() { m_graphics->unloadTexture(m_backgroundTexture); }
 
 void Game::run()
 {
@@ -53,7 +53,7 @@ void Game::run()
 
     Clock::time_point previous = Clock::now();
 
-    while (!WindowShouldClose()) {
+    while (!m_graphics->shouldClose()) {
         const Clock::time_point now = Clock::now();
         const engine::Duration dt =
             std::min(engine::Duration{now - previous}, maxFrameTime);
@@ -70,7 +70,7 @@ void Game::update(engine::Duration dt)
     backgroundScrollSystem(m_registry, dt);
     const auto now = std::chrono::steady_clock::now();
     networkSyncSystem(m_registry, m_network.update(now), m_sync);
-    m_network.sendInput(inputSystem(), now);
+    m_network.sendInput(inputSystem(*m_graphics), now);
 
     m_registry.flush();
 }
@@ -78,33 +78,24 @@ void Game::update(engine::Duration dt)
 void Game::render()
 {
     // The world is in playfield units: scale it to fit the window.
-    const float zoom = std::min(
-        static_cast<float>(GetScreenWidth()) / rtype::PlayfieldWidth,
-        static_cast<float>(GetScreenHeight()) / rtype::PlayfieldHeight);
+    const engine::Vec2f screen = m_graphics->screenSize();
+    const float zoom = std::min(screen.x / rtype::PlayfieldWidth,
+                                screen.y / rtype::PlayfieldHeight);
 
-    BeginDrawing();
-    ClearBackground(BLACK);
-    backgroundRenderSystem(m_registry);
-    BeginMode2D(Camera2D{
-        .offset = {.x = 0.0F, .y = 0.0F},
-        .target = {.x = 0.0F, .y = 0.0F},
-        .rotation = 0.0F,
-        .zoom = zoom,
-    });
-    renderSystem(m_registry);
-    healthBarSystem(m_registry);
-    EndMode2D();
-    hudSystem(m_sync);
+    m_graphics->beginFrame(gfx::colors::Black);
+    backgroundRenderSystem(m_registry, *m_graphics);
+    m_graphics->beginWorld(zoom);
+    renderSystem(m_registry, *m_graphics);
+    healthBarSystem(m_registry, *m_graphics);
+    m_graphics->endWorld();
+    hudSystem(m_sync, *m_graphics);
     drawStatus();
-    EndDrawing();
+    m_graphics->endFrame();
 }
 
 void Game::spawnBackground()
 {
-    const std::string path =
-        std::string{GetApplicationDirectory()} + backgroundPath;
-    m_backgroundTexture = LoadTexture(path.c_str());
-    SetTextureFilter(m_backgroundTexture, TEXTURE_FILTER_BILINEAR);
+    m_backgroundTexture = m_graphics->loadTexture(backgroundPath);
 
     const engine::Entity background = m_registry.create();
     m_registry.emplace<Background>(
@@ -131,7 +122,10 @@ void Game::drawStatus() const
         text = "Disconnected by the server";
         break;
     }
-    DrawText(text, 20, GetScreenHeight() - 50, 30, RAYWHITE);
+    m_graphics->drawText(
+        text,
+        {.x = statusX, .y = m_graphics->screenSize().y - statusBottomMargin},
+        statusFontSize, gfx::colors::OffWhite);
 }
 
 } // namespace client
