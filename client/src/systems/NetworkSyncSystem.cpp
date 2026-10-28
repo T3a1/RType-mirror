@@ -21,20 +21,9 @@ namespace client {
 namespace {
 
 using namespace rtype::protocol;
+using gfx::rgb;
 
 constexpr std::uint32_t DestroyedMemory = 300;
-
-/**
- * @brief Builds an opaque raylib color.
- * @param red The red component, 0 to 255.
- * @param green The green component, 0 to 255.
- * @param blue The blue component, 0 to 255.
- * @return The color.
- **/
-constexpr Color rgb(unsigned char red, unsigned char green, unsigned char blue)
-{
-    return {.r = red, .g = green, .b = blue, .a = 255};
-}
 
 constexpr engine::Vec2f ShipSize{.x = 64.0F, .y = 32.0F};
 constexpr engine::Vec2f EnemySize{.x = 64.0F, .y = 64.0F};

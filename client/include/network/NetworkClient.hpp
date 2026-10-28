@@ -25,7 +25,7 @@ namespace client {
  * The game calls update() then sendInput() once per frame. It handles the
  * protocol itself (Connect retries, Accept, Reject, Disconnect, acks,
  * timeout) and only hands the game what concerns it. No Asio type appears
- * in this header, so it can be included next to raylib.h.
+ * in this header, so it can be included next to a graphics library.
  **/
 class NetworkClient {
   public:
