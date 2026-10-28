@@ -4,7 +4,7 @@ project(r-type_client)
 # Graphics backend: the client only uses client/include/graphics/IGraphics.hpp,
 # each backend implements it in src/graphics/<backend>/ and links its library.
 set(RTYPE_GRAPHICS_BACKEND "raylib" CACHE STRING "Graphics library of the client")
-set_property(CACHE RTYPE_GRAPHICS_BACKEND PROPERTY STRINGS raylib sfml)
+set_property(CACHE RTYPE_GRAPHICS_BACKEND PROPERTY STRINGS raylib sfml ncurses)
 
 set(SOURCE_FILES
     src/main.cpp
@@ -26,6 +26,13 @@ elseif(RTYPE_GRAPHICS_BACKEND STREQUAL "sfml")
     find_package(SFML 3 REQUIRED COMPONENTS Graphics Window System)
     list(APPEND SOURCE_FILES src/graphics/sfml/SfmlGraphics.cpp)
     set(GRAPHICS_LIBRARIES SFML::Graphics)
+elseif(RTYPE_GRAPHICS_BACKEND STREQUAL "ncurses")
+    if(WIN32)
+        message(FATAL_ERROR "The ncurses client only runs on Linux")
+    endif()
+    find_package(Curses REQUIRED)
+    list(APPEND SOURCE_FILES src/graphics/ncurses/NcursesGraphics.cpp)
+    set(GRAPHICS_LIBRARIES Curses::Curses)
 else()
     message(FATAL_ERROR "Unknown RTYPE_GRAPHICS_BACKEND: ${RTYPE_GRAPHICS_BACKEND}")
 endif()

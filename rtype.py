@@ -36,7 +36,7 @@ CONTAINER = os.environ.get("CONTAINER", "rtype-server")
 CONAN_SYSTEM_PACKAGES = os.environ.get("CONAN_SYSTEM_PACKAGES", "install")
 # Graphics library of the client (also --graphics): raylib or sfml.
 GRAPHICS = os.environ.get("GRAPHICS", "raylib")
-GRAPHICS_CHOICES = ("raylib", "sfml")
+GRAPHICS_CHOICES = ("raylib", "sfml", "ncurses")
 # Virtual environment where missing build tools (cmake, conan...) are installed.
 TOOLS_DIR = Path(os.environ.get("TOOLS_DIR", ".venv"))
 
@@ -382,13 +382,25 @@ def play(args: argparse.Namespace) -> int:
     server: subprocess.Popen | None = None
     clients: list[subprocess.Popen] = []
     container_started = False
+    # The ncurses client draws in this terminal: nothing else may write to it.
+    in_terminal = GRAPHICS == "ncurses"
+    if in_terminal and args.clients > 1:
+        raise LauncherError("the ncurses client uses this terminal: start one client "
+                            "here (-c 1) and the others from other terminals")
     try:
         client_bin = ensure_binary("r-type_client", CLIENT_BIN, "-DBUILD_CLIENT=ON")
 
         if args.native:
             server_bin = ensure_binary("r-type_server", SERVER_BIN)
             log(f"Starting native server on port {args.port}...")
-            server = subprocess.Popen([str(server_bin), str(args.port)])
+            if in_terminal:
+                server_log = BUILD_DIR / "server.log"
+                log(f"Server output: {server_log}")
+                with server_log.open("w") as output:
+                    server = subprocess.Popen([str(server_bin), str(args.port)],
+                                              stdout=output, stderr=subprocess.STDOUT)
+            else:
+                server = subprocess.Popen([str(server_bin), str(args.port)])
         else:
             require("docker", "use --native to skip it")
             log("Building server image...")
@@ -404,7 +416,10 @@ def play(args: argparse.Namespace) -> int:
             log(f"Starting client {i}/{args.clients} -> {args.host}:{args.port}")
             clients.append(subprocess.Popen([str(client_bin), args.host, str(args.port)]))
 
-        log("Running. Close all clients or press Ctrl+C to stop.")
+        if in_terminal:
+            log("Running. Press q in the game to stop (its logs: r-type_client.log).")
+        else:
+            log("Running. Close all clients or press Ctrl+C to stop.")
         for client in clients:
             client.wait()
         return 0
