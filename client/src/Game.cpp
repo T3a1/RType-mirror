@@ -64,10 +64,11 @@ void Game::run()
 
 void Game::update(engine::Duration dt)
 {
-    // Later: interpolation, animation.
+    // Later: animation.
     backgroundScrollSystem(m_registry, dt);
     const auto now = std::chrono::steady_clock::now();
     networkSyncSystem(m_registry, m_network.update(now), m_sync);
+    smoothingSystem(m_registry, m_sync, dt);
     m_network.sendInput(inputSystem(), now);
 
     m_registry.flush();

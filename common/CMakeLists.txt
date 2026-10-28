@@ -4,6 +4,7 @@ project(r-type_common)
 set(SOURCE_FILES
     src/systems/MovementSystem.cpp
     src/systems/PlayerControlSystem.cpp
+    src/systems/InterpolationSystem.cpp
     src/protocol/ByteWriter.cpp
     src/protocol/ByteReader.cpp
     src/protocol/PacketHeader.cpp

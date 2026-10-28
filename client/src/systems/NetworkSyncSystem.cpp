@@ -10,10 +10,12 @@
 #include "common/components/Health.hpp"
 #include "common/components/NetworkId.hpp"
 #include "common/components/Player.hpp"
+#include "common/components/SnapshotHistory.hpp"
 #include "common/components/Transform.hpp"
 #include "components/Sprite.hpp"
 #include "engine/Logger.hpp"
 
+#include <algorithm>
 #include <variant>
 
 namespace client {
@@ -71,24 +73,35 @@ Sprite spriteOf(rtype::EntityType type, bool local)
 
 /**
  * @brief Creates or updates the local copy of one snapshot entity, unless
- * it was destroyed recently.
+ * it was destroyed recently. The position and health go to the entity's
+ * history, or straight to the Transform and Health of the local ship. The
+ * local player's missiles are drawn in the present, like the ship.
  * @param registry The client's registry.
  * @param entity The entity record from the snapshot.
+ * @param tick The tick of the snapshot.
  * @param state The sync state.
  **/
 void applyEntity(engine::Registry &registry, const EntityState &entity,
-                 SyncState &state)
+                 std::uint32_t tick, SyncState &state)
 {
     if (state.destroyed.contains(entity.networkId)) {
         return;
     }
+    const rtype::SnapshotSample sample{
+        .tick = tick,
+        .position = {.x = entity.x, .y = entity.y},
+        .health = entity.health,
+    };
     const auto it = state.entities.find(entity.networkId);
     if (it != state.entities.end()) {
-        registry.get<rtype::Transform>(it->second).position = {
-            .x = entity.x,
-            .y = entity.y,
-        };
-        registry.get<rtype::Health>(it->second).current = entity.health;
+        if (auto *history =
+                registry.tryGet<rtype::SnapshotHistory>(it->second)) {
+            rtype::pushSample(*history, sample);
+        } else {
+            registry.get<rtype::Transform>(it->second).position =
+                sample.position;
+            registry.get<rtype::Health>(it->second).current = sample.health;
+        }
         return;
     }
     const engine::Entity created = registry.create();
@@ -96,13 +109,23 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
                                        rtype::NetworkId{entity.networkId});
     registry.emplace<rtype::EntityType>(created, entity.type);
     registry.emplace<rtype::Transform>(
-        created, rtype::Transform{.position = {.x = entity.x, .y = entity.y}});
+        created, rtype::Transform{.position = sample.position});
     registry.emplace<rtype::Health>(created, rtype::Health{
                                                  .current = entity.health,
                                                  .max = rtype::PlayerMaxHealth,
                                              });
-    registry.emplace<Sprite>(
-        created, spriteOf(entity.type, entity.networkId == state.localShip));
+    const bool local = entity.networkId == state.localShip;
+    registry.emplace<Sprite>(created, spriteOf(entity.type, local));
+    if (!local) {
+        const bool ownMissile =
+            state.localSlot != 0 &&
+            EntityFlag::ownerOf(entity.flags) == state.localSlot;
+        rtype::SnapshotHistory history{
+            .lead = ownMissile ? rtype::InterpolationDelay : 0.0,
+        };
+        rtype::pushSample(history, sample);
+        registry.emplace<rtype::SnapshotHistory>(created, history);
+    }
     state.entities.emplace(entity.networkId, created);
 }
 
@@ -124,7 +147,7 @@ void applySnapshot(engine::Registry &registry, const SnapshotPart &snapshot,
         state.players = snapshot.players;
     }
     for (const EntityState &entity : snapshot.entities) {
-        applyEntity(registry, entity, state);
+        applyEntity(registry, entity, snapshot.tick, state);
     }
     std::erase_if(state.destroyed, [&state](const auto &entry) {
         return state.lastTick - entry.second > DestroyedMemory;
@@ -132,8 +155,9 @@ void applySnapshot(engine::Registry &registry, const SnapshotPart &snapshot,
 }
 
 /**
- * @brief Applies a game event: destroys the entity of EntityDestroyed and
- * logs the player events.
+ * @brief Applies a game event: hands the entity of EntityDestroyed to the
+ * dying list (or destroys it at once if it is not interpolated) and logs
+ * the player events.
  * @param registry The client's registry.
  * @param event The event.
  * @param state The sync state.
@@ -146,7 +170,13 @@ void applyEvent(engine::Registry &registry, const GameEvent &event,
         state.destroyed[event.networkId] = state.lastTick;
         const auto it = state.entities.find(event.networkId);
         if (it != state.entities.end()) {
-            registry.destroy(it->second);
+            if (const auto *history =
+                    registry.tryGet<rtype::SnapshotHistory>(it->second)) {
+                state.dying.emplace_back(it->second,
+                                         state.lastTick - history->lead);
+            } else {
+                registry.destroy(it->second);
+            }
             state.entities.erase(it);
         }
         break;
@@ -165,7 +195,7 @@ void applyEvent(engine::Registry &registry, const GameEvent &event,
 
 /**
  * @brief Records the local player's ship and slot, and recolors the ship
- * if it already exists.
+ * and stops interpolating it if it already exists.
  * @param registry The client's registry.
  * @param welcome The Welcome payload.
  * @param state The sync state.
@@ -180,6 +210,7 @@ void applyWelcome(engine::Registry &registry, const Welcome &welcome,
     if (it != state.entities.end()) {
         registry.get<Sprite>(it->second) =
             spriteOf(rtype::EntityType::PlayerShip, true);
+        registry.remove<rtype::SnapshotHistory>(it->second);
     }
 }
 
@@ -197,6 +228,20 @@ void networkSyncSystem(engine::Registry &registry,
             applyWelcome(registry, *welcome, state);
         }
     }
+}
+
+void smoothingSystem(engine::Registry &registry, SyncState &state,
+                     engine::Duration dt)
+{
+    rtype::advanceRenderClock(state.clock, state.lastTick, dt);
+    rtype::interpolationSystem(registry, state.clock.tick);
+    std::erase_if(state.dying, [&registry, &state](const auto &dying) {
+        if (state.clock.tick < dying.second) {
+            return false;
+        }
+        registry.destroy(dying.first);
+        return true;
+    });
 }
 
 } // namespace client
