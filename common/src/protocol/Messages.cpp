@@ -185,6 +185,7 @@ bool decode(ByteReader &in, SnapshotPart &message)
         entity.x = in.f32();
         entity.y = in.f32();
         if ((entity.flags & EntityFlag::All) != entity.flags ||
+            EntityFlag::ownerOf(entity.flags) > MaxPlayers ||
             !std::isfinite(entity.x) || !std::isfinite(entity.y)) {
             return false;
         }

@@ -203,7 +203,7 @@ not fit in one datagram is split into several **parts**
 |-------:|-----:|-------|--------|
 | 0 | 4 | networkId | `u32`, identifies the entity. Never reused by the server |
 | 4 | 1 | type | Entity type, see below. The client chooses the sprite from it |
-| 5 | 1 | flags | Bit 0 (`0x01`) Invincible (blinking), bit 1 (`0x02`) Charging. Other bits **MUST** be 0 |
+| 5 | 1 | flags | Bit 0 (`0x01`) Invincible (blinking), bit 1 (`0x02`) Charging. Bits 2 to 4 (`0x1C`) Owner: the slot (`1` to `4`) of the player who fired a `PlayerMissile`, `0` for every other entity. Bits 5 to 7 **MUST** be 0 |
 | 6 | 2 | health | `u16`, for health bars |
 | 8 | 4 | x | `f32`, center, in playfield units |
 | 12 | 4 | y | `f32`, center, in playfield units |

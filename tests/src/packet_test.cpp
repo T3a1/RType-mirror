@@ -155,6 +155,8 @@ TEST(Packet, RoundTripsEveryPayload)
     laterPart.part = 1;
     laterPart.partCount = 2;
     laterPart.players.clear();
+    laterPart.entities[1].type = EntityType::PlayerMissile;
+    laterPart.entities[1].flags = EntityFlag::owner(MaxPlayers);
     const std::vector<Payload> payloads{
         Connect{},
         Accept{},
@@ -336,6 +338,10 @@ TEST(Packet, RejectsInvalidSnapshots)
 
     snapshot = sampleSnapshot();
     snapshot.entities[0].flags = 0x80;
+    expectBadPayload(snapshot);
+
+    snapshot = sampleSnapshot();
+    snapshot.entities[0].flags = EntityFlag::owner(MaxPlayers + 1);
     expectBadPayload(snapshot);
 
     snapshot = sampleSnapshot();
