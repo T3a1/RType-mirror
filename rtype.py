@@ -35,6 +35,11 @@ CONTAINER = os.environ.get("CONTAINER", "rtype-server")
 CONAN_SYSTEM_PACKAGES = os.environ.get("CONAN_SYSTEM_PACKAGES", "install")
 # Virtual environment where missing build tools (cmake, conan...) are installed.
 TOOLS_DIR = Path(os.environ.get("TOOLS_DIR", ".venv"))
+# Every clang-format version formats a little differently: everyone (and the
+# CI) uses this one, installed from PyPI into TOOLS_DIR.
+CLANG_FORMAT_VERSION = "18.1.3"
+# Versioned Git hooks (pre-commit: formatting check), enabled by this script.
+HOOKS_DIR = ".githooks"
 
 BUILD_TYPE = "Release"
 JOBS = str(os.cpu_count() or 1)
@@ -249,13 +254,68 @@ def run_tidy(fix: bool) -> int:
     return status
 
 
-# Same files as the CI's formatting check.
+# ---------- Formatting (clang-format) ----------
+FORMAT_FOLDERS = ("engine", "common", "server", "client", "tests")
+
+
+def ensure_clang_format() -> Path:
+    """Returns the pinned clang-format of TOOLS_DIR, installing it if it is
+    missing or has another version. The system one is never used."""
+    clang_format = TOOLS_BIN / f"clang-format{EXE}"
+    if clang_format.is_file():
+        version = subprocess.run([str(clang_format), "--version"],
+                                 capture_output=True, text=True).stdout
+        if f"version {CLANG_FORMAT_VERSION}" in version:
+            return clang_format
+    python = ensure_tools_env()
+    log(f"Installing clang-format {CLANG_FORMAT_VERSION} in {TOOLS_DIR}...")
+    run(python, "-m", "pip", "install", "--quiet", "--disable-pip-version-check",
+        f"clang-format=={CLANG_FORMAT_VERSION}",
+        error=f"pip install clang-format=={CLANG_FORMAT_VERSION} failed")
+    return clang_format
+
+
+def format_files(paths: list[str] | None = None) -> list[Path]:
+    """The project's C++ sources, or the given paths that are among them."""
+    if paths is not None:
+        return sorted(Path(path) for path in paths
+                      if Path(path).suffix in (".cpp", ".hpp")
+                      and Path(path).parts[0] in FORMAT_FOLDERS and Path(path).is_file())
+    return sorted(path for folder in FORMAT_FOLDERS
+                  for pattern in ("*.cpp", "*.hpp") for path in Path(folder).rglob(pattern))
+
+
 def run_format() -> None:
-    require("clang-format")
-    files = sorted(path for folder in ("engine", "common", "server", "client", "tests")
-                   for pattern in ("*.cpp", "*.hpp") for path in Path(folder).rglob(pattern))
+    clang_format = ensure_clang_format()
     log("Running clang-format on every file of the project...")
-    run("clang-format", "-i", *files, error="clang-format failed")
+    run(clang_format, "-i", *format_files(), error="clang-format failed")
+
+
+def check_format(paths: list[str]) -> int:
+    """Same check as the CI (all the sources when no path is given)."""
+    files = format_files(paths or None)
+    if not files:
+        return 0
+    clang_format = ensure_clang_format()
+    if subprocess.run([str(clang_format), "--dry-run", "--Werror", *map(str, files)]
+                      ).returncode != 0:
+        print_error("Badly formatted files: run ./rtype.py --format, then git add them again")
+        return 1
+    return 0
+
+
+def install_hooks() -> None:
+    """Points Git to the versioned hooks, unless the clone already uses its
+    own hooks folder."""
+    if not Path(".git").exists():
+        return
+    current = subprocess.run(["git", "config", "--local", "core.hooksPath"],
+                             capture_output=True, text=True).stdout.strip()
+    if current:
+        return
+    if subprocess.run(["git", "config", "--local", "core.hooksPath", HOOKS_DIR]
+                      ).returncode == 0:
+        log(f"Git hooks enabled ({HOOKS_DIR}/): commits are checked by clang-format")
 
 
 # ---------- Unit tests (GoogleTest + CTest) ----------
@@ -428,6 +488,12 @@ def parse_args() -> argparse.Namespace:
                       help="run clang-tidy on the project and exit")
     mode.add_argument("-f", "--fix", action="store_true",
                       help="apply the clang-tidy automatic fixes, run clang-format and exit")
+    mode.add_argument("-F", "--format", action="store_true",
+                      help=f"run clang-format {CLANG_FORMAT_VERSION} (the CI's version) "
+                           "on the project and exit")
+    mode.add_argument("--check-format", nargs="*", metavar="FILE",
+                      help="check the formatting like the CI (all the sources, or only "
+                           "FILE...) and exit; used by the pre-commit hook")
     mode.add_argument("-T", "--test", action="store_true",
                       help="build and run the unit tests (GoogleTest) and exit")
     mode.add_argument("-C", "--coverage", action="store_true",
@@ -444,6 +510,12 @@ def main() -> int:
     # server and the clients are stopped too.
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(128 + signal.SIGTERM))
     try:
+        install_hooks()
+        if args.check_format is not None:
+            return check_format(args.check_format)
+        if args.format:
+            run_format()
+            return 0
         if args.tidy or args.fix:
             return run_tidy(args.fix)
         if args.test:

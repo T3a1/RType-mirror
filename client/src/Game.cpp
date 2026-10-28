@@ -6,6 +6,7 @@
 */
 
 #include "Game.hpp"
+#include "Window.hpp"
 #include "common/Playfield.hpp"
 #include "components/Background.hpp"
 #include "systems/BackgroundRenderSystem.hpp"
@@ -23,9 +24,6 @@
 namespace client {
 
 namespace {
-
-constexpr int windowWidth = 1280;
-constexpr int windowHeight = 720;
 
 constexpr const char *backgroundPath = "assets/bg.jpg";
 constexpr float backgroundSpeed = 120.0F;

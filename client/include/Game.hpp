@@ -18,6 +18,8 @@
 
 #include <raylib.h>
 
+#include <random>
+
 namespace client {
 
 // The client game: its own registry (a mirror of the server's world plus
@@ -48,7 +50,6 @@ class Game {
      */
     void spawnBackground();
     void drawStatus() const;
-
     NetworkClient m_network;
     engine::Registry m_registry;
     Texture2D m_backgroundTexture{};

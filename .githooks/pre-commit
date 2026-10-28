@@ -1,0 +1,16 @@
+#!/bin/sh
+# Refuses a commit whose staged C++ files are not formatted like the CI wants.
+# Enabled by rtype.py (git config core.hooksPath .githooks).
+# Skip it once with: git commit --no-verify
+
+files=$(git diff --cached --name-only --diff-filter=ACMR -- '*.cpp' '*.hpp')
+[ -z "$files" ] && exit 0
+
+python=$(command -v python3 || command -v python)
+if [ -z "$python" ]; then
+    echo "pre-commit: Python not found, formatting not checked" >&2
+    exit 0
+fi
+
+# shellcheck disable=SC2086 # one argument per file (no spaces in our paths)
+exec "$python" "$(git rev-parse --show-toplevel)/rtype.py" --check-format $files

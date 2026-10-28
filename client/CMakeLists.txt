@@ -6,6 +6,7 @@ find_package(raylib REQUIRED)
 set(SOURCE_FILES
     src/main.cpp
     src/Game.cpp
+    src/EnemyFactory.cpp
     src/systems/BackgroundRenderSystem.cpp
     src/systems/BackgroundScrollSystem.cpp
     src/network/NetworkClient.cpp
