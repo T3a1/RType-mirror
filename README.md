@@ -41,6 +41,7 @@ all the options.
 | [Installation guide](docs/INSTALLATION.md) | Requirements, building, running the server and the clients, troubleshooting. |
 | [Architecture](docs/ARCHITECTURE.md) | How the code is organized: game engine, subsystems, game loop, threads. |
 | [Network protocol](docs/PROTOCOL.md) | The messages exchanged between the server and the clients. |
+| [Network testing](docs/NETWORK_TESTING.md) | Playing with added latency and packet loss on one machine, to test the networking. |
 | [Contributing](docs/CONTRIBUTORS.md) | How to work on the project: workflow, conventions, tools. |
 | Code documentation | Every class and function of the code, generated with Doxygen: <https://DOCS_URL_PLACEHOLDER> (or `./rtype.py --docs` to build it locally). |
 
