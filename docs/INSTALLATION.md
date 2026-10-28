@@ -31,7 +31,7 @@ Supported platforms:
 - **Windows 10/11**: supported by `rtype.py`. Crossplay with Linux is still
   under discussion.
 
-All third-party libraries (Raylib, Asio, GoogleTest) come from the Conan
+All third-party libraries (Raylib or SFML, Asio, GoogleTest) come from the Conan
 package manager. Nothing is copied into the repository, and no library has to
 be installed system-wide.
 
@@ -52,6 +52,7 @@ To play without Docker, or with friends on the same machine:
 ```bash
 ./rtype.py --native          # server built and run on your machine
 ./rtype.py --native -c 2     # same, with two clients
+./rtype.py --graphics sfml   # client built with SFML instead of Raylib
 ```
 
 ## 3. The launcher: rtype.py
@@ -62,8 +63,8 @@ that is missing:
 - `cmake`, `conan` and `gcovr` are installed with pip into a local virtual
   environment, `.venv/` (no admin rights, ignored by Git).
 - A default Conan profile is created from your compiler if you have none.
-- On Linux, Conan installs the X11 and OpenGL development packages that Raylib
-  needs with your package manager (apt, pacman...). It asks for your `sudo`
+- On Linux, Conan installs the X11 and OpenGL development packages that the
+  graphics library needs with your package manager (apt, pacman...). It asks for your `sudo`
   password only if one of them is missing.
 - On Windows, if no MSVC compiler is found, it installs Visual Studio 2022
   Build Tools with the C++ workload through `winget` (several GB, asks for
@@ -78,6 +79,7 @@ that is missing:
 | `-c N`, `--clients N` | Starts `N` clients (default: 1). |
 | `-p PORT`, `--port PORT` | UDP port used by the clients (default: 4242). |
 | `-H HOST`, `--host HOST` | Address the clients connect to (default: 127.0.0.1). |
+| `-g LIB`, `--graphics LIB` | Graphics library of the client: `raylib` (default) or `sfml`. Changing it reconfigures and rebuilds `build/`. |
 | `-T`, `--test` | Builds and runs the unit tests, then exits. |
 | `-C`, `--coverage` | Runs the unit tests with coverage and writes an HTML report. |
 | `-t`, `--tidy` | Runs clang-tidy on the project. |
@@ -100,6 +102,7 @@ rebuild it with `cmake --build build` (see [section 4](#4-building-by-hand)).
 | `COVERAGE_DIR` | `build-coverage` | Build directory of `--coverage`. |
 | `SERVER_BIN`, `CLIENT_BIN` | *(found in `BUILD_DIR`)* | Paths to existing binaries. |
 | `IMAGE`, `CONTAINER` | `rtype-server` | Docker image and container names. |
+| `GRAPHICS` | `raylib` | Default of `--graphics`. |
 | `CONAN_SYSTEM_PACKAGES` | `install` | `check` only checks the X11/OpenGL packages, `report` only lists them. |
 | `TOOLS_DIR` | `.venv` | Virtual environment for the build tools. |
 | `NO_COLOR` | *(unset)* | Disables colored output. |
@@ -117,12 +120,21 @@ cmake --build build --config Release
 The executables `r-type_server` and `r-type_client` are written to `build/`
 (`build/Release/` with Visual Studio).
 
+The client uses Raylib by default. To build it with SFML, choose the library
+for Conan, which installs it and passes the choice on to CMake. On a build
+directory that was already configured, also pass it to CMake:
+
+```bash
+conan install . --output-folder=build --build=missing -s compiler.cppstd=20 -s build_type=Release -o "&:graphics=sfml"
+cmake -B build -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DRTYPE_GRAPHICS_BACKEND=sfml
+```
+
 CMake options:
 
 | Option | Default | Effect |
 |--------|---------|--------|
 | `BUILD_CLIENT` | `ON` | Builds the client. `OFF` builds the server only (it still needs Conan for Asio). |
-| `RTYPE_GRAPHICS_BACKEND` | `raylib` | Graphics library of the client. Only `raylib` exists for now. |
+| `RTYPE_GRAPHICS_BACKEND` | `raylib` | Graphics library of the client: `raylib` or `sfml`. It must match the Conan option `graphics`. |
 | `BUILD_TESTS` | `OFF` | Builds the unit tests (`r-type_tests`). |
 | `ENABLE_COVERAGE` | `OFF` | Instruments the code for test coverage (GCC/Clang). |
 
@@ -177,6 +189,11 @@ documentation is generated without diagrams.
 **CMake cannot find raylib.** The build directory was configured without the
 Conan toolchain. Delete `build/`, or let `rtype.py` reconfigure it (it does so
 automatically).
+
+**CMake cannot find SFML (or raylib) after switching library.** Conan installed
+the other library: `RTYPE_GRAPHICS_BACKEND` and the Conan option `graphics`
+must name the same one. Run `conan install` again with `-o "&:graphics=..."`,
+or use `./rtype.py --graphics ...`, which keeps them in sync.
 
 **`conan install` failed.** The full output is in `build/conan-install.log`.
 The usual cause on Linux is a missing X11/OpenGL package that could not be
