@@ -8,12 +8,14 @@
 #ifndef CLIENT_SYSTEMS_INPUTSYSTEM_HPP
 #define CLIENT_SYSTEMS_INPUTSYSTEM_HPP
 
+#include "graphics/IGraphics.hpp"
+
 #include <cstdint>
 
 namespace client {
 
 // Actions held this frame, as Action bits.
-[[nodiscard]] std::uint8_t inputSystem();
+[[nodiscard]] std::uint8_t inputSystem(const gfx::IGraphics &graphics);
 
 } // namespace client
 

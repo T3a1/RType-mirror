@@ -24,19 +24,19 @@ std::optional<Sprite> enemySprite(rtype::EntityType type)
     case rtype::EntityType::EnemySmall:
         return Sprite{
             .size = {.x = 50.0F, .y = 50.0F},
-            .tint = RED,
+            .tint = gfx::colors::Red,
             .layer = enemyLayer,
         };
     case rtype::EntityType::EnemyMedium:
         return Sprite{
             .size = {.x = 100.0F, .y = 50.0F},
-            .tint = BLUE,
+            .tint = gfx::rgb(0, 121, 241),
             .layer = enemyLayer,
         };
     case rtype::EntityType::EnemyLarge:
         return Sprite{
             .size = {.x = 100.0F, .y = 100.0F},
-            .tint = GREEN,
+            .tint = gfx::colors::Green,
             .layer = enemyLayer,
         };
     default:

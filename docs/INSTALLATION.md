@@ -124,6 +124,7 @@ CMake options:
 | Option | Default | Effect |
 |--------|---------|--------|
 | `BUILD_CLIENT` | `ON` | Builds the client. `OFF` builds the server only (it still needs Conan for Asio). |
+| `RTYPE_GRAPHICS_BACKEND` | `raylib` | Graphics library of the client. Only `raylib` exists for now. |
 | `BUILD_TESTS` | `OFF` | Builds the unit tests (`r-type_tests`). |
 | `ENABLE_COVERAGE` | `OFF` | Instruments the code for test coverage (GCC/Clang). |
 

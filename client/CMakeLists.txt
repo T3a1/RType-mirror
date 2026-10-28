@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.15)
 project(r-type_client)
 
-find_package(raylib REQUIRED)
+# Graphics backend: the client only uses client/include/graphics/IGraphics.hpp,
+# each backend implements it in src/graphics/<backend>/ and links its library.
+set(RTYPE_GRAPHICS_BACKEND "raylib" CACHE STRING "Graphics library of the client")
+set_property(CACHE RTYPE_GRAPHICS_BACKEND PROPERTY STRINGS raylib)
 
 set(SOURCE_FILES
     src/main.cpp
@@ -16,6 +19,15 @@ set(SOURCE_FILES
     src/systems/RenderSystem.cpp
 )
 
+if(RTYPE_GRAPHICS_BACKEND STREQUAL "raylib")
+    find_package(raylib REQUIRED)
+    list(APPEND SOURCE_FILES src/graphics/raylib/RaylibGraphics.cpp)
+    set(GRAPHICS_LIBRARIES raylib)
+else()
+    message(FATAL_ERROR "Unknown RTYPE_GRAPHICS_BACKEND: ${RTYPE_GRAPHICS_BACKEND}")
+endif()
+message(STATUS "Client graphics backend: ${RTYPE_GRAPHICS_BACKEND}")
+
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 target_include_directories(${PROJECT_NAME}
@@ -23,7 +35,7 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
-    PRIVATE r-type_common raylib
+    PRIVATE r-type_common ${GRAPHICS_LIBRARIES}
 )
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
