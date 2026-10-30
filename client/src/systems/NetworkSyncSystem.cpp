@@ -30,6 +30,9 @@ constexpr std::uint32_t DestroyedMemory = 300;
 constexpr engine::Vec2f ShipSize{.x = 64.0F, .y = 32.0F};
 constexpr engine::Vec2f EnemySize{.x = 64.0F, .y = 64.0F};
 constexpr engine::Vec2f MissileSize{.x = 16.0F, .y = 8.0F};
+constexpr engine::Vec2f SmallEnemySize{.x = 50.0F, .y = 50.0F};
+constexpr engine::Vec2f MediumEnemySize{.x = 100.0F, .y = 50.0F};
+constexpr engine::Vec2f LargeEnemySize{.x = 100.0F, .y = 100.0F};
 
 /**
  * @brief Returns how an entity type is drawn.
@@ -56,6 +59,12 @@ Sprite spriteOf(rtype::EntityType type, bool local)
         return {.size = EnemySize, .tint = rgb(170, 80, 220), .layer = 1};
     case rtype::EntityType::EnemyMissile:
         return {.size = MissileSize, .tint = rgb(255, 100, 180), .layer = 1};
+    case rtype::EntityType::EnemySmall:
+        return {.size = SmallEnemySize, .tint = gfx::colors::Red, .layer = 1};
+    case rtype::EntityType::EnemyMedium:
+        return {.size = MediumEnemySize, .tint = rgb(0, 121, 241), .layer = 1};
+    case rtype::EntityType::EnemyLarge:
+        return {.size = LargeEnemySize, .tint = gfx::colors::Green, .layer = 1};
     }
     return {.size = EnemySize};
 }
