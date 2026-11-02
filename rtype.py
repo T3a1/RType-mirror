@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import platform
 import shutil
 import signal
 import subprocess
@@ -58,8 +59,17 @@ HOOKS_DIR = ".githooks"
 
 BUILD_TYPE = "Release"
 JOBS = str(os.cpu_count() or 1)
-EXE = ".exe" if os.name == "nt" else ""
-TOOLS_BIN = (ROOT / TOOLS_DIR) / ("Scripts" if os.name == "nt" else "bin")
+
+# ---------- Operating system ----------
+# Everything that differs between OSes is decided here or in the functions
+# that test these flags; the rest of the script is the same everywhere.
+SYSTEM = platform.system()  # "Linux", "Darwin" (macOS) or "Windows"
+IS_WINDOWS = SYSTEM == "Windows"
+IS_MACOS = SYSTEM == "Darwin"
+EXE = ".exe" if IS_WINDOWS else ""
+# How to start this script, for the messages that suggest a command.
+LAUNCHER = "python rtype.py" if IS_WINDOWS else "./rtype.py"
+TOOLS_BIN = (ROOT / TOOLS_DIR) / ("Scripts" if IS_WINDOWS else "bin")
 PIP_PYZ_URL = "https://bootstrap.pypa.io/pip/pip.pyz"
 
 
@@ -68,7 +78,7 @@ class LauncherError(Exception):
     """A fatal error: main() prints its message and exits with status 1."""
 
 
-if os.name == "nt":
+if IS_WINDOWS:
     os.system("")  # enables ANSI colors in the legacy Windows console
 COLORS = sys.stdout.isatty() and "NO_COLOR" not in os.environ
 
@@ -127,10 +137,18 @@ def output_of(*args: str | Path) -> str:
         return ""
 
 
-def require(tool: str, hint: str = "") -> None:
-    """Raises LauncherError if `tool` is not in the PATH."""
-    if shutil.which(tool) is None:
-        raise LauncherError(f"{tool} is not installed" + (f" ({hint})" if hint else ""))
+def install_hint(windows: str, macos: str, linux: str) -> str:
+    """The way to install something on this OS."""
+    return windows if IS_WINDOWS else macos if IS_MACOS else linux
+
+
+def require(tool: str, hint: str = "") -> str:
+    """Returns the path of `tool`, or raises LauncherError if it is not in the
+    PATH."""
+    path = shutil.which(tool)
+    if path is None:
+        raise LauncherError(f"{tool} is not installed" + (f": {hint}" if hint else ""))
+    return path
 
 
 # ---------- Build tools (.venv/, compiler) ----------
@@ -207,9 +225,21 @@ def has_msvc() -> bool:
 
 
 def ensure_compiler() -> None:
-    """Windows only: installs the MSVC compiler (Visual Studio Build Tools) with
-    winget if it is missing. Linux distributions ship a compiler."""
-    if os.name != "nt" or shutil.which("cl") or has_msvc():
+    """Makes sure a C++ compiler is installed. On Windows, installs MSVC
+    (Visual Studio Build Tools) with winget if it is missing. On Linux and
+    macOS, explains how to install one: it needs admin rights."""
+    if not IS_WINDOWS:
+        if IS_MACOS and not succeeds("xcode-select", "-p"):
+            raise LauncherError("no C++ compiler: install the Xcode Command Line Tools "
+                                "with `xcode-select --install`, then run this again")
+        if not any(shutil.which(cxx) for cxx in (os.environ.get("CXX", ""), "c++",
+                                                  "g++", "clang++") if cxx):
+            raise LauncherError(
+                "no C++ compiler found: install GCC or Clang with your package manager "
+                "(e.g. `sudo apt install build-essential`, `sudo dnf install gcc-c++` "
+                "or `sudo pacman -S base-devel`)")
+        return
+    if shutil.which("cl") or has_msvc():
         return
     require("winget", 'install Visual Studio Build Tools with the "Desktop development '
                       'with C++" workload')
@@ -239,17 +269,21 @@ def conan_install(build_dir: Path) -> None:
         log("No default Conan profile, detecting one...")
         run("conan", "profile", "detect", quiet=True, error="conan profile detect failed")
 
+    # Only Linux has system packages to install (xorg/system, opengl/system):
+    # macOS and Windows ship OpenGL and their window system. Conan asks for the
+    # sudo password only if one of them is missing.
+    system_packages = [] if IS_WINDOWS or IS_MACOS else [
+        "-c", f"tools.system.package_manager:mode={CONAN_SYSTEM_PACKAGES}",
+        "-c", "tools.system.package_manager:sudo=True"]
+
     log("Installing the Conan packages...")
     build_dir.mkdir(parents=True, exist_ok=True)
     conan_log = build_dir / "conan-install.log"
     with conan_log.open("w") as output:
-        # Conan asks for the sudo password only if a system package is missing.
         status = call(
             "conan", "install", ".", f"--output-folder={build_dir}", "--build=missing",
             "-s", "compiler.cppstd=20", "-s", f"build_type={BUILD_TYPE}",
-            "-o", f"&:graphics={GRAPHICS}",
-            "-c", f"tools.system.package_manager:mode={CONAN_SYSTEM_PACKAGES}",
-            "-c", "tools.system.package_manager:sudo=True",
+            "-o", f"&:graphics={GRAPHICS}", *system_packages,
             stdout=output, stderr=subprocess.STDOUT).returncode
     if status != 0:
         lines = conan_log.read_text(errors="replace").splitlines()
@@ -452,26 +486,46 @@ def run_coverage() -> int:
 
 
 # ---------- Static analysis (clang-tidy) ----------
+# Where LLVM installs its tools without adding them to the PATH: Homebrew's
+# llvm is "keg-only", and the Windows installer may skip the PATH.
+LLVM_DIRS = (Path("/opt/homebrew/opt/llvm/bin"), Path("/usr/local/opt/llvm/bin"),
+             Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "LLVM" / "bin")
+
+
+def find_llvm_tool(name: str) -> str | None:
+    """The path of an LLVM tool (clang-tidy...): in the PATH, or in LLVM_DIRS."""
+    found = shutil.which(name)
+    if found is None:
+        found = next((str(path) for path in (folder / f"{name}{EXE}" for folder in LLVM_DIRS)
+                      if path.is_file()), None)
+    return found
+
+
 def run_tidy(fix: bool = False) -> int:
     """Runs clang-tidy on every file of compile_commands.json (configuring
     BUILD_DIR first if it has none). With fix, applies its fixes, then
     clang-format."""
-    require("clang-tidy")
+    clang_tidy = find_llvm_tool("clang-tidy")
+    if clang_tidy is None:
+        raise LauncherError("clang-tidy is not installed: " + install_hint(
+            "winget install LLVM.LLVM", "brew install llvm",
+            "install clang-tidy with your package manager"))
     compile_commands = BUILD_DIR / "compile_commands.json"
     if not compile_commands.is_file():
         log(f"Generating {compile_commands}...")
         configure()
 
-    if shutil.which("run-clang-tidy"):
+    run_clang_tidy = find_llvm_tool("run-clang-tidy")
+    if run_clang_tidy:
         log("Running clang-tidy on every file of the project...")
-        status = call("run-clang-tidy", "-p", BUILD_DIR, "-quiet",
-                      *(["-fix"] if fix else [])).returncode
+        status = call(run_clang_tidy, "-p", BUILD_DIR, "-quiet",
+                      f"-clang-tidy-binary={clang_tidy}", *(["-fix"] if fix else [])).returncode
     else:
         log("run-clang-tidy not found, checking files one by one...")
         files = sorted({entry["file"] for entry in json.loads(compile_commands.read_text())})
         status = 0
         for file in files:
-            if call("clang-tidy", "-p", BUILD_DIR, "--quiet",
+            if call(clang_tidy, "-p", BUILD_DIR, "--quiet",
                     *(["--fix"] if fix else []), file).returncode != 0:
                 status = 1
 
@@ -519,7 +573,7 @@ def check_format(paths: list[str]) -> int:
         return 0
     clang_format = ensure_clang_format()
     if call(clang_format, "--dry-run", "--Werror", *files).returncode != 0:
-        print_error("Badly formatted files: run ./rtype.py --format, then git add them again")
+        print_error(f"Badly formatted files: run {LAUNCHER} --format, then git add them again")
         return 1
     return 0
 
@@ -538,7 +592,9 @@ def run_docs() -> int:
     """Generates the HTML documentation in BUILD_DIR/docs. Settings come from
     the Doxyfile; the diagrams are turned off when Graphviz is missing instead
     of failing. Warnings go to a log file, not to the terminal."""
-    require("doxygen", "winget install DimitriVanHeesch.Doxygen, or your package manager")
+    require("doxygen", install_hint("winget install DimitriVanHeesch.Doxygen",
+                                    "brew install doxygen",
+                                    "install doxygen with your package manager"))
     output = (BUILD_DIR / "docs").resolve()
     output.mkdir(parents=True, exist_ok=True)
     warnings = output / "doxygen-warnings.log"
@@ -646,6 +702,9 @@ def main() -> int:
     GRAPHICS = args.graphics
     if GRAPHICS not in GRAPHICS_CHOICES:  # argparse does not check the default
         print_error(f"GRAPHICS must be one of: {', '.join(GRAPHICS_CHOICES)}")
+        return 2
+    if GRAPHICS == "ncurses" and IS_WINDOWS:
+        print_error("the ncurses client does not run on Windows: use raylib or sfml")
         return 2
     os.chdir(ROOT)
     use_tools_dir()
