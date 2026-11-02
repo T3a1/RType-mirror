@@ -43,6 +43,9 @@ target_include_directories(${PROJECT_NAME}
 
 find_package(Threads REQUIRED)
 
+# The network library stays PRIVATE: no public header includes it, so the
+# server, the client and the tests never see it.
 target_link_libraries(${PROJECT_NAME}
-    PUBLIC r-type_engine ${NETWORK_LIBRARIES} Threads::Threads
+    PUBLIC r-type_engine Threads::Threads
+    PRIVATE ${NETWORK_LIBRARIES}
 )
