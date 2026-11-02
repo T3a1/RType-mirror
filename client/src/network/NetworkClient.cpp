@@ -6,14 +6,12 @@
 */
 
 #include "network/NetworkClient.hpp"
+#include "common/network/UdpSocket.hpp"
 #include "common/protocol/ByteWriter.hpp"
 #include "common/protocol/Connection.hpp"
-#include "common/protocol/ReliableChannel.hpp"
 #include "engine/Logger.hpp"
 
-#include <asio.hpp>
-
-#include <array>
+#include <utility>
 
 namespace client {
 
@@ -25,34 +23,17 @@ constexpr std::chrono::milliseconds AckDelay{50};
 
 } // namespace
 
-/**
- * @struct NetworkClient::Impl
- * @brief The Asio objects of the client, kept out of the header.
- * @param io The context the socket belongs to; never run.
- * @param socket The non-blocking UDP socket.
- * @param server The server's address; datagrams from elsewhere are dropped.
- * @param channel The reliability state of the connection.
- * @param buffer Receives one datagram at a time.
- **/
-struct NetworkClient::Impl {
-    asio::io_context io;
-    asio::ip::udp::socket socket{io};
-    asio::ip::udp::endpoint server;
-    ReliableChannel channel;
-    std::array<std::uint8_t, MaxPacketSize> buffer{};
-};
-
 NetworkClient::NetworkClient(const std::string &host, std::uint16_t port)
-    : m_impl(std::make_unique<Impl>())
+    : NetworkClient(rtype::network::openUdpSocket(),
+                    rtype::network::resolve(host, port))
 {
-    asio::ip::udp::resolver resolver(m_impl->io);
-    m_impl->server =
-        *resolver.resolve(asio::ip::udp::v4(), host, std::to_string(port))
-             .begin();
-    m_impl->socket.open(asio::ip::udp::v4());
-    m_impl->socket.non_blocking(true);
-    BB_INFO("Connecting to " << m_impl->server.address() << ":"
-                             << m_impl->server.port());
+}
+
+NetworkClient::NetworkClient(std::unique_ptr<engine::net::IUdpSocket> socket,
+                             const engine::net::Endpoint &server)
+    : m_socket(std::move(socket)), m_server(server)
+{
+    BB_INFO("Connecting to " << m_server.toString());
 }
 
 NetworkClient::~NetworkClient()
@@ -80,7 +61,7 @@ std::vector<Payload> NetworkClient::update(TimePoint now)
             m_state = State::Lost;
             return received;
         }
-        if (m_impl->channel.needsAck() && now - m_lastSent >= AckDelay) {
+        if (m_channel.needsAck() && now - m_lastSent >= AckDelay) {
             send(Ack{}, now);
         }
     }
@@ -98,19 +79,13 @@ void NetworkClient::sendInput(std::uint8_t actions, TimePoint now)
 void NetworkClient::receivePending(TimePoint now,
                                    std::vector<Payload> &received)
 {
-    asio::ip::udp::endpoint sender;
-    asio::error_code error;
-    while (true) {
-        const std::size_t size = m_impl->socket.receive_from(
-            asio::buffer(m_impl->buffer), sender, 0, error);
-        if (error == asio::error::would_block) {
-            return;
-        }
-        if (error || sender != m_impl->server) {
+    while (const auto datagram =
+               m_socket->receive(m_buffer, std::chrono::milliseconds::zero())) {
+        if (datagram->sender != m_server) {
             continue;
         }
         const auto result =
-            decodePacket({m_impl->buffer.data(), size}, Side::Server);
+            decodePacket({m_buffer.data(), datagram->size}, Side::Server);
         if (const auto *decodeError = std::get_if<DecodeError>(&result)) {
             if (*decodeError == DecodeError::BadVersion) {
                 BB_ERROR("The server runs another protocol version");
@@ -121,7 +96,7 @@ void NetworkClient::receivePending(TimePoint now,
         }
         const auto &packet = std::get<Packet>(result);
         m_lastHeard = now;
-        if (!m_impl->channel.receive(packet.header)) {
+        if (!m_channel.receive(packet.header)) {
             continue;
         }
         handlePacket(packet, received);
@@ -155,16 +130,15 @@ void NetworkClient::handlePacket(const Packet &packet,
 void NetworkClient::send(const Payload &payload, TimePoint now)
 {
     Packet packet{.payload = payload};
-    if (!m_impl->channel.prepare(packet, now)) {
+    if (!m_channel.prepare(packet, now)) {
         return;
     }
     ByteWriter writer;
     if (!encodePacket(packet, writer)) {
         return;
     }
-    asio::error_code error;
-    m_impl->socket.send_to(asio::buffer(writer.data().data(), writer.size()),
-                           m_impl->server, 0, error);
+    const std::error_code error =
+        m_socket->sendTo(m_server, {writer.data().data(), writer.size()});
     if (error) {
         BB_DEBUG("Send failed: " << error.message());
     }
