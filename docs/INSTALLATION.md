@@ -31,7 +31,7 @@ Supported platforms:
 - **Windows 10/11**: supported by `rtype.py`. Crossplay with Linux is still
   under discussion.
 
-All third-party libraries (Raylib or SFML, Asio, GoogleTest) come from the Conan
+All third-party libraries (Raylib, SFML or ncurses, Asio, GoogleTest) come from the Conan
 package manager. Nothing is copied into the repository, and no library has to
 be installed system-wide.
 
@@ -53,6 +53,7 @@ To play without Docker, or with friends on the same machine:
 ./rtype.py --native          # server built and run on your machine
 ./rtype.py --native -c 2     # same, with two clients
 ./rtype.py --graphics sfml   # client built with SFML instead of Raylib
+./rtype.py --native -g ncurses   # client drawn in this terminal (Linux)
 ```
 
 ## 3. The launcher: rtype.py
@@ -79,7 +80,7 @@ that is missing:
 | `-c N`, `--clients N` | Starts `N` clients (default: 1). |
 | `-p PORT`, `--port PORT` | UDP port used by the clients (default: 4242). |
 | `-H HOST`, `--host HOST` | Address the clients connect to (default: 127.0.0.1). |
-| `-g LIB`, `--graphics LIB` | Graphics library of the client: `raylib` (default) or `sfml`. Changing it reconfigures and rebuilds `build/`. |
+| `-g LIB`, `--graphics LIB` | Graphics library of the client: `raylib` (default), `sfml` or `ncurses` (see [Terminal client](#terminal-client-ncurses)). Changing it reconfigures and rebuilds `build/`. |
 | `-T`, `--test` | Builds and runs the unit tests, then exits. |
 | `-C`, `--coverage` | Runs the unit tests with coverage and writes an HTML report. |
 | `-t`, `--tidy` | Runs clang-tidy on the project. |
@@ -120,8 +121,8 @@ cmake --build build --config Release
 The executables `r-type_server` and `r-type_client` are written to `build/`
 (`build/Release/` with Visual Studio).
 
-The client uses Raylib by default. To build it with SFML, choose the library
-for Conan, which installs it and passes the choice on to CMake. On a build
+The client uses Raylib by default. To build it with SFML (or ncurses), choose
+the library for Conan, which installs it and passes the choice on to CMake. On a build
 directory that was already configured, also pass it to CMake:
 
 ```bash
@@ -134,7 +135,7 @@ CMake options:
 | Option | Default | Effect |
 |--------|---------|--------|
 | `BUILD_CLIENT` | `ON` | Builds the client. `OFF` builds the server only (it still needs Conan for Asio). |
-| `RTYPE_GRAPHICS_BACKEND` | `raylib` | Graphics library of the client: `raylib` or `sfml`. It must match the Conan option `graphics`. |
+| `RTYPE_GRAPHICS_BACKEND` | `raylib` | Graphics library of the client: `raylib`, `sfml` or `ncurses`. It must match the Conan option `graphics`. |
 | `BUILD_TESTS` | `OFF` | Builds the unit tests (`r-type_tests`). |
 | `ENABLE_COVERAGE` | `OFF` | Instruments the code for test coverage (GCC/Clang). |
 
@@ -169,6 +170,28 @@ The image contains a single static binary and runs as an unprivileged user.
 another machine, pass its IP address and make sure UDP port 4242 is open on
 that machine's firewall.
 
+### Terminal client (ncurses)
+
+Built with `--graphics ncurses`, the client draws the game in the terminal it
+was started from. It shows that the client does not depend on its graphics
+library, but the game is degraded:
+
+- Linux only. A large terminal (about 160x45) gives the best result.
+- Ships, missiles and enemies are colored blocks of characters, and there is
+  no background image. Colors are rounded to the terminal's palette (256
+  colors, or 8).
+- A terminal only sends key presses and their repeats, never key releases. A
+  key counts as held for about half a second after it is pressed, then as long
+  as it repeats. Only one key works at a time: you cannot move and fire
+  together.
+- Quit with `q` or Ctrl+C.
+- The logs go to `r-type_client.log` in the current directory instead of the
+  terminal. With `--native`, `rtype.py` writes the server's output to
+  `build/server.log`, and it starts one client only (start others from other
+  terminals with `./build/r-type_client`).
+- The terminal descriptions come from the system (`/usr/share/terminfo`...),
+  unless `TERMINFO` or `TERMINFO_DIRS` is set.
+
 ## 6. Developer tools
 
 | Command | Result |
@@ -190,7 +213,7 @@ documentation is generated without diagrams.
 Conan toolchain. Delete `build/`, or let `rtype.py` reconfigure it (it does so
 automatically).
 
-**CMake cannot find SFML (or raylib) after switching library.** Conan installed
+**CMake cannot find SFML, ncurses or raylib after switching library.** Conan installed
 the other library: `RTYPE_GRAPHICS_BACKEND` and the Conan option `graphics`
 must name the same one. Run `conan install` again with `-o "&:graphics=..."`,
 or use `./rtype.py --graphics ...`, which keeps them in sync.

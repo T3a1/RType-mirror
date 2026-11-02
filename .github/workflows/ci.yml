@@ -57,25 +57,29 @@ jobs:
             | awk -v k=${{ matrix.shard }} 'NR % 4 == k - 1' \
             | xargs -r -P "$(nproc)" -n 1 clang-tidy -p build -quiet --warnings-as-errors='*'
 
-  # The jobs above build the client with Raylib: build and lint the SFML backend too.
-  sfml:
-    name: Build and lint the SFML client
+  # The jobs above build the client with Raylib: build and lint the other backends too.
+  backends:
+    name: Build and lint the ${{ matrix.graphics }} client
     if: github.repository != 'EpitechPGE3-2026/G-ING-500-LIL-5-1-rtype-3'
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        graphics: [sfml, ncurses]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
         with:
-          graphics: sfml
+          graphics: ${{ matrix.graphics }}
       - name: Build the client
         run: cmake --build build --target r-type_client
-      - name: Run clang-tidy on the SFML backend
-        run: clang-tidy -p build -quiet --warnings-as-errors='*' client/src/graphics/sfml/*.cpp
+      - name: Run clang-tidy on the backend
+        run: clang-tidy -p build -quiet --warnings-as-errors='*' client/src/graphics/${{ matrix.graphics }}/*.cpp
 
   # Keeps the check name required by the "Protect main" ruleset.
   gate:
     name: Build, lint and test
-    needs: [build-and-test, lint, sfml]
+    needs: [build-and-test, lint, backends]
     if: ${{ !cancelled() && github.repository != 'EpitechPGE3-2026/G-ING-500-LIL-5-1-rtype-3' }}
     runs-on: ubuntu-24.04
     steps:
@@ -83,7 +87,7 @@ jobs:
         run: |
           test "${{ needs.build-and-test.result }}" = success
           test "${{ needs.lint.result }}" = success
-          test "${{ needs.sfml.result }}" = success
+          test "${{ needs.backends.result }}" = success
 
   docker:
     name: Build server image
