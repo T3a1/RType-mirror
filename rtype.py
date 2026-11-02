@@ -1,10 +1,20 @@
 #!/usr/bin/env python3
-"""R-Type launcher.
+"""R-Type launcher: build, run, test and lint the project with one command.
 
-Starts the server (in Docker by default, or natively) and one or more clients.
-Runs on Linux and Windows: `./rtype.py [options]` or `python rtype.py [options]`.
+Usage: `./rtype.py [options]` on Linux and macOS, `python rtype.py [options]`
+on Windows. Run it with `--help` for the options.
 
-Environment variables override the defaults below. Relative paths are relative
+Without options, it builds the client, starts the server (in Docker, or
+natively with `--native`), starts the clients and waits for them. The other
+modes (`--test`, `--tidy`, `--format`, `--docs`...) run one developer tool and
+exit.
+
+Before building, it installs what is missing without admin rights: cmake,
+conan and gcovr go into a local virtual environment (TOOLS_DIR, `.venv/`), and
+Conan installs the libraries. Only the standard library of Python 3.8+ is used,
+and no command goes through a shell.
+
+Environment variables override the settings below. Relative paths are relative
 to the repository root, whatever the current directory.
 """
 
@@ -20,9 +30,8 @@ import sys
 import urllib.request
 from pathlib import Path
 
-# ---------- Defaults (can be overridden by environment variables) ----------
+# ---------- Settings (environment variables override them) ----------
 ROOT = Path(__file__).resolve().parent
-os.chdir(ROOT)
 
 BUILD_DIR = Path(os.environ.get("BUILD_DIR", "build"))
 COVERAGE_DIR = Path(os.environ.get("COVERAGE_DIR", "build-coverage"))
@@ -34,27 +43,29 @@ CONTAINER = os.environ.get("CONTAINER", "rtype-server")
 # graphics library): install (with sudo), check (fail if missing) or report
 # (only list them).
 CONAN_SYSTEM_PACKAGES = os.environ.get("CONAN_SYSTEM_PACKAGES", "install")
-# Graphics library of the client (also --graphics): raylib or sfml.
-GRAPHICS = os.environ.get("GRAPHICS", "raylib")
+# Graphics library of the client (also --graphics).
 GRAPHICS_CHOICES = ("raylib", "sfml", "ncurses")
+GRAPHICS = os.environ.get("GRAPHICS", "raylib")
 # Virtual environment where missing build tools (cmake, conan...) are installed.
 TOOLS_DIR = Path(os.environ.get("TOOLS_DIR", ".venv"))
 # Every clang-format version formats a little differently: everyone (and the
 # CI) uses this one, installed from PyPI into TOOLS_DIR.
 CLANG_FORMAT_VERSION = "18.1.3"
+# Folders whose C++ sources are formatted and checked.
+FORMAT_FOLDERS = ("engine", "common", "server", "client", "tests")
 # Versioned Git hooks (pre-commit: formatting check), enabled by this script.
 HOOKS_DIR = ".githooks"
 
 BUILD_TYPE = "Release"
 JOBS = str(os.cpu_count() or 1)
 EXE = ".exe" if os.name == "nt" else ""
-TOOLS_BIN = TOOLS_DIR.resolve() / ("Scripts" if os.name == "nt" else "bin")
+TOOLS_BIN = (ROOT / TOOLS_DIR) / ("Scripts" if os.name == "nt" else "bin")
 PIP_PYZ_URL = "https://bootstrap.pypa.io/pip/pip.pyz"
 
 
-# ---------- Helpers ----------
+# ---------- Output and errors ----------
 class LauncherError(Exception):
-    pass
+    """A fatal error: main() prints its message and exits with status 1."""
 
 
 if os.name == "nt":
@@ -63,37 +74,77 @@ COLORS = sys.stdout.isatty() and "NO_COLOR" not in os.environ
 
 
 def log(message: str) -> None:
+    """Prints a progress message on stdout."""
     prefix = "\033[1;34m[run]\033[0m" if COLORS else "[run]"
     print(f"{prefix} {message}", flush=True)
 
 
 def print_error(message: str) -> None:
+    """Prints an error message on stderr."""
     prefix = "\033[1;31m[error]\033[0m" if COLORS else "[error]"
     print(f"{prefix} {message}", file=sys.stderr, flush=True)
 
 
+# ---------- Running commands ----------
+def call(*args: str | Path, **kwargs) -> subprocess.CompletedProcess:
+    """Runs a command (no shell) and returns its result, whatever its exit
+    status. Keyword arguments go to subprocess.run. A program that cannot be
+    started raises LauncherError instead of a traceback."""
+    try:
+        return subprocess.run([str(arg) for arg in args], **kwargs)
+    except OSError as error:
+        raise LauncherError(f"could not run {args[0]}: {error}") from error
+
+
+def run(*args: str | Path, error: str, quiet: bool = False) -> None:
+    """Runs a command and raises LauncherError(error) if it fails. A quiet
+    command prints nothing, except the end of its output when it fails."""
+    if not quiet:
+        if call(*args).returncode != 0:
+            raise LauncherError(error)
+        return
+    result = call(*args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                  text=True, errors="replace")
+    if result.returncode != 0:
+        print("\n".join(result.stdout.splitlines()[-30:]), file=sys.stderr)
+        raise LauncherError(error)
+
+
+def succeeds(*args: str | Path) -> bool:
+    """True if the command runs and exits with status 0. Prints nothing."""
+    try:
+        return subprocess.run([str(arg) for arg in args], capture_output=True).returncode == 0
+    except OSError:
+        return False
+
+
+def output_of(*args: str | Path) -> str:
+    """The standard output of a command, stripped ("" if it cannot run)."""
+    try:
+        return subprocess.run([str(arg) for arg in args], capture_output=True,
+                              text=True, errors="replace").stdout.strip()
+    except OSError:
+        return ""
+
+
 def require(tool: str, hint: str = "") -> None:
+    """Raises LauncherError if `tool` is not in the PATH."""
     if shutil.which(tool) is None:
         raise LauncherError(f"{tool} is not installed" + (f" ({hint})" if hint else ""))
 
 
-def run(*args: str | Path, error: str, quiet: bool = False) -> None:
-    """Runs a command and raises `error` if it fails."""
-    output = subprocess.DEVNULL if quiet else None
-    if subprocess.run([str(a) for a in args], stdout=output).returncode != 0:
-        raise LauncherError(error)
-
-
+# ---------- Build tools (.venv/, compiler) ----------
 def use_tools_dir() -> None:
     """Makes the tools installed in TOOLS_DIR visible to this script and to the
     commands it runs. System tools come first."""
-    if TOOLS_BIN.is_dir() and str(TOOLS_BIN) not in os.environ.get("PATH", ""):
-        os.environ["PATH"] = os.environ.get("PATH", "") + os.pathsep + str(TOOLS_BIN)
+    path = os.environ.get("PATH", "")
+    if TOOLS_BIN.is_dir() and str(TOOLS_BIN) not in path.split(os.pathsep):
+        os.environ["PATH"] = path + os.pathsep + str(TOOLS_BIN)
 
 
 def has_pip(python: Path) -> bool:
-    return subprocess.run([str(python), "-m", "pip", "--version"],
-                          capture_output=True).returncode == 0
+    """True if this Python interpreter has pip."""
+    return succeeds(python, "-m", "pip", "--version")
 
 
 def ensure_tools_env() -> Path:
@@ -104,16 +155,15 @@ def ensure_tools_env() -> Path:
         log(f"Creating the tools environment in {TOOLS_DIR}...")
         # Without pip: Debian/Ubuntu strip ensurepip unless python3-venv is
         # installed, and venv fails halfway when it is missing.
-        run(sys.executable, "-m", "venv", "--without-pip", TOOLS_DIR,
+        run(sys.executable, "-m", "venv", "--without-pip", ROOT / TOOLS_DIR,
             error="Could not create a Python virtual environment")
         use_tools_dir()
     if has_pip(python):
         return python
     log(f"Installing pip in {TOOLS_DIR}...")
-    if subprocess.run([str(python), "-m", "ensurepip", "--default-pip"],
-                      capture_output=True).returncode != 0:
+    if not succeeds(python, "-m", "ensurepip", "--default-pip"):
         # No ensurepip: use the official standalone pip to install pip.
-        pip_pyz = TOOLS_DIR / "pip.pyz"
+        pip_pyz = ROOT / TOOLS_DIR / "pip.pyz"
         try:
             urllib.request.urlretrieve(PIP_PYZ_URL, pip_pyz)
         except OSError as error:
@@ -128,30 +178,32 @@ def ensure_tools_env() -> Path:
     return python
 
 
+def pip_install(requirement: str) -> None:
+    """Installs a PyPI package into TOOLS_DIR."""
+    python = ensure_tools_env()
+    log(f"Installing {requirement} in {TOOLS_DIR}...")
+    run(python, "-m", "pip", "install", "--quiet", "--disable-pip-version-check", requirement,
+        error=f"pip install {requirement} failed")
+
+
 def ensure_tool(tool: str) -> None:
     """Installs a missing Python-packaged tool (cmake, conan, gcovr) from PyPI
-    into the project's virtual environment: no pipx, no admin rights, same on
-    Linux and Windows."""
+    into TOOLS_DIR: no pipx, no admin rights, same on every OS."""
     if shutil.which(tool):
         return
-    python = ensure_tools_env()
-    log(f"{tool} not found, installing it in {TOOLS_DIR}...")
-    run(python, "-m", "pip", "install", "--quiet", "--disable-pip-version-check", tool,
-        error=f"pip install {tool} failed")
+    log(f"{tool} not found.")
+    pip_install(tool)
     if shutil.which(tool) is None:
         raise LauncherError(f"{tool} still not found after installing it in {TOOLS_DIR}")
 
 
 def has_msvc() -> bool:
+    """Windows: true if vswhere finds a Visual Studio with the C++ tools."""
     vswhere = (Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"))
                / "Microsoft Visual Studio" / "Installer" / "vswhere.exe")
-    if not vswhere.is_file():
-        return False
-    found = subprocess.run(
-        [str(vswhere), "-latest", "-products", "*", "-requires",
-         "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", "-property", "installationPath"],
-        capture_output=True, text=True).stdout.strip()
-    return bool(found)
+    return vswhere.is_file() and bool(output_of(
+        vswhere, "-latest", "-products", "*", "-requires",
+        "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", "-property", "installationPath"))
 
 
 def ensure_compiler() -> None:
@@ -165,41 +217,25 @@ def ensure_compiler() -> None:
         "(several GB, asks for admin rights)...")
     # Its exit code is not reliable (e.g. already installed without the C++
     # workload): check the result instead.
-    subprocess.run(["winget", "install", "--id", "Microsoft.VisualStudio.2022.BuildTools",
-                    "--exact", "--accept-package-agreements", "--accept-source-agreements",
-                    "--override", "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools "
-                    "--includeRecommended"])
+    call("winget", "install", "--id", "Microsoft.VisualStudio.2022.BuildTools",
+         "--exact", "--accept-package-agreements", "--accept-source-agreements",
+         "--override", "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools "
+         "--includeRecommended")
     if not has_msvc():
         raise LauncherError('MSVC still not found: add the "Desktop development with C++" '
                             "workload in the Visual Studio Installer")
 
 
-def find_binary(name: str, override: str | None) -> Path | None:
-    """Single-config generators put binaries in the build folder, multi-config
-    ones (Visual Studio) in a per-configuration subfolder."""
-    if override:
-        candidates = [Path(override)]
-    else:
-        candidates = [BUILD_DIR / f"{name}{EXE}", BUILD_DIR / BUILD_TYPE / f"{name}{EXE}"]
-    return next((path for path in candidates if path.is_file()), None)
-
-
-def build(target: str, build_dir: Path = BUILD_DIR) -> None:
-    run("cmake", "--build", build_dir, "--target", target, "--config", BUILD_TYPE,
-        "--parallel", JOBS, error=f"{target} build failed")
-
-
-def configure(*cmake_args: str, build_dir: Path = BUILD_DIR) -> None:
-    """Installs the Conan packages into build_dir, then configures it with the
-    Conan toolchain. Extra arguments are passed to CMake."""
+# ---------- Configure and build (Conan + CMake) ----------
+def conan_install(build_dir: Path) -> None:
+    """Installs the Conan packages and the CMake toolchain into build_dir.
+    Conan's output goes to build_dir/conan-install.log."""
     # The compiler comes first: pip builds Conan's dependencies (e.g. PyYAML)
     # from source when PyPI has no prebuilt wheel for this Python version.
     ensure_compiler()
-    ensure_tool("cmake")
     ensure_tool("conan")
     # A fresh Conan install has no profile: detect one from the local compiler.
-    if subprocess.run(["conan", "profile", "path", "default"],
-                      capture_output=True).returncode != 0:
+    if not succeeds("conan", "profile", "path", "default"):
         log("No default Conan profile, detecting one...")
         run("conan", "profile", "detect", quiet=True, error="conan profile detect failed")
 
@@ -208,18 +244,24 @@ def configure(*cmake_args: str, build_dir: Path = BUILD_DIR) -> None:
     conan_log = build_dir / "conan-install.log"
     with conan_log.open("w") as output:
         # Conan asks for the sudo password only if a system package is missing.
-        status = subprocess.run(
-            ["conan", "install", ".", f"--output-folder={build_dir}", "--build=missing",
-             "-s", "compiler.cppstd=20", "-s", f"build_type={BUILD_TYPE}",
-             "-o", f"&:graphics={GRAPHICS}",
-             "-c", f"tools.system.package_manager:mode={CONAN_SYSTEM_PACKAGES}",
-             "-c", "tools.system.package_manager:sudo=True"],
+        status = call(
+            "conan", "install", ".", f"--output-folder={build_dir}", "--build=missing",
+            "-s", "compiler.cppstd=20", "-s", f"build_type={BUILD_TYPE}",
+            "-o", f"&:graphics={GRAPHICS}",
+            "-c", f"tools.system.package_manager:mode={CONAN_SYSTEM_PACKAGES}",
+            "-c", "tools.system.package_manager:sudo=True",
             stdout=output, stderr=subprocess.STDOUT).returncode
     if status != 0:
         lines = conan_log.read_text(errors="replace").splitlines()
         print("\n".join(lines[-30:]), file=sys.stderr)
         raise LauncherError(f"conan install failed (full output: {conan_log})")
 
+
+def configure(*cmake_args: str, build_dir: Path = BUILD_DIR) -> None:
+    """Installs the Conan packages into build_dir, then configures it with the
+    Conan toolchain. Extra arguments are passed to CMake."""
+    ensure_tool("cmake")
+    conan_install(build_dir)
     # CMake only reads the toolchain on a build folder's first configure: a
     # folder first configured without it must be configured from scratch.
     fresh = []
@@ -235,155 +277,24 @@ def configure(*cmake_args: str, build_dir: Path = BUILD_DIR) -> None:
         quiet=True, error="CMake configuration failed")
 
 
-# ---------- Static analysis (clang-tidy) ----------
-def run_tidy(fix: bool) -> int:
-    require("clang-tidy")
-    compile_commands = BUILD_DIR / "compile_commands.json"
-    if not compile_commands.is_file():
-        log(f"Generating {compile_commands}...")
-        configure()
-
-    if shutil.which("run-clang-tidy"):
-        log("Running clang-tidy on every file of the project...")
-        command = ["run-clang-tidy", "-p", str(BUILD_DIR), "-quiet"] + (["-fix"] if fix else [])
-        status = subprocess.run(command).returncode
-    else:
-        log("run-clang-tidy not found, checking files one by one...")
-        files = sorted({entry["file"] for entry in json.loads(compile_commands.read_text())})
-        status = 0
-        for file in files:
-            command = ["clang-tidy", "-p", str(BUILD_DIR), "--quiet"] + (["--fix"] if fix else [])
-            if subprocess.run(command + [file]).returncode != 0:
-                status = 1
-
-    if fix:
-        run_format()
-    return status
-
-
-# ---------- Formatting (clang-format) ----------
-FORMAT_FOLDERS = ("engine", "common", "server", "client", "tests")
-
-
-def ensure_clang_format() -> Path:
-    """Returns the pinned clang-format of TOOLS_DIR, installing it if it is
-    missing or has another version. The system one is never used."""
-    clang_format = TOOLS_BIN / f"clang-format{EXE}"
-    if clang_format.is_file():
-        version = subprocess.run([str(clang_format), "--version"],
-                                 capture_output=True, text=True).stdout
-        if f"version {CLANG_FORMAT_VERSION}" in version:
-            return clang_format
-    python = ensure_tools_env()
-    log(f"Installing clang-format {CLANG_FORMAT_VERSION} in {TOOLS_DIR}...")
-    run(python, "-m", "pip", "install", "--quiet", "--disable-pip-version-check",
-        f"clang-format=={CLANG_FORMAT_VERSION}",
-        error=f"pip install clang-format=={CLANG_FORMAT_VERSION} failed")
-    return clang_format
-
-
-def format_files(paths: list[str] | None = None) -> list[Path]:
-    """The project's C++ sources, or the given paths that are among them."""
-    if paths is not None:
-        return sorted(Path(path) for path in paths
-                      if Path(path).suffix in (".cpp", ".hpp")
-                      and Path(path).parts[0] in FORMAT_FOLDERS and Path(path).is_file())
-    return sorted(path for folder in FORMAT_FOLDERS
-                  for pattern in ("*.cpp", "*.hpp") for path in Path(folder).rglob(pattern))
-
-
-def run_format() -> None:
-    clang_format = ensure_clang_format()
-    log("Running clang-format on every file of the project...")
-    run(clang_format, "-i", *format_files(), error="clang-format failed")
-
-
-def check_format(paths: list[str]) -> int:
-    """Same check as the CI (all the sources when no path is given)."""
-    files = format_files(paths or None)
-    if not files:
-        return 0
-    clang_format = ensure_clang_format()
-    if subprocess.run([str(clang_format), "--dry-run", "--Werror", *map(str, files)]
-                      ).returncode != 0:
-        print_error("Badly formatted files: run ./rtype.py --format, then git add them again")
-        return 1
-    return 0
-
-
-def install_hooks() -> None:
-    """Points Git to the versioned hooks, unless the clone already uses its
-    own hooks folder."""
-    if not Path(".git").exists():
-        return
-    current = subprocess.run(["git", "config", "--local", "core.hooksPath"],
-                             capture_output=True, text=True).stdout.strip()
-    if current:
-        return
-    if subprocess.run(["git", "config", "--local", "core.hooksPath", HOOKS_DIR]
-                      ).returncode == 0:
-        log(f"Git hooks enabled ({HOOKS_DIR}/): commits are checked by clang-format")
-
-
-# ---------- Unit tests (GoogleTest + CTest) ----------
-def run_tests() -> int:
-    configure("-DBUILD_TESTS=ON")
-    log("Building the unit tests...")
-    build("r-type_tests")
-    log("Running the unit tests...")
-    return subprocess.run(["ctest", "--test-dir", str(BUILD_DIR), "-C", BUILD_TYPE,
-                           "--output-on-failure"]).returncode
-
-
-# ---------- Test coverage (gcov + gcovr) ----------
-# Uses its own build directory: instrumented binaries must not mix with the
-# normal build.
-def run_coverage() -> int:
+def build(target: str, build_dir: Path = BUILD_DIR) -> None:
+    """Builds one CMake target of build_dir."""
     ensure_tool("cmake")
-    ensure_tool("gcovr")
-    log("Building the unit tests with coverage...")
-    configure("-DBUILD_TESTS=ON", "-DENABLE_COVERAGE=ON", "-DBUILD_CLIENT=OFF",
-              build_dir=COVERAGE_DIR)
-    build("r-type_tests", COVERAGE_DIR)
-    # Counters add up across runs: start from zero.
-    for counters in COVERAGE_DIR.rglob("*.gcda"):
-        counters.unlink()
-    log("Running the unit tests...")
-    run("ctest", "--test-dir", COVERAGE_DIR, "--output-on-failure", error="Some tests failed")
-    report = COVERAGE_DIR / "coverage" / "index.html"
-    report.parent.mkdir(parents=True, exist_ok=True)
-    run("gcovr", "--root", ".", "--object-directory", COVERAGE_DIR,
-        "--filter", "engine/", "--filter", "common/",
-        "--html-details", report, "--print-summary", error="gcovr failed")
-    log(f"HTML report: {report}")
-    return 0
+    run("cmake", "--build", build_dir, "--target", target, "--config", BUILD_TYPE,
+        "--parallel", JOBS, error=f"{target} build failed")
 
 
-# ---------- Documentation (Doxygen) ----------
-# Settings come from the Doxyfile; the diagrams are turned off when Graphviz is
-# missing instead of failing. Warnings go to a log file, not to the terminal.
-def run_docs() -> int:
-    require("doxygen", "winget install DimitriVanHeesch.Doxygen, or your package manager")
-    output = (BUILD_DIR / "docs").resolve()
-    output.mkdir(parents=True, exist_ok=True)
-    warnings = output / "doxygen-warnings.log"
-    config = Path("Doxyfile").read_text(encoding="utf-8")
-    config += (f'\nOUTPUT_DIRECTORY = "{output.as_posix()}"\n'
-               f'WARN_LOGFILE = "{warnings.as_posix()}"\nQUIET = YES\n')
-    if shutil.which("dot") is None:
-        log("Graphviz (dot) not found, generating the documentation without diagrams...")
-        config += "HAVE_DOT = NO\n"
-    log("Generating the documentation...")
-    if subprocess.run(["doxygen", "-"], input=config, text=True).returncode != 0:
-        raise LauncherError(f"doxygen failed (warnings and errors: {warnings})")
-    count = warnings.read_text(errors="replace").count("warning:") if warnings.is_file() else 0
-    if count:
-        log(f"{count} Doxygen warnings, see {warnings}")
-    log(f"HTML documentation: {output / 'html' / 'index.html'}")
-    return 0
+def find_binary(name: str, override: str | None) -> Path | None:
+    """The path of a built program, None if it is not built. Single-config
+    generators put binaries in the build folder, multi-config ones (Visual
+    Studio) in a per-configuration subfolder."""
+    if override:
+        candidates = [Path(override)]
+    else:
+        candidates = [BUILD_DIR / f"{name}{EXE}", BUILD_DIR / BUILD_TYPE / f"{name}{EXE}"]
+    return next((path for path in candidates if path.is_file()), None)
 
 
-# ---------- Server and clients ----------
 def conan_outdated(build_dir: Path = BUILD_DIR) -> bool:
     """True if conanfile.py is newer than the last Conan install: a build
     would then miss the newly required packages."""
@@ -404,7 +315,7 @@ def configured_graphics(build_dir: Path = BUILD_DIR) -> str | None:
 
 
 def ensure_binary(name: str, override: str | None, *cmake_args: str) -> Path:
-    """Returns the binary, built from the current sources. A binary given by
+    """Returns the program, built from the current sources. A binary given by
     the user (SERVER_BIN, CLIENT_BIN) is used as is."""
     binary = find_binary(name, override)
     if binary is not None and override:
@@ -420,7 +331,6 @@ def ensure_binary(name: str, override: str | None, *cmake_args: str) -> Path:
         configure(*cmake_args)
     # Always build: it is almost instant when nothing changed, and a stale
     # binary would silently ignore the latest changes.
-    ensure_tool("cmake")
     log(f"Building {name}...")
     build(name)
     binary = find_binary(name, override)
@@ -429,7 +339,35 @@ def ensure_binary(name: str, override: str | None, *cmake_args: str) -> Path:
     return binary
 
 
+# ---------- Game: server and clients ----------
+def start_docker_server(port: int) -> None:
+    """Builds the server image and starts it in a detached container."""
+    require("docker", "use --native to skip it")
+    log("Building server image...")
+    run("docker", "build", "-t", IMAGE, ".", error="Docker build failed")
+    succeeds("docker", "rm", "-f", CONTAINER)
+    log(f"Starting server in Docker on port {port}/udp...")
+    run("docker", "run", "-d", "--rm", "--init", "--name", CONTAINER,
+        "-p", f"{port}:4242/udp", IMAGE, quiet=True,
+        error="Could not start the server container")
+
+
+def start_native_server(port: int, in_terminal: bool) -> subprocess.Popen:
+    """Builds and starts the server on this machine. When the client draws in
+    this terminal, the server's output goes to BUILD_DIR/server.log."""
+    server_bin = ensure_binary("r-type_server", SERVER_BIN)
+    log(f"Starting native server on port {port}...")
+    if not in_terminal:
+        return subprocess.Popen([str(server_bin), str(port)])
+    server_log = BUILD_DIR / "server.log"
+    log(f"Server output: {server_log}")
+    with server_log.open("w") as output:
+        return subprocess.Popen([str(server_bin), str(port)],
+                                stdout=output, stderr=subprocess.STDOUT)
+
+
 def stop(process: subprocess.Popen) -> None:
+    """Stops a process: politely first, then by force after 5 seconds."""
     if process.poll() is None:
         process.terminate()
         try:
@@ -439,6 +377,8 @@ def stop(process: subprocess.Popen) -> None:
 
 
 def play(args: argparse.Namespace) -> int:
+    """Default mode: starts the server and the clients, waits until every
+    client is closed, then stops everything (also on Ctrl+C or an error)."""
     server: subprocess.Popen | None = None
     clients: list[subprocess.Popen] = []
     container_started = False
@@ -449,27 +389,10 @@ def play(args: argparse.Namespace) -> int:
                             "here (-c 1) and the others from other terminals")
     try:
         client_bin = ensure_binary("r-type_client", CLIENT_BIN, "-DBUILD_CLIENT=ON")
-
         if args.native:
-            server_bin = ensure_binary("r-type_server", SERVER_BIN)
-            log(f"Starting native server on port {args.port}...")
-            if in_terminal:
-                server_log = BUILD_DIR / "server.log"
-                log(f"Server output: {server_log}")
-                with server_log.open("w") as output:
-                    server = subprocess.Popen([str(server_bin), str(args.port)],
-                                              stdout=output, stderr=subprocess.STDOUT)
-            else:
-                server = subprocess.Popen([str(server_bin), str(args.port)])
+            server = start_native_server(args.port, in_terminal)
         else:
-            require("docker", "use --native to skip it")
-            log("Building server image...")
-            run("docker", "build", "-t", IMAGE, ".", error="Docker build failed")
-            subprocess.run(["docker", "rm", "-f", CONTAINER], capture_output=True)
-            log(f"Starting server in Docker on port {args.port}/udp...")
-            run("docker", "run", "-d", "--rm", "--init", "--name", CONTAINER,
-                "-p", f"{args.port}:4242/udp", IMAGE, quiet=True,
-                error="Could not start the server container")
+            start_docker_server(args.port)
             container_started = True
 
         for i in range(1, args.clients + 1):
@@ -491,63 +414,240 @@ def play(args: argparse.Namespace) -> int:
         if server is not None:
             stop(server)
         if container_started:
-            subprocess.run(["docker", "stop", "-t", "5", CONTAINER], capture_output=True)
+            succeeds("docker", "stop", "-t", "5", CONTAINER)
 
 
-# ---------- Arguments ----------
+# ---------- Unit tests (GoogleTest + CTest) ----------
+def run_tests() -> int:
+    """Builds the unit tests in BUILD_DIR and runs them with CTest."""
+    configure("-DBUILD_TESTS=ON")
+    log("Building the unit tests...")
+    build("r-type_tests")
+    log("Running the unit tests...")
+    return call("ctest", "--test-dir", BUILD_DIR, "-C", BUILD_TYPE,
+                "--output-on-failure").returncode
+
+
+def run_coverage() -> int:
+    """Runs the unit tests with coverage and writes an HTML report. Uses its
+    own build directory: instrumented binaries must not mix with the normal
+    build."""
+    ensure_tool("gcovr")
+    log("Building the unit tests with coverage...")
+    configure("-DBUILD_TESTS=ON", "-DENABLE_COVERAGE=ON", "-DBUILD_CLIENT=OFF",
+              build_dir=COVERAGE_DIR)
+    build("r-type_tests", COVERAGE_DIR)
+    # Counters add up across runs: start from zero.
+    for counters in COVERAGE_DIR.rglob("*.gcda"):
+        counters.unlink()
+    log("Running the unit tests...")
+    run("ctest", "--test-dir", COVERAGE_DIR, "--output-on-failure", error="Some tests failed")
+    report = COVERAGE_DIR / "coverage" / "index.html"
+    report.parent.mkdir(parents=True, exist_ok=True)
+    run("gcovr", "--root", ".", "--object-directory", COVERAGE_DIR,
+        "--filter", "engine/", "--filter", "common/",
+        "--html-details", report, "--print-summary", error="gcovr failed")
+    log(f"HTML report: {report}")
+    return 0
+
+
+# ---------- Static analysis (clang-tidy) ----------
+def run_tidy(fix: bool = False) -> int:
+    """Runs clang-tidy on every file of compile_commands.json (configuring
+    BUILD_DIR first if it has none). With fix, applies its fixes, then
+    clang-format."""
+    require("clang-tidy")
+    compile_commands = BUILD_DIR / "compile_commands.json"
+    if not compile_commands.is_file():
+        log(f"Generating {compile_commands}...")
+        configure()
+
+    if shutil.which("run-clang-tidy"):
+        log("Running clang-tidy on every file of the project...")
+        status = call("run-clang-tidy", "-p", BUILD_DIR, "-quiet",
+                      *(["-fix"] if fix else [])).returncode
+    else:
+        log("run-clang-tidy not found, checking files one by one...")
+        files = sorted({entry["file"] for entry in json.loads(compile_commands.read_text())})
+        status = 0
+        for file in files:
+            if call("clang-tidy", "-p", BUILD_DIR, "--quiet",
+                    *(["--fix"] if fix else []), file).returncode != 0:
+                status = 1
+
+    if fix:
+        run_format()
+    return status
+
+
+# ---------- Formatting (clang-format) ----------
+def ensure_clang_format() -> Path:
+    """Returns the pinned clang-format of TOOLS_DIR, installing it if it is
+    missing or has another version. The system one is never used."""
+    clang_format = TOOLS_BIN / f"clang-format{EXE}"
+    if clang_format.is_file() and f"version {CLANG_FORMAT_VERSION}" in output_of(
+            clang_format, "--version"):
+        return clang_format
+    pip_install(f"clang-format=={CLANG_FORMAT_VERSION}")
+    return clang_format
+
+
+def format_files(paths: list[str] | None = None) -> list[Path]:
+    """The project's C++ sources, or the given paths that are among them
+    (paths relative to the repository root, as Git prints them)."""
+    if paths is not None:
+        return sorted(Path(path) for path in paths
+                      if Path(path).suffix in (".cpp", ".hpp")
+                      and Path(path).parts[0] in FORMAT_FOLDERS and Path(path).is_file())
+    return sorted(path for folder in FORMAT_FOLDERS
+                  for pattern in ("*.cpp", "*.hpp") for path in Path(folder).rglob(pattern))
+
+
+def run_format() -> int:
+    """Formats every C++ source of the project in place."""
+    clang_format = ensure_clang_format()
+    log("Running clang-format on every file of the project...")
+    run(clang_format, "-i", *format_files(), error="clang-format failed")
+    return 0
+
+
+def check_format(paths: list[str]) -> int:
+    """Same check as the CI (all the sources when no path is given): returns
+    1 if a file is badly formatted, without changing it."""
+    files = format_files(paths or None)
+    if not files:
+        return 0
+    clang_format = ensure_clang_format()
+    if call(clang_format, "--dry-run", "--Werror", *files).returncode != 0:
+        print_error("Badly formatted files: run ./rtype.py --format, then git add them again")
+        return 1
+    return 0
+
+
+def install_hooks() -> None:
+    """Points Git to the versioned hooks, unless the clone already uses its
+    own hooks folder."""
+    if not Path(".git").exists() or output_of("git", "config", "--local", "core.hooksPath"):
+        return
+    if succeeds("git", "config", "--local", "core.hooksPath", HOOKS_DIR):
+        log(f"Git hooks enabled ({HOOKS_DIR}/): commits are checked by clang-format")
+
+
+# ---------- Documentation (Doxygen) ----------
+def run_docs() -> int:
+    """Generates the HTML documentation in BUILD_DIR/docs. Settings come from
+    the Doxyfile; the diagrams are turned off when Graphviz is missing instead
+    of failing. Warnings go to a log file, not to the terminal."""
+    require("doxygen", "winget install DimitriVanHeesch.Doxygen, or your package manager")
+    output = (BUILD_DIR / "docs").resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    warnings = output / "doxygen-warnings.log"
+    config = Path("Doxyfile").read_text(encoding="utf-8")
+    config += (f'\nOUTPUT_DIRECTORY = "{output.as_posix()}"\n'
+               f'WARN_LOGFILE = "{warnings.as_posix()}"\nQUIET = YES\n')
+    if shutil.which("dot") is None:
+        log("Graphviz (dot) not found, generating the documentation without diagrams...")
+        config += "HAVE_DOT = NO\n"
+    log("Generating the documentation...")
+    if call("doxygen", "-", input=config, text=True).returncode != 0:
+        raise LauncherError(f"doxygen failed (warnings and errors: {warnings})")
+    count = warnings.read_text(errors="replace").count("warning:") if warnings.is_file() else 0
+    if count:
+        log(f"{count} Doxygen warnings, see {warnings}")
+    log(f"HTML documentation: {output / 'html' / 'index.html'}")
+    return 0
+
+
+# ---------- Command line ----------
 def positive(value: str) -> int:
+    """argparse type: an integer >= 1."""
     if not value.isdigit() or int(value) < 1:
         raise argparse.ArgumentTypeError("must be a positive number")
     return int(value)
 
 
 def port(value: str) -> int:
+    """argparse type: a port number."""
     if not value.isdigit() or not 1 <= int(value) <= 65535:
         raise argparse.ArgumentTypeError("must be between 1 and 65535")
     return int(value)
 
 
+EPILOG = """\
+examples:
+  ./rtype.py                    server in Docker + 1 client
+  ./rtype.py --native -c 2      server built and run here + 2 clients
+  ./rtype.py -g sfml            client built with SFML
+  ./rtype.py --test             build and run the unit tests
+  ./rtype.py --check-format     check the formatting like the CI
+  (on Windows: python rtype.py ...)
+
+environment variables:
+  BUILD_DIR (build), COVERAGE_DIR (build-coverage), SERVER_BIN, CLIENT_BIN,
+  IMAGE and CONTAINER (rtype-server), GRAPHICS (raylib),
+  CONAN_SYSTEM_PACKAGES (install | check | report), TOOLS_DIR (.venv), NO_COLOR
+
+See docs/INSTALLATION.md for the requirements of each OS."""
+
+
 def parse_args() -> argparse.Namespace:
+    """Parses the command line. At most one developer tool can be chosen."""
     parser = argparse.ArgumentParser(
-        description="Starts the R-Type server (in Docker by default, or natively) "
-                    "and one or more clients.")
-    parser.add_argument("-n", "--native", action="store_true",
-                        help="run the server natively instead of in Docker")
-    parser.add_argument("-c", "--clients", type=positive, default=1, metavar="N",
-                        help="number of clients to launch (default: 1)")
-    parser.add_argument("-p", "--port", type=port, default=4242,
-                        help="UDP port of the server (default: 4242)")
-    parser.add_argument("-H", "--host", default="127.0.0.1",
-                        help="address the clients connect to (default: 127.0.0.1)")
-    parser.add_argument("-g", "--graphics", choices=GRAPHICS_CHOICES, default=GRAPHICS,
-                        help=f"graphics library of the client (default: {GRAPHICS})")
-    mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("-t", "--tidy", action="store_true",
-                      help="run clang-tidy on the project and exit")
-    mode.add_argument("-f", "--fix", action="store_true",
-                      help="apply the clang-tidy automatic fixes, run clang-format and exit")
-    mode.add_argument("-F", "--format", action="store_true",
-                      help=f"run clang-format {CLANG_FORMAT_VERSION} (the CI's version) "
-                           "on the project and exit")
+        prog="rtype.py", epilog=EPILOG, formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="Builds and starts the R-Type server (in Docker by default, or\n"
+                    "natively) and its clients, or runs one developer tool.")
+    game = parser.add_argument_group("game (default mode)")
+    game.add_argument("-n", "--native", action="store_true",
+                      help="run the server natively instead of in Docker")
+    game.add_argument("-c", "--clients", type=positive, default=1, metavar="N",
+                      help="number of clients to launch (default: 1)")
+    game.add_argument("-p", "--port", type=port, default=4242,
+                      help="UDP port of the server (default: 4242)")
+    game.add_argument("-H", "--host", default="127.0.0.1",
+                      help="address the clients connect to (default: 127.0.0.1)")
+    game.add_argument("-g", "--graphics", choices=GRAPHICS_CHOICES, default=GRAPHICS,
+                      help=f"graphics library of the client (default: {GRAPHICS})")
+    tools = parser.add_argument_group("developer tools (run one, then exit)")
+    mode = tools.add_mutually_exclusive_group()
+    mode.add_argument("-T", "--test", dest="action", action="store_const", const="test",
+                      help="build and run the unit tests (GoogleTest)")
+    mode.add_argument("-C", "--coverage", dest="action", action="store_const",
+                      const="coverage", help="run the unit tests with coverage, write an "
+                                             "HTML report")
+    mode.add_argument("-t", "--tidy", dest="action", action="store_const", const="tidy",
+                      help="run clang-tidy on the project")
+    mode.add_argument("-f", "--fix", dest="action", action="store_const", const="fix",
+                      help="apply the clang-tidy fixes, then run clang-format")
+    mode.add_argument("-F", "--format", dest="action", action="store_const", const="format",
+                      help=f"run clang-format {CLANG_FORMAT_VERSION} (the CI's version) on "
+                           "the project")
     mode.add_argument("--check-format", nargs="*", metavar="FILE",
                       help="check the formatting like the CI (all the sources, or only "
-                           "FILE...) and exit; used by the pre-commit hook")
-    mode.add_argument("-T", "--test", action="store_true",
-                      help="build and run the unit tests (GoogleTest) and exit")
-    mode.add_argument("-C", "--coverage", action="store_true",
-                      help="run the unit tests with coverage, write an HTML report and exit")
-    mode.add_argument("-d", "--docs", action="store_true",
-                      help="generate the HTML documentation with Doxygen and exit")
+                           "FILE...); used by the pre-commit hook")
+    mode.add_argument("-d", "--docs", dest="action", action="store_const", const="docs",
+                      help="generate the HTML documentation with Doxygen")
     return parser.parse_args()
 
 
+ACTIONS = {
+    "test": run_tests,
+    "coverage": run_coverage,
+    "tidy": run_tidy,
+    "fix": lambda: run_tidy(fix=True),
+    "format": run_format,
+    "docs": run_docs,
+}
+
+
 def main() -> int:
+    """Entry point: returns the exit status of the chosen mode."""
     global GRAPHICS
     args = parse_args()
     GRAPHICS = args.graphics
     if GRAPHICS not in GRAPHICS_CHOICES:  # argparse does not check the default
         print_error(f"GRAPHICS must be one of: {', '.join(GRAPHICS_CHOICES)}")
         return 2
+    os.chdir(ROOT)
     use_tools_dir()
     # Turns `docker stop`/`kill` of the launcher into a normal exit, so the
     # server and the clients are stopped too.
@@ -556,17 +656,8 @@ def main() -> int:
         install_hooks()
         if args.check_format is not None:
             return check_format(args.check_format)
-        if args.format:
-            run_format()
-            return 0
-        if args.tidy or args.fix:
-            return run_tidy(args.fix)
-        if args.test:
-            return run_tests()
-        if args.coverage:
-            return run_coverage()
-        if args.docs:
-            return run_docs()
+        if args.action:
+            return ACTIONS[args.action]()
         return play(args)
     except LauncherError as error:
         print_error(str(error))
