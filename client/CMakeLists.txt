@@ -11,7 +11,6 @@ set(SOURCE_FILES
     src/Game.cpp
     src/systems/BackgroundRenderSystem.cpp
     src/systems/BackgroundScrollSystem.cpp
-    src/network/NetworkClient.cpp
     src/systems/HudSystem.cpp
     src/systems/InputSystem.cpp
     src/systems/NetworkSyncSystem.cpp
@@ -38,6 +37,18 @@ else()
 endif()
 message(STATUS "Client graphics backend: ${RTYPE_GRAPHICS_BACKEND}")
 
+# The connection to the server is a library so the tests can run it on a
+# fake socket.
+add_library(r-type_client_network STATIC src/network/NetworkClient.cpp)
+
+target_include_directories(r-type_client_network
+    PUBLIC include
+)
+
+target_link_libraries(r-type_client_network
+    PUBLIC r-type_common
+)
+
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 target_include_directories(${PROJECT_NAME}
@@ -45,7 +56,7 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
-    PRIVATE r-type_common ${GRAPHICS_LIBRARIES}
+    PRIVATE r-type_client_network ${GRAPHICS_LIBRARIES}
 )
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
