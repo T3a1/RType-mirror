@@ -9,12 +9,13 @@
 #define CLIENT_SYSTEMS_RENDERSYSTEM_HPP
 
 #include "engine/Registry.hpp"
+#include "graphics/IGraphics.hpp"
 
 namespace client {
 
-// Draws every entity with a Transform and a Sprite, layer by layer.
-// Must be called between BeginDrawing() and EndDrawing().
-void renderSystem(engine::Registry &registry);
+// Draws every entity with a Transform and a Sprite, layer by layer, in
+// world units: call it between beginWorld() and endWorld().
+void renderSystem(engine::Registry &registry, gfx::IGraphics &graphics);
 
 } // namespace client
 

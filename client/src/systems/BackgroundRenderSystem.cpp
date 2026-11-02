@@ -9,20 +9,20 @@
 #include "components/Background.hpp"
 #include "engine/Entity.hpp"
 
-#include <raylib.h>
-
 #include <cmath>
 
 namespace client {
 
-void backgroundRenderSystem(engine::Registry &registry)
+void backgroundRenderSystem(engine::Registry &registry,
+                            gfx::IGraphics &graphics)
 {
-    const auto screenWidth = static_cast<float>(GetScreenWidth());
-    const auto screenHeight = static_cast<float>(GetScreenHeight());
+    const engine::Vec2f screen = graphics.screenSize();
+    const float screenWidth = screen.x;
+    const float screenHeight = screen.y;
 
     registry.each<Background>(
-        [screenWidth, screenHeight](engine::Entity,
-                                    const Background &background) {
+        [&graphics, screenWidth, screenHeight](engine::Entity,
+                                               const Background &background) {
             const auto width = static_cast<float>(background.texture.width);
             const auto height = static_cast<float>(background.texture.height);
             if (width <= 0.0F || height <= 0.0F) {
@@ -35,20 +35,20 @@ void backgroundRenderSystem(engine::Registry &registry)
                 static_cast<int>(std::ceil((screenWidth - start) / tileWidth));
             for (int i = 0; i < tiles; ++i) {
                 const float x = start + (static_cast<float>(i) * tileWidth);
-                DrawTexturePro(background.texture,
-                               Rectangle{
-                                   .x = 0.0F,
-                                   .y = 0.0F,
-                                   .width = width,
-                                   .height = height,
-                               },
-                               Rectangle{
-                                   .x = x,
-                                   .y = 0.0F,
-                                   .width = tileWidth,
-                                   .height = screenHeight,
-                               },
-                               Vector2{.x = 0.0F, .y = 0.0F}, 0.0F, WHITE);
+                graphics.drawTexture(background.texture,
+                                     gfx::Rect{
+                                         .x = 0.0F,
+                                         .y = 0.0F,
+                                         .width = width,
+                                         .height = height,
+                                     },
+                                     gfx::Rect{
+                                         .x = x,
+                                         .y = 0.0F,
+                                         .width = tileWidth,
+                                         .height = screenHeight,
+                                     },
+                                     gfx::colors::White);
             }
         });
 }

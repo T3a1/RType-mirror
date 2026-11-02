@@ -10,8 +10,6 @@
 #include "components/Sprite.hpp"
 #include "engine/Entity.hpp"
 
-#include <raylib.h>
-
 #include <algorithm>
 #include <vector>
 
@@ -26,7 +24,7 @@ struct DrawCommand {
 
 } // namespace
 
-void renderSystem(engine::Registry &registry)
+void renderSystem(engine::Registry &registry, gfx::IGraphics &graphics)
 {
     std::vector<DrawCommand> commands;
     registry.each<rtype::Transform, Sprite>(
@@ -42,10 +40,11 @@ void renderSystem(engine::Registry &registry)
     for (const DrawCommand &command : commands) {
         const engine::Vec2f topLeft =
             command.transform->position - command.sprite->size * 0.5;
-        DrawRectangleV(
-            Vector2{.x = topLeft.x, .y = topLeft.y},
-            Vector2{.x = command.sprite->size.x, .y = command.sprite->size.y},
-            command.sprite->tint);
+        graphics.drawRectangle(gfx::Rect{.x = topLeft.x,
+                                         .y = topLeft.y,
+                                         .width = command.sprite->size.x,
+                                         .height = command.sprite->size.y},
+                               command.sprite->tint);
     }
 }
 

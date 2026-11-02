@@ -9,14 +9,13 @@
 #define CLIENT_COMPONENTS_SPRITE_HPP
 
 #include "engine/Vec2.hpp"
-
-#include <raylib.h>
+#include "graphics/Types.hpp"
 
 namespace client {
 
 struct Sprite {
     engine::Vec2f size;
-    Color tint{.r = 255, .g = 255, .b = 255, .a = 255};
+    gfx::Color tint = gfx::colors::White;
     int layer = 0;
 };
 

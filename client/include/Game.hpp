@@ -10,13 +10,13 @@
 
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"
+#include "graphics/IGraphics.hpp"
 #include "network/NetworkClient.hpp"
 #include "systems/NetworkSyncSystem.hpp"
 
 #include <cstdint>
+#include <memory>
 #include <string>
-
-#include <raylib.h>
 
 namespace client {
 
@@ -25,7 +25,8 @@ namespace client {
 // per displayed frame with a variable time step.
 class Game {
   public:
-    // Throws if the server address cannot be resolved.
+    // Throws if the server address cannot be resolved or the window cannot
+    // be opened.
     Game(const std::string &host, std::uint16_t port);
     ~Game();
 
@@ -44,14 +45,16 @@ class Game {
      * @brief Loads the background texture and creates the entity scrolling it.
      *
      * The texture is loaded from the assets directory next to the executable
-     * and stays owned by the Game, which unloads it in its destructor.
+     * and stays owned by the Game, which unloads it in its destructor. If it
+     * cannot be loaded, the window simply has no background.
      */
     void spawnBackground();
     void drawStatus() const;
 
     NetworkClient m_network;
+    std::unique_ptr<gfx::IGraphics> m_graphics;
     engine::Registry m_registry;
-    Texture2D m_backgroundTexture{};
+    gfx::Texture m_backgroundTexture;
     SyncState m_sync;
 };
 

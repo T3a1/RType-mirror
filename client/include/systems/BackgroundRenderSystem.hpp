@@ -9,6 +9,7 @@
 #define CLIENT_SYSTEMS_BACKGROUNDRENDERSYSTEM_HPP
 
 #include "engine/Registry.hpp"
+#include "graphics/IGraphics.hpp"
 
 namespace client {
 
@@ -19,8 +20,10 @@ namespace client {
  * from its scrolled position until the window is covered.
  *
  * @param registry Registry holding the Background components.
+ * @param graphics The graphics backend to draw with, in screen pixels.
  */
-void backgroundRenderSystem(engine::Registry &registry);
+void backgroundRenderSystem(engine::Registry &registry,
+                            gfx::IGraphics &graphics);
 
 } // namespace client
 

@@ -9,25 +9,28 @@
 #define CLIENT_SYSTEMS_HUDSYSTEM_HPP
 
 #include "engine/Registry.hpp"
+#include "graphics/IGraphics.hpp"
 #include "systems/NetworkSyncSystem.hpp"
 
 namespace client {
 
 /**
  * @brief Draws a health bar above every player ship, from its Health and
- * Transform. It is drawn in playfield units: call it between BeginMode2D()
- * and EndMode2D().
+ * Transform. It is drawn in playfield units: call it between beginWorld()
+ * and endWorld().
  * @param registry The client's registry.
+ * @param graphics The graphics backend to draw with.
  **/
-void healthBarSystem(engine::Registry &registry);
+void healthBarSystem(engine::Registry &registry, gfx::IGraphics &graphics);
 
 /**
  * @brief Draws the score of every player in the top-left corner, the local
  * player highlighted and marked "(you)". It is drawn in screen pixels: call
- * it after EndMode2D().
+ * it after endWorld().
  * @param state The sync state, for the players and the local slot.
+ * @param graphics The graphics backend to draw with.
  **/
-void hudSystem(const SyncState &state);
+void hudSystem(const SyncState &state, gfx::IGraphics &graphics);
 
 } // namespace client
 
