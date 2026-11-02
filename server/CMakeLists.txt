@@ -18,7 +18,17 @@ set(SOURCE_FILES
     src/systems/ShootSystem.cpp
     src/systems/LifetimeSystem.cpp
     src/EntityFactory.cpp
-    src/network/NetworkServer.cpp
+)
+
+# The network thread is a library so the tests can run it on a fake socket.
+add_library(r-type_server_network STATIC src/network/NetworkServer.cpp)
+
+target_include_directories(r-type_server_network
+    PUBLIC include
+)
+
+target_link_libraries(r-type_server_network
+    PUBLIC r-type_common
 )
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
@@ -28,5 +38,5 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
-    PRIVATE r-type_common
+    PRIVATE r-type_server_network
 )

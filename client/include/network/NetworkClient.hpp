@@ -9,7 +9,11 @@
 #define CLIENT_NETWORK_NETWORKCLIENT_HPP
 
 #include "common/protocol/Packet.hpp"
+#include "common/protocol/ReliableChannel.hpp"
+#include "engine/network/Endpoint.hpp"
+#include "engine/network/IUdpSocket.hpp"
 
+#include <array>
 #include <chrono>
 #include <cstdint>
 #include <memory>
@@ -24,8 +28,8 @@ namespace client {
  *
  * The game calls update() then sendInput() once per frame. It handles the
  * protocol itself (Connect retries, Accept, Reject, Disconnect, acks,
- * timeout) and only hands the game what concerns it. No Asio type appears
- * in this header, so it can be included next to a graphics library.
+ * timeout) and only hands the game what concerns it. The socket is an
+ * engine::net::IUdpSocket, so no network library appears here.
  **/
 class NetworkClient {
   public:
@@ -54,10 +58,20 @@ class NetworkClient {
      * socket. The first Connect is sent by the first update().
      * @param host The server's host name or IP address.
      * @param port The server's UDP port.
-     * @throws asio::system_error If the host cannot be resolved or the
-     * socket cannot be opened.
+     * @throws engine::net::NetworkError If the host cannot be resolved or
+     * the socket cannot be opened.
      **/
     NetworkClient(const std::string &host, std::uint16_t port);
+
+    /**
+     * @brief Uses an already opened socket (a fake one in tests). The first
+     * Connect is sent by the first update().
+     * @param socket The socket, polled without blocking.
+     * @param server The server's endpoint; datagrams from elsewhere are
+     * dropped.
+     **/
+    NetworkClient(std::unique_ptr<engine::net::IUdpSocket> socket,
+                  const engine::net::Endpoint &server);
 
     /**
      * @brief Sends Disconnect{Left} if connected, so the server frees the
@@ -96,15 +110,16 @@ class NetworkClient {
     [[nodiscard]] State state() const { return m_state; }
 
   private:
-    struct Impl;
-
     void receivePending(TimePoint now,
                         std::vector<rtype::protocol::Payload> &received);
     void handlePacket(const rtype::protocol::Packet &packet,
                       std::vector<rtype::protocol::Payload> &received);
     void send(const rtype::protocol::Payload &payload, TimePoint now);
 
-    std::unique_ptr<Impl> m_impl;
+    std::unique_ptr<engine::net::IUdpSocket> m_socket;
+    engine::net::Endpoint m_server;
+    rtype::protocol::ReliableChannel m_channel;
+    std::array<std::uint8_t, rtype::protocol::MaxPacketSize> m_buffer{};
     State m_state = State::Connecting;
     TimePoint m_lastHeard;
     TimePoint m_lastSent;

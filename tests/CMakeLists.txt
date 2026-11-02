@@ -18,12 +18,21 @@ set(SOURCE_FILES
     src/packet_test.cpp
     src/packet_fuzz_test.cpp
     src/reliable_channel_test.cpp
+    src/udp_socket_test.cpp
+    src/network_server_test.cpp
 )
+
+# The client's network code only exists when the client is built.
+if(TARGET r-type_client_network)
+    list(APPEND SOURCE_FILES src/network_client_test.cpp)
+    set(CLIENT_NETWORK_LIBRARY r-type_client_network)
+endif()
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 target_link_libraries(${PROJECT_NAME}
-    PRIVATE r-type_common GTest::gtest GTest::gtest_main GTest::gmock
+    PRIVATE r-type_server_network ${CLIENT_NETWORK_LIBRARY}
+    GTest::gtest GTest::gtest_main GTest::gmock
 )
 
 gtest_discover_tests(${PROJECT_NAME})

@@ -163,6 +163,7 @@ CMake options:
 |--------|---------|--------|
 | `BUILD_CLIENT` | `ON` | Builds the client. `OFF` builds the server only (it still needs Conan for Asio). |
 | `RTYPE_GRAPHICS_BACKEND` | `raylib` | Graphics library of the client: `raylib`, `sfml` or `ncurses`. It must match the Conan option `graphics`. |
+| `RTYPE_NETWORK_BACKEND` | `asio` | Network library behind `engine::net::IUdpSocket`. Only `asio` exists. |
 | `BUILD_TESTS` | `OFF` | Builds the unit tests (`r-type_tests`). |
 | `ENABLE_COVERAGE` | `OFF` | Instruments the code for test coverage (GCC/Clang). |
 

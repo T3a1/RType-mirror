@@ -10,29 +10,42 @@
 
 namespace server {
 
+namespace {
+
+constexpr std::chrono::milliseconds UpdateInterval{10};
+
+} // namespace
+
 void NetworkServer::start()
 {
-    receive();
-    scheduleUpdate();
+    m_running = true;
     m_serverThread = std::thread([this] {
         try {
-            m_io.run();
+            run();
         } catch (const std::exception &e) {
             BB_ERROR(e.what());
         }
     });
 }
 
-void NetworkServer::scheduleUpdate()
+void NetworkServer::run()
 {
-    m_timer.expires_after(std::chrono::milliseconds(10));
-    m_timer.async_wait([this](const asio::error_code &error) {
-        if (error) {
-            return;
+    auto nextUpdate = std::chrono::steady_clock::now() + UpdateInterval;
+    while (m_running) {
+        const auto now = std::chrono::steady_clock::now();
+        if (now >= nextUpdate) {
+            update(now);
+            nextUpdate = now + UpdateInterval;
+            continue;
         }
-        update(std::chrono::steady_clock::now());
-        scheduleUpdate();
-    });
+        const auto datagram = m_socket->receive(
+            m_buffer,
+            std::chrono::ceil<std::chrono::milliseconds>(nextUpdate - now));
+        if (datagram) {
+            handleDatagram(*datagram);
+        }
+    }
+    closeSessions();
 }
 
 void NetworkServer::update(TimePoint now)
@@ -63,33 +76,13 @@ void NetworkServer::update(TimePoint now)
     }
 }
 
-void NetworkServer::receive()
+void NetworkServer::handleDatagram(const engine::net::Datagram &datagram)
 {
-    m_socket.async_receive_from(
-        asio::buffer(m_buffer), m_remote,
-        [this](const asio::error_code &error, std::size_t size) {
-            onReceive(error, size);
-        });
-}
-
-void NetworkServer::onReceive(const asio::error_code &error, std::size_t size)
-{
-    if (error == asio::error::operation_aborted) {
-        return;
-    }
-    if (!error) {
-        handleDatagram(size);
-    }
-    receive();
-}
-
-void NetworkServer::handleDatagram(std::size_t size)
-{
-    BB_DEBUG("Size " << size << " bytes received from " << m_remote.address()
-                     << ":" << m_remote.port());
+    BB_DEBUG("Size " << datagram.size << " bytes received from "
+                     << datagram.sender.toString());
     const auto now = std::chrono::steady_clock::now();
     const auto result = rtype::protocol::decodePacket(
-        {m_buffer.data(), size}, rtype::protocol::Side::Client);
+        {m_buffer.data(), datagram.size}, rtype::protocol::Side::Client);
     const auto *packet = std::get_if<rtype::protocol::Packet>(&result);
     if (packet == nullptr) {
         const auto error = std::get<rtype::protocol::DecodeError>(result);
@@ -97,10 +90,10 @@ void NetworkServer::handleDatagram(std::size_t size)
                  << rtype::protocol::toString(error));
         return;
     }
-    auto const it = m_sessions.find(m_remote);
+    auto const it = m_sessions.find(datagram.sender);
     if (it == m_sessions.end()) {
         if (std::holds_alternative<rtype::protocol::Connect>(packet->payload)) {
-            handleNewPeer(now);
+            handleNewPeer(datagram.sender, now);
         }
         return;
     }
@@ -142,7 +135,7 @@ void NetworkServer::send(SessionIterator it,
     sendPacket(it->first, packet);
 }
 
-void NetworkServer::sendPacket(const asio::ip::udp::endpoint &endpoint,
+void NetworkServer::sendPacket(const engine::net::Endpoint &endpoint,
                                const rtype::protocol::Packet &packet)
 {
     rtype::protocol::ByteWriter writer;
@@ -150,9 +143,8 @@ void NetworkServer::sendPacket(const asio::ip::udp::endpoint &endpoint,
         BB_ERROR("Packet too large to be sent");
         return;
     }
-    asio::error_code error;
-    m_socket.send_to(asio::buffer(writer.data().data(), writer.size()),
-                     endpoint, 0, error);
+    const std::error_code error =
+        m_socket->sendTo(endpoint, {writer.data().data(), writer.size()});
     if (error) {
         BB_DEBUG("Send failed: " << error.message());
     }
@@ -165,12 +157,13 @@ void NetworkServer::pushInbound(InboundMessage message)
     }
 }
 
-void NetworkServer::handleNewPeer(TimePoint now)
+void NetworkServer::handleNewPeer(const engine::net::Endpoint &endpoint,
+                                  TimePoint now)
 {
     if (m_sessions.size() >= rtype::protocol::MaxPlayers) {
         BB_DEBUG("Too many clients");
         sendPacket(
-            m_remote,
+            endpoint,
             rtype::protocol::Packet{
                 .payload =
                     rtype::protocol::Reject{
@@ -180,7 +173,7 @@ void NetworkServer::handleNewPeer(TimePoint now)
         return;
     }
     const auto [it, inserted] = m_sessions.try_emplace(
-        m_remote, Session{.id = m_newCliendId++, .lastHeard = now});
+        endpoint, Session{.id = m_newCliendId++, .lastHeard = now});
     BB_INFO("Registered new client " << it->second.id);
     send(it, rtype::protocol::Accept{}, now);
     pushInbound({.clientId = it->second.id, .kind = InboundKind::Connected});
@@ -208,21 +201,24 @@ void NetworkServer::handleSessionPacket(SessionIterator it,
     }
 }
 
+void NetworkServer::closeSessions()
+{
+    for (const auto &[endpoint, session] : m_sessions) {
+        sendPacket(
+            endpoint,
+            {
+                .payload =
+                    rtype::protocol::Disconnect{
+                        .reason =
+                            rtype::protocol::DisconnectReason::ServerClosing,
+                    },
+            });
+    }
+}
+
 void NetworkServer::stop()
 {
-    asio::post(m_io, [this] {
-        for (const auto &[endpoint, session] : m_sessions) {
-            sendPacket(endpoint,
-                       {
-                           .payload =
-                               rtype::protocol::Disconnect{
-                                   .reason = rtype::protocol::DisconnectReason::
-                                       ServerClosing,
-                               },
-                       });
-        }
-        m_io.stop();
-    });
+    m_running = false;
     if (m_serverThread.joinable()) {
         m_serverThread.join();
     }
