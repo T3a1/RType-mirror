@@ -158,7 +158,32 @@ struct PlayerInfo {
 namespace EntityFlag {
 inline constexpr std::uint8_t Invincible = 1U << 0U;
 inline constexpr std::uint8_t Charging = 1U << 1U;
-inline constexpr std::uint8_t All = Invincible | Charging;
+inline constexpr unsigned OwnerShift = 2U;
+inline constexpr std::uint8_t Owner = 0x7U << OwnerShift;
+inline constexpr std::uint8_t All =
+    unsigned{Invincible} | unsigned{Charging} | unsigned{Owner};
+
+/**
+ * @brief Returns the flag bits naming the player who owns an entity.
+ * @param slot The owner's slot, from 1 to MaxPlayers, or 0 for none.
+ * @return The Owner bits.
+ **/
+constexpr std::uint8_t owner(std::uint8_t slot)
+{
+    return static_cast<std::uint8_t>((unsigned{slot} << OwnerShift) &
+                                     unsigned{Owner});
+}
+
+/**
+ * @brief Returns the slot of the player who owns an entity.
+ * @param flags The entity's flags.
+ * @return The owner's slot, or 0 if no player owns it.
+ **/
+constexpr std::uint8_t ownerOf(std::uint8_t flags)
+{
+    return static_cast<std::uint8_t>((unsigned{flags} & unsigned{Owner}) >>
+                                     OwnerShift);
+}
 } // namespace EntityFlag
 
 /**
@@ -166,7 +191,8 @@ inline constexpr std::uint8_t All = Invincible | Charging;
  * @brief One entity in a snapshot (EntityRecordSize bytes on the wire).
  * @param networkId The id shared by the server and the clients.
  * @param type What the entity is, to pick its sprite.
- * @param flags EntityFlag bits.
+ * @param flags EntityFlag bits: Invincible, Charging, and the Owner slot
+ * of a player's missile.
  * @param health The entity's health points, 0 if it has none.
  * @param x The horizontal position of its center, in playfield units.
  * @param y The vertical position of its center, in playfield units.

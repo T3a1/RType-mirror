@@ -21,6 +21,9 @@ enum class EntityType : std::uint8_t {
     EnemyWave,
     EnemyShooter,
     EnemyMissile,
+    EnemySmall,
+    EnemyMedium,
+    EnemyLarge,
 };
 
 } // namespace rtype

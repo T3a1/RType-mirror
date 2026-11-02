@@ -50,7 +50,6 @@ class Game {
      */
     void spawnBackground();
     void drawStatus() const;
-
     NetworkClient m_network;
     std::unique_ptr<gfx::IGraphics> m_graphics;
     engine::Registry m_registry;

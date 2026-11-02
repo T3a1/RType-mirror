@@ -10,6 +10,7 @@
 #include "common/components/Health.hpp"
 #include "common/components/NetworkId.hpp"
 #include "common/components/Player.hpp"
+#include "common/components/Projectile.hpp"
 #include "common/components/Transform.hpp"
 #include "common/protocol/Messages.hpp"
 
@@ -38,6 +39,24 @@ std::uint16_t healthOf(engine::Registry &registry, engine::Entity entity)
 }
 
 /**
+ * @brief Returns the flags of an entity as sent in a snapshot.
+ * @param registry The registry holding the entity.
+ * @param entity The entity.
+ * @return The Owner bits of a projectile fired by a player still alive, 0
+ * otherwise.
+ **/
+std::uint8_t flagsOf(engine::Registry &registry, engine::Entity entity)
+{
+    const auto *projectile = registry.tryGet<rtype::Projectile>(entity);
+    if (projectile == nullptr) {
+        return 0;
+    }
+    const auto *player = registry.tryGet<rtype::Player>(projectile->owner);
+    return player != nullptr ? rtype::protocol::EntityFlag::owner(player->slot)
+                             : 0;
+}
+
+/**
  * @brief Builds the snapshot record of every networked entity.
  * @param registry The registry to read.
  * @return One record per entity with a NetworkId, an EntityType and a
@@ -53,6 +72,7 @@ entityStates(engine::Registry &registry)
             states.push_back({
                 .networkId = networkId.value,
                 .type = type,
+                .flags = flagsOf(registry, entity),
                 .health = healthOf(registry, entity),
                 .x = transform.position.x,
                 .y = transform.position.y,

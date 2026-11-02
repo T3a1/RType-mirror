@@ -11,6 +11,7 @@ set(SOURCE_FILES
     src/vec2_test.cpp
     src/movement_system_test.cpp
     src/player_control_system_test.cpp
+    src/interpolation_system_test.cpp
     src/message_queue_test.cpp
     src/logger_test.cpp
     src/byte_io_test.cpp

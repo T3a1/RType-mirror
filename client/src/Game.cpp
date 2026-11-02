@@ -6,6 +6,7 @@
 */
 
 #include "Game.hpp"
+#include "Window.hpp"
 #include "common/Playfield.hpp"
 #include "components/Background.hpp"
 #include "systems/BackgroundRenderSystem.hpp"
@@ -21,9 +22,6 @@
 namespace client {
 
 namespace {
-
-constexpr int windowWidth = 1280;
-constexpr int windowHeight = 720;
 
 constexpr const char *backgroundPath = "assets/bg.jpg";
 constexpr float backgroundSpeed = 120.0F;
@@ -66,10 +64,11 @@ void Game::run()
 
 void Game::update(engine::Duration dt)
 {
-    // Later: interpolation, animation.
+    // Later: animation.
     backgroundScrollSystem(m_registry, dt);
     const auto now = std::chrono::steady_clock::now();
     networkSyncSystem(m_registry, m_network.update(now), m_sync);
+    smoothingSystem(m_registry, m_sync, dt);
     m_network.sendInput(inputSystem(*m_graphics), now);
 
     m_registry.flush();
