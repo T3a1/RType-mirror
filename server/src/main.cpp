@@ -6,8 +6,11 @@
 */
 
 #include "Game.hpp"
+#include "common/network/UdpSocket.hpp"
+#include "common/protocol/Connection.hpp"
 #include "engine/Logger.hpp"
 #include "engine/MessageQueue.hpp"
+#include "engine/network/IUdpSocket.hpp"
 #include "network/NetworkMessages.hpp"
 #include "network/NetworkServer.hpp"
 #include <cstdint>
@@ -41,8 +44,10 @@ int main(int /*argc*/, char * /*argv*/[])
     engine::MessageQueue<server::OutboundMessage> outbound;
     std::unique_ptr<server::NetworkServer> network;
     try {
-        network = std::make_unique<server::NetworkServer>(inbound, outbound);
-    } catch (asio::system_error &e) {
+        network = std::make_unique<server::NetworkServer>(
+            rtype::network::openUdpSocket(rtype::protocol::DefaultPort),
+            inbound, outbound);
+    } catch (const engine::net::NetworkError &e) {
         BB_FATAL("Could not start server. " << e.what());
         return ExitError;
     }
