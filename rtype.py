@@ -352,7 +352,9 @@ def ensure_binary(name: str, override: str | None, *cmake_args: str) -> Path:
     """Returns the program, built from the current sources. A binary given by
     the user (SERVER_BIN, CLIENT_BIN) is used as is."""
     binary = find_binary(name, override)
-    if binary is not None and override:
+    if override:
+        if binary is None:
+            raise LauncherError(f"{override} does not exist (set by SERVER_BIN or CLIENT_BIN)")
         return binary
     if binary is None:
         log(f"{name} not found, configuring the build...")
@@ -374,9 +376,26 @@ def ensure_binary(name: str, override: str | None, *cmake_args: str) -> Path:
 
 
 # ---------- Game: server and clients ----------
+def check_docker() -> None:
+    """Raises LauncherError with the fix if Docker is missing, stopped, or not
+    usable by this user."""
+    require("docker", install_hint("install Docker Desktop", "install Docker Desktop",
+                                   "install Docker Engine") + ", or use --native")
+    info = call("docker", "info", capture_output=True, text=True, errors="replace")
+    if info.returncode == 0:
+        return
+    if "permission denied" in info.stderr.lower():
+        raise LauncherError("your user cannot use Docker: add it to the docker group "
+                            "(`sudo usermod -aG docker $USER`, then log in again), "
+                            "or use --native")
+    raise LauncherError("Docker is installed but not running: start " + install_hint(
+        "Docker Desktop", "Docker Desktop", "it (`sudo systemctl start docker`)")
+        + ", or use --native")
+
+
 def start_docker_server(port: int) -> None:
     """Builds the server image and starts it in a detached container."""
-    require("docker", "use --native to skip it")
+    check_docker()
     log("Building server image...")
     run("docker", "build", "-t", IMAGE, ".", error="Docker build failed")
     succeeds("docker", "rm", "-f", CONTAINER)
@@ -466,6 +485,8 @@ def run_coverage() -> int:
     """Runs the unit tests with coverage and writes an HTML report. Uses its
     own build directory: instrumented binaries must not mix with the normal
     build."""
+    if IS_WINDOWS:
+        raise LauncherError("--coverage needs GCC or Clang (gcov): it does not work with MSVC")
     ensure_tool("gcovr")
     log("Building the unit tests with coverage...")
     configure("-DBUILD_TESTS=ON", "-DENABLE_COVERAGE=ON", "-DBUILD_CLIENT=OFF",
@@ -514,6 +535,9 @@ def run_tidy(fix: bool = False) -> int:
     if not compile_commands.is_file():
         log(f"Generating {compile_commands}...")
         configure()
+    if not compile_commands.is_file():  # Visual Studio generators write none
+        raise LauncherError(f"CMake wrote no {compile_commands}: configure {BUILD_DIR} with "
+                            "Ninja or Makefiles (`cmake -G Ninja ...`) to run clang-tidy")
 
     run_clang_tidy = find_llvm_tool("run-clang-tidy")
     if run_clang_tidy:
@@ -698,6 +722,9 @@ ACTIONS = {
 def main() -> int:
     """Entry point: returns the exit status of the chosen mode."""
     global GRAPHICS
+    if sys.version_info < (3, 8):
+        print_error("Python 3.8 or newer is required")
+        return 2
     args = parse_args()
     GRAPHICS = args.graphics
     if GRAPHICS not in GRAPHICS_CHOICES:  # argparse does not check the default
