@@ -1,8 +1,8 @@
 # Installation
 
-This guide explains how to build and run R-Type on Linux and Windows, either
-with the launcher script `rtype.py` (recommended) or by hand with Conan and
-CMake.
+This guide explains how to build and run R-Type on Linux, macOS and Windows,
+either with the launcher script `rtype.py` (recommended) or by hand with Conan
+and CMake.
 
 ## Contents
 
@@ -19,15 +19,32 @@ CMake.
 | Tool | Needed for | Notes |
 |------|------------|-------|
 | Git | Getting the sources | |
-| Python 3.8 or newer | `rtype.py` | `python3` on Linux, `python` on Windows. |
-| C++20 compiler | Building | GCC 11+ or Clang 14+ on Linux, MSVC 2022 on Windows. |
+| Python 3.8 or newer | `rtype.py` | `python3` on Linux and macOS, `python` on Windows. Standard library only. |
+| C++20 compiler | Building | See the table below. |
 | CMake 3.15+ and Conan 2 | Building | Installed automatically by `rtype.py` if missing. |
 | Docker | Running the server in a container (default mode) | Optional: use `--native` to run it without Docker. |
+| clang-tidy | `--tidy`, `--fix` | Optional. |
 | Doxygen, Graphviz | Generating the code documentation | Optional. |
+
+What to install by hand on each OS (everything else is installed by
+`rtype.py`):
+
+| OS | Compiler | Docker | clang-tidy | Doxygen, Graphviz |
+|----|----------|--------|------------|-------------------|
+| Debian, Ubuntu | `sudo apt install build-essential` | Docker Engine | `sudo apt install clang-tidy` | `sudo apt install doxygen graphviz` |
+| Fedora | `sudo dnf install gcc-c++` | Docker Engine | `sudo dnf install clang-tools-extra` | `sudo dnf install doxygen graphviz` |
+| Arch | `sudo pacman -S base-devel` | Docker Engine | `sudo pacman -S clang` | `sudo pacman -S doxygen graphviz` |
+| macOS (Intel or Apple Silicon) | `xcode-select --install` | Docker Desktop | `brew install llvm` | `brew install doxygen graphviz` |
+| Windows 10/11 | Installed by `rtype.py` (MSVC, through winget) | Docker Desktop (Linux containers) | `winget install LLVM.LLVM` | `winget install DimitriVanHeesch.Doxygen Graphviz.Graphviz` |
+
+When something is missing, `rtype.py` stops with a message that says what to
+install.
 
 Supported platforms:
 
 - **Linux**: required by the project, and tested in the CI on Ubuntu 24.04.
+- **macOS**: supported by `rtype.py` (tested by hand on Apple Silicon, not in
+  the CI).
 - **Windows 10/11**: supported by `rtype.py`. Crossplay with Linux is still
   under discussion.
 
@@ -43,6 +60,9 @@ cd rtype
 ./rtype.py              # on Windows: python rtype.py
 ```
 
+On Windows, replace `./rtype.py` with `python rtype.py` in every command of
+this guide.
+
 The first launch takes a few minutes: it installs the missing build tools,
 downloads the libraries, builds the client, builds the server's Docker image,
 then starts the server and one client.
@@ -53,23 +73,26 @@ To play without Docker, or with friends on the same machine:
 ./rtype.py --native          # server built and run on your machine
 ./rtype.py --native -c 2     # same, with two clients
 ./rtype.py --graphics sfml   # client built with SFML instead of Raylib
-./rtype.py --native -g ncurses   # client drawn in this terminal (Linux)
+./rtype.py --native -g ncurses   # client drawn in this terminal (not on Windows)
 ```
 
 ## 3. The launcher: rtype.py
 
-`rtype.py` works from any directory. Before building, it sets up everything
-that is missing:
+`rtype.py` works from any directory and on every OS: it only uses Python's
+standard library and never goes through a shell. `./rtype.py --help` lists
+the options. Before building, it sets up everything that is missing:
 
 - `cmake`, `conan` and `gcovr` are installed with pip into a local virtual
   environment, `.venv/` (no admin rights, ignored by Git).
 - A default Conan profile is created from your compiler if you have none.
 - On Linux, Conan installs the X11 and OpenGL development packages that the
-  graphics library needs with your package manager (apt, pacman...). It asks for your `sudo`
-  password only if one of them is missing.
+  graphics library needs with your package manager (apt, dnf, pacman...). It
+  asks for your `sudo` password only if one of them is missing. macOS and
+  Windows need no system package.
 - On Windows, if no MSVC compiler is found, it installs Visual Studio 2022
   Build Tools with the C++ workload through `winget` (several GB, asks for
-  admin rights).
+  admin rights). On Linux and macOS, it stops and tells you how to install a
+  compiler (see the table above).
 
 ### Options
 
@@ -93,9 +116,11 @@ that is missing:
 > changes the port published on your machine; in native mode, keep the
 > default.
 
-The client and the server are built only if they are missing from `build/`. A
-client that is already built is not rebuilt after you change the code:
-rebuild it with `cmake --build build` (see [section 4](#4-building-by-hand)).
+The client (and the server with `--native`) is rebuilt from the current
+sources at every launch, which takes a second when nothing changed. The build
+is configured again when `build/` is new, when `conanfile.py` changed, or when
+`--graphics` names another library. Docker mode builds the server inside the
+image, never into `build/`.
 
 ### Environment variables
 
@@ -106,7 +131,7 @@ rebuild it with `cmake --build build` (see [section 4](#4-building-by-hand)).
 | `SERVER_BIN`, `CLIENT_BIN` | *(found in `BUILD_DIR`)* | Paths to existing binaries. |
 | `IMAGE`, `CONTAINER` | `rtype-server` | Docker image and container names. |
 | `GRAPHICS` | `raylib` | Default of `--graphics`. |
-| `CONAN_SYSTEM_PACKAGES` | `install` | `check` only checks the X11/OpenGL packages, `report` only lists them. |
+| `CONAN_SYSTEM_PACKAGES` | `install` | Linux only: `check` only checks the X11/OpenGL packages, `report` only lists them. |
 | `TOOLS_DIR` | `.venv` | Virtual environment for the build tools. |
 | `NO_COLOR` | *(unset)* | Disables colored output. |
 
@@ -178,7 +203,8 @@ Built with `--graphics ncurses`, the client draws the game in the terminal it
 was started from. It shows that the client does not depend on its graphics
 library, but the game is degraded:
 
-- Linux only. A large terminal (about 160x45) gives the best result.
+- Not available on Windows; tested on Linux. A large terminal (about 160x45)
+  gives the best result.
 - Ships, missiles and enemies are colored blocks of characters, and there is
   no background image. Colors are rounded to the terminal's palette (256
   colors, or 8).
@@ -214,10 +240,20 @@ The first run of `rtype.py` enables the project's Git hooks
 whose C++ files are badly formatted: run `./rtype.py --format`, `git add` the
 files again and commit. Use `git commit --no-verify` to skip it once.
 
-`--docs` needs Doxygen (`winget install DimitriVanHeesch.Doxygen` on Windows,
-or your package manager on Linux). Install Graphviz too
-(`winget install Graphviz.Graphviz`) to get the class diagrams; without it the
-documentation is generated without diagrams.
+On Windows, the hook runs in Git's own shell and uses the first of `python3`,
+`python` and `py` that really runs (it skips the Microsoft Store placeholder).
+
+`--tidy` and `--fix` need clang-tidy (see the table in
+[section 1](#1-requirements)). Homebrew's `llvm` and the Windows LLVM installer
+do not always add it to the `PATH`: `rtype.py` also looks for it in
+`/opt/homebrew/opt/llvm/bin`, `/usr/local/opt/llvm/bin` and
+`C:\Program Files\LLVM\bin`. clang-tidy reads `build/compile_commands.json`,
+which the Visual Studio generator does not write: on Windows, configure
+`build/` with Ninja to use it. `--coverage` needs GCC or Clang (gcov), so it
+does not work with MSVC.
+
+`--docs` needs Doxygen. Install Graphviz too to get the class diagrams;
+without it the documentation is generated without diagrams.
 
 ## 7. Troubleshooting
 
@@ -234,8 +270,17 @@ or use `./rtype.py --graphics ...`, which keeps them in sync.
 The usual cause on Linux is a missing X11/OpenGL package that could not be
 installed: run `CONAN_SYSTEM_PACKAGES=report ./rtype.py` to list them.
 
-**`docker: permission denied`.** Your user is not in the `docker` group. Add
-it (`sudo usermod -aG docker $USER`, then log in again) or use `--native`.
+**`Docker is installed but not running`.** Start Docker Desktop (macOS,
+Windows) or the Docker service (`sudo systemctl start docker` on Linux), or
+use `--native`.
+
+**`your user cannot use Docker`.** On Linux, your user is not in the `docker`
+group. Add it (`sudo usermod -aG docker $USER`, then log in again) or use
+`--native`.
+
+**`no C++ compiler`.** Install one as shown in
+[section 1](#1-requirements), then run `rtype.py` again. On macOS, `rtype.py`
+checks for the Xcode Command Line Tools.
 
 **The client does not connect.** Check that the server is running
 (`docker logs rtype-server` in Docker mode), that the host and port match,
