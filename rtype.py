@@ -30,9 +30,13 @@ SERVER_BIN = os.environ.get("SERVER_BIN")
 CLIENT_BIN = os.environ.get("CLIENT_BIN")
 IMAGE = os.environ.get("IMAGE", "rtype-server")
 CONTAINER = os.environ.get("CONTAINER", "rtype-server")
-# What Conan does with missing system packages (X11/OpenGL headers for Raylib):
-# install (with sudo), check (fail if missing) or report (only list them).
+# What Conan does with missing system packages (X11/OpenGL headers for the
+# graphics library): install (with sudo), check (fail if missing) or report
+# (only list them).
 CONAN_SYSTEM_PACKAGES = os.environ.get("CONAN_SYSTEM_PACKAGES", "install")
+# Graphics library of the client (also --graphics): raylib or sfml.
+GRAPHICS = os.environ.get("GRAPHICS", "raylib")
+GRAPHICS_CHOICES = ("raylib", "sfml")
 # Virtual environment where missing build tools (cmake, conan...) are installed.
 TOOLS_DIR = Path(os.environ.get("TOOLS_DIR", ".venv"))
 
@@ -202,6 +206,7 @@ def configure(*cmake_args: str, build_dir: Path = BUILD_DIR) -> None:
         status = subprocess.run(
             ["conan", "install", ".", f"--output-folder={build_dir}", "--build=missing",
              "-s", "compiler.cppstd=20", "-s", f"build_type={BUILD_TYPE}",
+             "-o", f"&:graphics={GRAPHICS}",
              "-c", f"tools.system.package_manager:mode={CONAN_SYSTEM_PACKAGES}",
              "-c", "tools.system.package_manager:sudo=True"],
             stdout=output, stderr=subprocess.STDOUT).returncode
@@ -219,7 +224,9 @@ def configure(*cmake_args: str, build_dir: Path = BUILD_DIR) -> None:
         log(f"{build_dir} was configured without Conan, reconfiguring it from scratch...")
         fresh = ["--fresh"]
     run("cmake", *fresh, "-B", build_dir, "-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake",
-        f"-DCMAKE_BUILD_TYPE={BUILD_TYPE}", "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON", *cmake_args,
+        f"-DCMAKE_BUILD_TYPE={BUILD_TYPE}", "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+        # The toolchain only sets it on the first configure: force it here.
+        f"-DRTYPE_GRAPHICS_BACKEND={GRAPHICS}", *cmake_args,
         quiet=True, error="CMake configuration failed")
 
 
@@ -318,11 +325,22 @@ def run_docs() -> int:
 
 # ---------- Server and clients ----------
 def conan_outdated(build_dir: Path = BUILD_DIR) -> bool:
-    """True if conanfile.txt is newer than the last Conan install: a build
+    """True if conanfile.py is newer than the last Conan install: a build
     would then miss the newly required packages."""
     conan_log = build_dir / "conan-install.log"
     return (not conan_log.is_file()
-            or (ROOT / "conanfile.txt").stat().st_mtime > conan_log.stat().st_mtime)
+            or (ROOT / "conanfile.py").stat().st_mtime > conan_log.stat().st_mtime)
+
+
+def configured_graphics(build_dir: Path = BUILD_DIR) -> str | None:
+    """The graphics library build_dir was configured with, None if unknown."""
+    cache = build_dir / "CMakeCache.txt"
+    if not cache.is_file():
+        return None
+    for line in cache.read_text(errors="replace").splitlines():
+        if line.startswith("RTYPE_GRAPHICS_BACKEND:"):
+            return line.partition("=")[2]
+    return None
 
 
 def ensure_binary(name: str, override: str | None, *cmake_args: str) -> Path:
@@ -335,7 +353,10 @@ def ensure_binary(name: str, override: str | None, *cmake_args: str) -> Path:
         log(f"{name} not found, configuring the build...")
         configure(*cmake_args)
     elif conan_outdated():
-        log("conanfile.txt changed since the last Conan install, configuring the build...")
+        log("conanfile.py changed since the last Conan install, configuring the build...")
+        configure(*cmake_args)
+    elif configured_graphics() != GRAPHICS:
+        log(f"Switching the graphics library to {GRAPHICS}, configuring the build...")
         configure(*cmake_args)
     # Always build: it is almost instant when nothing changed, and a stale
     # binary would silently ignore the latest changes.
@@ -423,6 +444,8 @@ def parse_args() -> argparse.Namespace:
                         help="UDP port of the server (default: 4242)")
     parser.add_argument("-H", "--host", default="127.0.0.1",
                         help="address the clients connect to (default: 127.0.0.1)")
+    parser.add_argument("-g", "--graphics", choices=GRAPHICS_CHOICES, default=GRAPHICS,
+                        help=f"graphics library of the client (default: {GRAPHICS})")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("-t", "--tidy", action="store_true",
                       help="run clang-tidy on the project and exit")
@@ -438,7 +461,12 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    global GRAPHICS
     args = parse_args()
+    GRAPHICS = args.graphics
+    if GRAPHICS not in GRAPHICS_CHOICES:  # argparse does not check the default
+        print_error(f"GRAPHICS must be one of: {', '.join(GRAPHICS_CHOICES)}")
+        return 2
     use_tools_dir()
     # Turns `docker stop`/`kill` of the launcher into a normal exit, so the
     # server and the clients are stopped too.

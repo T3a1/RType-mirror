@@ -61,8 +61,9 @@ Rules:
 - Only `client/src/graphics/<backend>/` may include the graphics library. The
   rest of the client draws, loads textures and reads the keyboard through
   `client::gfx::IGraphics` (`client/include/graphics/IGraphics.hpp`), so
-  switching library (Raylib to SDL2, for example) means writing one new
-  backend and choosing it with the CMake option `RTYPE_GRAPHICS_BACKEND`.
+  switching library means writing one new backend and choosing it with the
+  Conan option `graphics` and the CMake option `RTYPE_GRAPHICS_BACKEND`. Two
+  backends exist: Raylib (default) and SFML.
 - Tests link the libraries directly, so game logic can be tested without
   starting a server or opening a window.
 
