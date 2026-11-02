@@ -30,14 +30,16 @@ The code is split into four CMake targets. Arrows mean "links against".
 
 ```mermaid
 flowchart BT
-    engine["r-type_engine<br/>(static library)<br/>ECS, scheduler, clock, math"]
-    common["r-type_common<br/>(static library)<br/>game components, protocol"]
+    engine["r-type_engine<br/>(static library)<br/>ECS, scheduler, clock, math,<br/>socket interface"]
+    common["r-type_common<br/>(static library)<br/>game components, protocol,<br/>socket backend"]
     server["r-type_server<br/>(executable)"]
     client["r-type_client<br/>(executable)"]
     tests["r-type_tests<br/>(executable)"]
     gfx["Graphics library<br/>(SFML / SDL / Raylib)"]
+    net["Network library<br/>(Asio, private)"]
 
     common --> engine
+    common -. private .-> net
     server --> common
     client --> common
     client --> gfx
@@ -46,10 +48,10 @@ flowchart BT
 
 | Directory | Target | Contents | Allowed dependencies |
 |-----------|--------|----------|----------------------|
-| `engine/` | `r-type_engine` | Generic ECS (entities, components, registry, systems), scheduler, clock, math types. Knows nothing about R-Type. | Standard library only |
-| `common/` | `r-type_common` | R-Type components shared by both programs (`Transform`, `Velocity`, `Health`...), protocol messages and their serialization, networking shared by both programs. | `r-type_engine`, Asio (Conan, or the Alpine package `asio-dev` in the `Dockerfile`) |
-| `server/` | `r-type_server` | Server game loop, gameplay systems (movement, collisions, spawning, AI), client sessions, network thread. | `r-type_common`, server-side packages from the `Dockerfile` |
-| `client/` | `r-type_client` | Rendering, input, audio, interpolation, client network thread. | `r-type_common`, graphics library (Conan) |
+| `engine/` | `r-type_engine` | Generic ECS (entities, components, registry, systems), scheduler, clock, math types, the UDP socket interface (`engine::net`). Knows nothing about R-Type. | Standard library only |
+| `common/` | `r-type_common` | R-Type components shared by both programs (`Transform`, `Velocity`, `Health`...), protocol messages and their serialization, the socket backend. | `r-type_engine`; Asio as a **private** dependency (Conan, or the Alpine package `asio-dev` in the `Dockerfile`) |
+| `server/` | `r-type_server` (and `r-type_server_network`) | Server game loop, gameplay systems (movement, collisions, spawning, AI), client sessions, network thread. | `r-type_common`, server-side packages from the `Dockerfile` |
+| `client/` | `r-type_client` (and `r-type_client_network`) | Rendering, input, audio, interpolation, connection to the server. | `r-type_common`, graphics library (Conan) |
 
 Rules:
 
@@ -65,8 +67,63 @@ Rules:
   Conan option `graphics` and the CMake option `RTYPE_GRAPHICS_BACKEND`.
   Three backends exist: Raylib (default), SFML, and ncurses, which draws in a
   terminal (character cells of 8x16 virtual pixels, no textures).
+- Only `common/src/network/<backend>/` may include the network library. The
+  server and the client send and receive datagrams through
+  `engine::net::IUdpSocket` (see [2.1](#21-network-abstraction)), so no
+  public header includes Asio and the library is linked `PRIVATE`.
 - Tests link the libraries directly, so game logic can be tested without
-  starting a server or opening a window.
+  starting a server or opening a window. The network code is tested on an
+  in-memory fake socket (`tests/src/FakeNetwork.hpp`).
+
+### 2.1 Network abstraction
+
+The network library is hidden behind a small interface, in the same way as
+the graphics library:
+
+| File | Role |
+|------|------|
+| `engine/include/engine/network/Endpoint.hpp` | `engine::net::Endpoint`: an IPv4 address and a port. Totally ordered, so it keys the server's session table. |
+| `engine/include/engine/network/IUdpSocket.hpp` | `engine::net::IUdpSocket`: `sendTo()` (non-blocking, returns a `std::error_code`), `receive()` (waits for one datagram at most for a timeout; zero only polls), `localEndpoint()`. Also `engine::net::NetworkError`, the only exception the network code throws (socket cannot be opened or bound, host cannot be resolved). |
+| `common/include/common/network/UdpSocket.hpp` | `rtype::network::openUdpSocket(port)` and `rtype::network::resolve(host, port)`: the entry points every backend defines. |
+| `common/src/network/asio/` | The Asio backend (`AsioUdpSocket`), the only files that include `<asio.hpp>`. |
+
+The interface lives in `engine/` because it is game-agnostic and uses the
+standard library only, like the rest of the engine: another game can reuse
+it. Its implementation lives in `common/`, the only library allowed to
+depend on a network library. The interface has no callbacks, no event loop
+and no timer: a socket only reads datagrams inside `receive()`, so the
+caller keeps its own loop and the threading model stays the one of section
+6 (the server's network thread waits in `receive()` until its next 10 ms
+update; the client polls once per frame with a zero timeout).
+
+To add another implementation (raw BSD sockets, Winsock...):
+
+1. Create `common/src/network/<backend>/` with a class implementing
+   `engine::net::IUdpSocket`, and define `rtype::network::openUdpSocket()`
+   and `rtype::network::resolve()` there. Convert errors to
+   `engine::net::NetworkError` or `std::error_code`; never let a library
+   type cross the interface.
+2. Add the backend to `RTYPE_NETWORK_BACKEND` in `common/CMakeLists.txt`
+   (its source files and its library, linked `PRIVATE`).
+3. Run the tests: `tests/src/udp_socket_test.cpp` checks a real backend over
+   the loopback interface.
+
+### 2.2 Platform-specific code
+
+Platform-specific code is isolated in one place per subsystem, so the rest
+of the code stays portable and never includes a system or library header
+directly:
+
+| Subsystem | Where platform or library code goes | Interface the rest of the code uses |
+|-----------|-------------------------------------|-------------------------------------|
+| Networking (sockets, addresses, OS error codes) | `common/src/network/<backend>/` | `engine::net::IUdpSocket`, `rtype::network::openUdpSocket()` |
+| Graphics, windows, keyboard | `client/src/graphics/<backend>/` | `client::gfx::IGraphics` |
+
+New platform-specific code (for example Windows sockets, or an audio
+library) goes into a new backend directory behind an interface, never into
+gameplay, protocol or engine code. The only other OS-dependent code is the
+signal handling in `server/src/main.cpp` (standard `<csignal>`) and the
+launcher `rtype.py`.
 
 ## 3. Entity Component System
 
@@ -484,9 +541,9 @@ the reliable header (sequence number) differs per client.
 **When does the network thread run?** It loops on a receive with a short
 timeout (about 1 ms). After each wake-up, whether a datagram arrived or the
 timeout expired, it also sends the outbound messages, resends unacknowledged
-reliable messages that are due, and checks timeouts. With Asio, the same work
-is done with asynchronous operations and a timer instead of a loop; the queues
-and messages stay the same.
+reliable messages that are due, and checks timeouts. In the code, the loop
+waits in `IUdpSocket::receive()` until the next update, which runs every
+10 ms; the network library never runs its own thread or event loop.
 
 ### 6.6 Delivery: unreliable and reliable
 
@@ -655,8 +712,8 @@ The client uses the same pattern with roles reversed:
 
 - **Graphics library**: SFML, SDL or Raylib (the client architecture does not
   depend on the choice).
-- **Network library**: raw sockets or Asio for the network threads (see
-  [PROTOCOL.md](PROTOCOL.md) and issue #32).
+- **Network library**: Asio, behind `engine::net::IUdpSocket` (see
+  [2.1](#21-network-abstraction)); raw sockets would be a new backend.
 - **Client-side prediction** of the local player's ship, to hide latency. Not
   planned for v1.
 - **Tick and snapshot rates**: 60 and 20 per second are starting values, to be
@@ -666,4 +723,4 @@ The client uses the same pattern with roles reversed:
 - **Lobby and game start**: v1 starts the game as soon as a player joins.
   Rooms, a lobby or a "ready" step are not designed yet.
 - **Windows support** (issue #6): the design above has no Linux-only parts
-  except the sockets, which would be hidden behind the network library.
+  except the sockets, which are hidden behind `engine::net::IUdpSocket`.
