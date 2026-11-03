@@ -6,6 +6,7 @@
 */
 
 #include "EntityFactory.hpp"
+#include "common/Playfield.hpp"
 
 namespace server {
 
@@ -70,7 +71,7 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
     registry.emplace<rtype::EntityType>(player, rtype::EntityType::PlayerShip);
     registry.emplace<rtype::Collider>(
         player, rtype::Collider{
-                    .size = {.x = 64.0F, .y = 64.0F},
+                    .size = rtype::PlayerShipSize,
                     .layer = rtype::CollisionLayer::Player,
                     .mask = rtype::CollisionLayer::Enemy |
                             rtype::CollisionLayer::EnemyProjectile |

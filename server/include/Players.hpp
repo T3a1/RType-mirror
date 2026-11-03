@@ -19,7 +19,8 @@ namespace server {
  * @param ship The player's ship; it may have been destroyed since.
  * @param slot The player's slot, from 1 to MaxPlayers.
  * @param lastSequence The sequence of the last input applied, to drop
- * older inputs that arrive late.
+ * older inputs that arrive late; sent back in the snapshots for the
+ * client-side prediction.
  **/
 struct ConnectedPlayer {
     engine::Entity ship{};

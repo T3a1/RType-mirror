@@ -84,6 +84,7 @@ void encode(const SnapshotPart &message, ByteWriter &out)
         for (const PlayerInfo &player : message.players) {
             out.u8(player.slot);
             out.u32(player.score);
+            out.u32(player.lastInput);
         }
     }
     for (const EntityState &entity : message.entities) {
@@ -162,6 +163,7 @@ bool decode(ByteReader &in, SnapshotPart &message)
             PlayerInfo player;
             player.slot = in.u8();
             player.score = in.u32();
+            player.lastInput = in.u32();
             if (!isValidSlot(player.slot)) {
                 return false;
             }

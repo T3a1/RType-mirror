@@ -38,10 +38,11 @@ void awardKill(engine::Registry &registry, engine::Entity projectile,
  * @param target The entity that takes it.
  * @param alreadyHit The entities that have already been hit this tick.
  * @param outbound Where the projectile destruction is announced.
+ * @param invinciblePlayers Whether a player's ship keeps its health.
  **/
 void hit(engine::Registry &registry, engine::Entity attacker,
          engine::Entity target, std::vector<engine::Entity> &alreadyHit,
-         Outbound &outbound)
+         Outbound &outbound, bool invinciblePlayers)
 {
     const auto *damage = registry.tryGet<rtype::Damage>(attacker);
     auto *health = registry.tryGet<rtype::Health>(target);
@@ -50,7 +51,9 @@ void hit(engine::Registry &registry, engine::Entity attacker,
         std::ranges::find(alreadyHit, attacker) != alreadyHit.end()) {
         return;
     }
-    health->current -= damage->points;
+    if (!invinciblePlayers || !registry.has<rtype::Player>(target)) {
+        health->current -= damage->points;
+    }
     BB_DEBUG("Entity " << target.id << " hit - Health " << health->current);
     if (health->current <= 0) {
         awardKill(registry, attacker, target);
@@ -64,20 +67,17 @@ void hit(engine::Registry &registry, engine::Entity attacker,
 
 } // namespace
 
-/**
- * Applies the effects of every collision of this tick, in both directions.
- * @param registry The registry holding the entities.
- * @param collisions The pairs found by the collision system.
- * @param outbound Where the destructions are announced to the clients.
- **/
 void damageSystem(engine::Registry &registry,
-                  const std::vector<Collision> &collisions, Outbound &outbound)
+                  const std::vector<Collision> &collisions, Outbound &outbound,
+                  bool invinciblePlayers)
 {
     std::vector<engine::Entity> alreadyHit;
 
     for (const Collision &collision : collisions) {
-        hit(registry, collision.a, collision.b, alreadyHit, outbound);
-        hit(registry, collision.b, collision.a, alreadyHit, outbound);
+        hit(registry, collision.a, collision.b, alreadyHit, outbound,
+            invinciblePlayers);
+        hit(registry, collision.b, collision.a, alreadyHit, outbound,
+            invinciblePlayers);
     }
 }
 
