@@ -8,6 +8,7 @@
 #ifndef CLIENT_SYSTEMS_NETWORKSYNCSYSTEM_HPP
 #define CLIENT_SYSTEMS_NETWORKSYNCSYSTEM_HPP
 
+#include "SpriteSheets.hpp"
 #include "common/protocol/Packet.hpp"
 #include "common/systems/InterpolationSystem.hpp"
 #include "engine/Clock.hpp"
@@ -50,8 +51,9 @@ struct SyncState {
 
 /**
  * @brief Applies what the server sent to the local registry. A snapshot
- * creates unknown entities (NetworkId, EntityType, Transform, Health,
- * Sprite, and a SnapshotHistory except for the local ship) and adds to the
+ * creates unknown entities (NetworkId, EntityType, Transform, Health, their
+ * sprite (attachSprite()), and a SnapshotHistory except for the local ship)
+ * and adds to the
  * history of known ones, or updates the Transform and Health of the local
  * ship;
  * snapshots older than the last one are ignored. EntityDestroyed hands the
@@ -60,21 +62,25 @@ struct SyncState {
  * @param registry The client's registry.
  * @param payloads The payloads received this frame, in order.
  * @param state The sync state, updated.
+ * @param sheets The sprite sheets the entities and explosions are drawn
+ * with.
  **/
 void networkSyncSystem(engine::Registry &registry,
                        const std::vector<rtype::protocol::Payload> &payloads,
-                       SyncState &state);
+                       SyncState &state, const SpriteSheets &sheets);
 
 /**
  * @brief Advances the render clock, moves the synced entities to their
  * interpolated position at its tick, and destroys the dying entities whose
- * tick it reached. Runs right after networkSyncSystem().
+ * tick it reached, leaving an explosion where ships and enemies were. Runs
+ * right after networkSyncSystem().
  * @param registry The client's registry.
  * @param state The sync state.
  * @param dt The time elapsed since the last frame.
+ * @param sheets The sprite sheets explosions are drawn with.
  **/
 void smoothingSystem(engine::Registry &registry, SyncState &state,
-                     engine::Duration dt);
+                     engine::Duration dt, const SpriteSheets &sheets);
 
 } // namespace client
 

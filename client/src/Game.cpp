@@ -9,6 +9,7 @@
 #include "Window.hpp"
 #include "common/Playfield.hpp"
 #include "components/Background.hpp"
+#include "systems/AnimationSystem.hpp"
 #include "systems/BackgroundRenderSystem.hpp"
 #include "systems/BackgroundScrollSystem.hpp"
 #include "systems/HudSystem.hpp"
@@ -37,7 +38,8 @@ Game::Game(const std::string &host, std::uint16_t port)
                                  .width = windowWidth,
                                  .height = windowHeight,
                                  .title = "R-Type",
-                             }))
+                             })),
+      m_sheets(*m_graphics)
 {
     spawnBackground();
 }
@@ -64,11 +66,12 @@ void Game::run()
 
 void Game::update(engine::Duration dt)
 {
-    // Later: animation.
     backgroundScrollSystem(m_registry, dt);
     const auto now = std::chrono::steady_clock::now();
-    networkSyncSystem(m_registry, m_network.update(now), m_sync);
-    smoothingSystem(m_registry, m_sync, dt);
+    networkSyncSystem(m_registry, m_network.update(now), m_sync, m_sheets);
+    smoothingSystem(m_registry, m_sync, dt, m_sheets);
+    shipTiltSystem(m_registry, dt);
+    animationSystem(m_registry, dt);
     m_network.sendInput(inputSystem(*m_graphics), now);
 
     m_registry.flush();
@@ -94,7 +97,8 @@ void Game::render()
 
 void Game::spawnBackground()
 {
-    m_backgroundTexture = m_graphics->loadTexture(backgroundPath);
+    m_backgroundTexture =
+        m_graphics->loadTexture(backgroundPath, gfx::TextureFilter::Smooth);
 
     const engine::Entity background = m_registry.create();
     m_registry.emplace<Background>(

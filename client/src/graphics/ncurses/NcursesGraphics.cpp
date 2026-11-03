@@ -289,7 +289,8 @@ void NcursesGraphics::beginWorld(float zoom)
 
 void NcursesGraphics::endWorld() { m_zoom = 1.0F; }
 
-Texture NcursesGraphics::loadTexture(const std::string & /*path*/)
+Texture NcursesGraphics::loadTexture(const std::string & /*path*/,
+                                     TextureFilter /*filter*/)
 {
     return {};
 }

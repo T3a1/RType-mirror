@@ -14,7 +14,8 @@
 namespace client {
 
 // Draws every entity with a Transform and a Sprite, layer by layer, in
-// world units: call it between beginWorld() and endWorld().
+// world units: call it between beginWorld() and endWorld(). A Sprite
+// without a texture is drawn as a rectangle of its tint.
 void renderSystem(engine::Registry &registry, gfx::IGraphics &graphics);
 
 } // namespace client
