@@ -47,15 +47,8 @@ void boundarySystem(engine::Registry &registry, Outbound &outbound)
     registry.each<KeepInPlayfield, rtype::Transform, rtype::Collider>(
         [](engine::Entity, const KeepInPlayfield &, rtype::Transform &transform,
            const rtype::Collider &collider) {
-            const float halfWidth = collider.size.x / 2.0F;
-            const float halfHeight = collider.size.y / 2.0F;
-
-            transform.position.x =
-                std::clamp(transform.position.x, halfWidth,
-                           rtype::PlayfieldWidth - halfWidth);
-            transform.position.y =
-                std::clamp(transform.position.y, halfHeight,
-                           rtype::PlayfieldHeight - halfHeight);
+            transform.position =
+                rtype::keepInPlayfield(transform.position, collider.size);
         });
 }
 
