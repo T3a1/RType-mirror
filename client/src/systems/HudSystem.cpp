@@ -6,9 +6,11 @@
 */
 
 #include "systems/HudSystem.hpp"
+#include "PlayerColors.hpp"
 #include "common/components/EntityType.hpp"
 #include "common/components/Health.hpp"
 #include "common/components/Transform.hpp"
+#include "components/ShipOwner.hpp"
 #include "engine/Entity.hpp"
 
 #include <algorithm>
@@ -22,6 +24,11 @@ constexpr float BarWidth = 64.0F;
 constexpr float BarHeight = 8.0F;
 constexpr float BarOffsetY = 44.0F; // above the ship's center
 constexpr float LowHealth = 0.3F;
+
+constexpr int LabelFontSize = 28;
+constexpr float LabelGap = 6.0F; // between the label and the health bar
+// Average glyph width of the default fonts, as a share of the font size.
+constexpr float GlyphWidth = 0.55F;
 
 constexpr float HudX = 20.0F;
 constexpr float HudY = 20.0F;
@@ -55,6 +62,26 @@ void healthBarSystem(engine::Registry &registry, gfx::IGraphics &graphics)
         });
 }
 
+void playerLabelSystem(engine::Registry &registry, const SyncState &state,
+                       gfx::IGraphics &graphics)
+{
+    registry.each<ShipOwner, rtype::Transform>(
+        [&graphics, &state](engine::Entity, const ShipOwner &owner,
+                            const rtype::Transform &transform) {
+            const bool local = owner.slot == state.localSlot;
+            const std::string text =
+                "P" + std::to_string(owner.slot) + (local ? " (you)" : "");
+            const float width = static_cast<float>(text.size()) *
+                                static_cast<float>(LabelFontSize) * GlyphWidth;
+            graphics.drawText(text,
+                              {.x = transform.position.x - (width / 2.0F),
+                               .y = transform.position.y - BarOffsetY -
+                                    LabelGap -
+                                    static_cast<float>(LabelFontSize)},
+                              LabelFontSize, playerColor(owner.slot));
+        });
+}
+
 void hudSystem(const SyncState &state, gfx::IGraphics &graphics)
 {
     float y = HudY;
@@ -64,7 +91,7 @@ void hudSystem(const SyncState &state, gfx::IGraphics &graphics)
                                  std::to_string(player.score) +
                                  (local ? "  (you)" : "");
         graphics.drawText(text, {.x = HudX, .y = y}, HudFontSize,
-                          local ? gfx::colors::SkyBlue : gfx::colors::OffWhite);
+                          playerColor(player.slot));
         y += HudLineHeight;
     }
 }
