@@ -1,4 +1,4 @@
-# R-Type network protocol (version 1)
+# R-Type network protocol (version 2)
 
 This document specifies the binary protocol spoken between the R-Type server
 and its clients. It is precise enough to write a compatible client or server
@@ -73,7 +73,7 @@ Every packet starts with this 12-byte header:
 | Offset | Size | Field | Value |
 |-------:|-----:|-------|-------|
 | 0 | 2 | magic | `52 54` (ASCII `"RT"`). Recognizes our packets: a random datagram almost never starts with these bytes |
-| 2 | 1 | version | `1`. See [Versioning](#12-versioning) |
+| 2 | 1 | version | `2`. See [Versioning](#12-versioning) |
 | 3 | 1 | type | Which payload follows. See [Packet types](#5-packet-types) |
 | 4 | 1 | flags | Bit 0: **Reliable**. Bits 1 to 7 are reserved and **MUST** be 0 |
 | 5 | 1 | reserved | **MUST** be 0 |
@@ -94,7 +94,7 @@ The names are the `DecodeError` values of the reference implementation.
 | 1 | At most 1200 bytes | `TooLarge` |
 | 2 | At least 12 bytes | `TooShort` |
 | 3 | Magic is `"RT"` | `BadMagic` |
-| 4 | Version is 1 | `BadVersion` |
+| 4 | Version is 2 | `BadVersion` |
 | 5 | Type is listed in section 5 | `UnknownType` |
 | 6 | No reserved flag bit, and Reliable set exactly on reliable types | `BadFlags` |
 | 7 | Reserved byte is 0 | `BadReserved` |
@@ -189,13 +189,14 @@ not fit in one datagram is split into several **parts**
 | 5 | 1 | partCount | Number of parts for this tick, at least `1` |
 | 6 | 2 | entityCount | `u16`, number of entity records in this part |
 
-**Players block (part 0 only): 1 + 5 bytes per player**
+**Players block (part 0 only): 1 + 9 bytes per player**
 
 | Size | Field | Values |
 |-----:|-------|--------|
 | 1 | playerCount | `0` to `4` |
-| 1 | slot | `1` to `4`, repeated `playerCount` times with the score |
+| 1 | slot | `1` to `4`, repeated `playerCount` times with the next two fields |
 | 4 | score | `u32` |
+| 4 | lastInput | `u32`. `sequence` of the last `Input` of this player that the server applied at this tick, `0` if none. The client replays its newer inputs on top of this state (client-side prediction) |
 
 **Entity record (16 bytes), repeated `entityCount` times**
 
@@ -394,7 +395,7 @@ entities. Only part 0 carries the players block.
 
 | Part | Room for entities |
 |------|-------------------|
-| Part 0, with 4 players | (1188 − 8 − 21) / 16 = **72** entities |
+| Part 0, with 4 players | (1188 − 8 − 37) / 16 = **71** entities |
 | Other parts | (1188 − 8) / 16 = **73** entities |
 
 `partCount` is at most 255.
@@ -426,7 +427,7 @@ or make it use unbounded memory:
 - The number of stored reliable packets per peer is capped
   ([section 7](#resending)).
 
-**Known limitation.** Version 1 has no handshake token. A `Connect` sent with
+**Known limitation.** This version has no handshake token. A `Connect` sent with
 a forged source address makes the server send `Accept`, `Welcome` and
 snapshots to that address until the 5-second timeout, and takes one of the 4
 slots meanwhile. A challenge-response handshake (the server answers
@@ -447,7 +448,7 @@ All bytes in hexadecimal.
 Unreliable sequence 298, acknowledging reliable packet 17, input number 1000:
 
 ```text
-52 54 01 10 00 00 2A 01 11 00 05 00   header: "RT", v1, Input, no flags,
+52 54 02 10 00 00 2A 01 11 00 05 00   header: "RT", v2, Input, no flags,
                                               sequence 298, ack 17, size 5
 E8 03 00 00                           sequence 1000
 11                                    actions 0x11 = Up | Fire
@@ -458,7 +459,7 @@ E8 03 00 00                           sequence 1000
 Reliable sequence 2, slot 2, ship 58, tick 1200:
 
 ```text
-52 54 01 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
+52 54 02 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
                                               sequence 2, ack 0, size 9
 02                                    slot 2
 3A 00 00 00                           shipId 58
@@ -468,12 +469,12 @@ B0 04 00 00                           tick 1200
 ### `Snapshot` with one player and one entity
 
 ```text
-52 54 01 20 00 00 2B 01 11 00 1E 00   header: Snapshot, size 30
+52 54 02 20 00 00 2B 01 11 00 22 00   header: Snapshot, size 34
 2C 01 00 00                           tick 300
 00 01                                 part 0 of 1
 01 00                                 1 entity
 01                                    1 player
-01 DC 05 00 00                          slot 1, score 1500
+01 DC 05 00 00 E8 03 00 00              slot 1, score 1500, last input 1000
 07 00 00 00                           networkId 7
 00                                      type PlayerShip
 00                                      flags none
@@ -491,3 +492,8 @@ B0 04 00 00                           tick 1200
   ([section 8](#version-mismatch)).
 - New packet types, enumeration values and flag bits are added only with a
   new version: until then, receivers reject them.
+
+| Version | Changes |
+|--------:|---------|
+| 1 | Part 1 prototype. |
+| 2 | Snapshot players block: `lastInput` added (9 bytes per player). Entity flags: Owner bits 2 to 4. Entity types `EnemySmall`, `EnemyMedium` and `EnemyLarge`. |

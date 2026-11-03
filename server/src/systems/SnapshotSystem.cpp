@@ -96,6 +96,7 @@ std::vector<rtype::protocol::PlayerInfo> playerInfos(engine::Registry &registry,
         infos.push_back({
             .slot = player.slot,
             .score = component != nullptr ? component->score : 0,
+            .lastInput = player.lastSequence,
         });
     }
     return infos;
