@@ -14,6 +14,7 @@
 #include "common/systems/PlayerControlSystem.hpp"
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"
+#include "engine/Scheduler.hpp"
 #include "network/NetworkMessages.hpp"
 #include "systems/BoundarySystem.hpp"
 #include "systems/CollisionSystem.hpp"
@@ -33,6 +34,7 @@
 #include <cstdint>
 #include <map>
 #include <thread>
+#include <vector>
 
 namespace server {
 
@@ -42,7 +44,8 @@ namespace server {
  *
  * The game owns the registry, the entity factory and the connected players.
  * It talks to the network thread only through the inbound and outbound
- * queues, and runs every system once per fixed 60 Hz tick.
+ * queues, and registers its systems in a scheduler that runs them once per
+ * fixed 60 Hz tick.
  **/
 class Game {
   public:
@@ -66,17 +69,22 @@ class Game {
     Game(Inbound &inbound, Outbound &outbound)
         : m_inbound(inbound), m_outbound(outbound)
     {
+        registerSystems();
     }
 
   private:
     Inbound &m_inbound;
     Outbound &m_outbound;
     void tick(engine::Duration dt);
+    void registerSystems();
     engine::Registry m_registry;
+    engine::Scheduler m_scheduler;
     EntityFactory m_factory;
     std::atomic<bool> m_running = true;
     Players m_players;
     std::uint32_t m_tick = 1;
+    std::vector<InboundMessage> m_messages;
+    std::vector<Collision> m_collisions;
     static_assert(std::atomic<bool>::is_always_lock_free);
 };
 
