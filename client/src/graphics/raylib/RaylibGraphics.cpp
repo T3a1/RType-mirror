@@ -27,6 +27,15 @@ Rectangle toRaylib(Rect rect)
 
 KeyboardKey toRaylib(Key key)
 {
+    const auto index = static_cast<int>(key);
+    if (key >= Key::A && key <= Key::Z) {
+        return static_cast<KeyboardKey>(KEY_A + index -
+                                        static_cast<int>(Key::A));
+    }
+    if (key >= Key::Num0 && key <= Key::Num9) {
+        return static_cast<KeyboardKey>(KEY_ZERO + index -
+                                        static_cast<int>(Key::Num0));
+    }
     switch (key) {
     case Key::Up:
         return KEY_UP;
@@ -38,8 +47,25 @@ KeyboardKey toRaylib(Key key)
         return KEY_RIGHT;
     case Key::Space:
         return KEY_SPACE;
+    case Key::Enter:
+        return KEY_ENTER;
+    case Key::Tab:
+        return KEY_TAB;
+    case Key::LeftShift:
+        return KEY_LEFT_SHIFT;
+    case Key::RightShift:
+        return KEY_RIGHT_SHIFT;
+    case Key::LeftControl:
+        return KEY_LEFT_CONTROL;
+    case Key::RightControl:
+        return KEY_RIGHT_CONTROL;
+    case Key::LeftAlt:
+        return KEY_LEFT_ALT;
+    case Key::RightAlt:
+        return KEY_RIGHT_ALT;
+    default:
+        return KEY_NULL;
     }
-    return KEY_NULL;
 }
 
 } // namespace

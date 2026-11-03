@@ -131,6 +131,15 @@ short terminalColor(Color color)
 
 std::optional<Key> toKey(int character)
 {
+    if (character >= 'a' && character <= 'z') {
+        return static_cast<Key>(static_cast<int>(Key::A) + character - 'a');
+    }
+    if (character >= 'A' && character <= 'Z') {
+        return static_cast<Key>(static_cast<int>(Key::A) + character - 'A');
+    }
+    if (character >= '0' && character <= '9') {
+        return static_cast<Key>(static_cast<int>(Key::Num0) + character - '0');
+    }
     switch (character) {
     case KEY_UP:
         return Key::Up;
@@ -142,6 +151,12 @@ std::optional<Key> toKey(int character)
         return Key::Right;
     case ' ':
         return Key::Space;
+    case '\n':
+    case '\r':
+    case KEY_ENTER:
+        return Key::Enter;
+    case '\t':
+        return Key::Tab;
     default:
         return std::nullopt;
     }
