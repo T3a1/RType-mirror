@@ -8,6 +8,7 @@
 #include "systems/InputSystem.hpp"
 #include "common/components/InputState.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 
@@ -15,28 +16,47 @@ namespace client {
 
 namespace {
 
-struct KeyBinding {
-    gfx::Key key;
+struct ActionBinding {
+    Control control;
     std::uint8_t action;
 };
 
-constexpr std::array bindings{
-    KeyBinding{.key = gfx::Key::Up, .action = rtype::Action::Up},
-    KeyBinding{.key = gfx::Key::Down, .action = rtype::Action::Down},
-    KeyBinding{.key = gfx::Key::Left, .action = rtype::Action::Left},
-    KeyBinding{.key = gfx::Key::Right, .action = rtype::Action::Right},
-    KeyBinding{.key = gfx::Key::Space, .action = rtype::Action::Fire},
+constexpr std::array ActionBindings{
+    ActionBinding{.control = Control::Up, .action = rtype::Action::Up},
+    ActionBinding{.control = Control::Down, .action = rtype::Action::Down},
+    ActionBinding{.control = Control::Left, .action = rtype::Action::Left},
+    ActionBinding{.control = Control::Right, .action = rtype::Action::Right},
+    ActionBinding{.control = Control::Fire, .action = rtype::Action::Fire},
 };
+
+/** @brief Whether one of the keys of a control is held. */
+bool isHeld(const gfx::IGraphics &graphics, const Controls &controls,
+            Control control)
+{
+    return std::ranges::any_of(
+        controls.at(static_cast<std::size_t>(control)),
+        [&graphics](gfx::Key key) { return graphics.isKeyDown(key); });
+}
 
 } // namespace
 
-std::uint8_t inputSystem(const gfx::IGraphics &graphics)
+std::uint8_t inputSystem(const gfx::IGraphics &graphics,
+                         const Controls &controls, AutoFire &autoFire)
 {
+    const bool toggle = isHeld(graphics, controls, Control::AutoFire);
+    if (toggle && !autoFire.keyHeld) {
+        autoFire.enabled = !autoFire.enabled;
+    }
+    autoFire.keyHeld = toggle;
+
     std::uint8_t actions = 0;
-    for (const KeyBinding &binding : bindings) {
-        if (graphics.isKeyDown(binding.key)) {
+    for (const ActionBinding &binding : ActionBindings) {
+        if (isHeld(graphics, controls, binding.control)) {
             actions |= binding.action;
         }
+    }
+    if (autoFire.enabled) {
+        actions |= rtype::Action::Fire;
     }
     return actions;
 }

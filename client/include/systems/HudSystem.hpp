@@ -25,12 +25,14 @@ void healthBarSystem(engine::Registry &registry, gfx::IGraphics &graphics);
 
 /**
  * @brief Draws the score of every player in the top-left corner, the local
- * player highlighted and marked "(you)". It is drawn in screen pixels: call
- * it after endWorld().
+ * player highlighted and marked "(you)", and "Auto-fire ON" below them
+ * while auto-fire is on. It is drawn in screen pixels: call it after
+ * endWorld().
  * @param state The sync state, for the players and the local slot.
+ * @param autoFire Whether auto-fire is on.
  * @param graphics The graphics backend to draw with.
  **/
-void hudSystem(const SyncState &state, gfx::IGraphics &graphics);
+void hudSystem(const SyncState &state, bool autoFire, gfx::IGraphics &graphics);
 
 } // namespace client
 

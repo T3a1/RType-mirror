@@ -44,6 +44,7 @@ Game::Game(const std::string &host, std::uint16_t port,
 {
     m_sync.interpolate = options.interpolate;
     m_sync.predict = options.predict;
+    m_controls = options.controls;
     if (options.bench) {
         m_bench.emplace(*options.bench);
     }
@@ -77,7 +78,8 @@ void Game::update(engine::Duration dt)
     networkSyncSystem(m_registry, m_network.update(now), m_sync, m_sheets);
     smoothingSystem(m_registry, m_sync, dt, m_sheets);
     const std::uint8_t actions =
-        m_bench ? m_bench->input(now) : inputSystem(*m_graphics);
+        m_bench ? m_bench->input(now)
+                : inputSystem(*m_graphics, m_controls, m_autoFire);
     const std::uint32_t sequence = m_network.sendInput(actions, now);
     predictionSystem(m_registry, m_sync, sequence, actions, dt);
     if (m_bench) {
@@ -102,7 +104,7 @@ void Game::render()
     renderSystem(m_registry, *m_graphics);
     healthBarSystem(m_registry, *m_graphics);
     m_graphics->endWorld();
-    hudSystem(m_sync, *m_graphics);
+    hudSystem(m_sync, m_autoFire.enabled, *m_graphics);
     drawStatus();
     m_graphics->endFrame();
 }

@@ -17,10 +17,33 @@ of enemies.
 
 ### Controls
 
-| Key | Action |
-|-----|--------|
-| Arrow keys | Move the ship |
-| Space | Shoot |
+Every action has a key for each hand, so the game can be played with one
+hand only.
+
+| Left hand | Right hand | Action |
+|-----------|------------|--------|
+| W A S D | Arrow keys | Move the ship |
+| Space | Right Ctrl | Shoot (hold the key) |
+| F | Right Shift | Auto-fire on or off: the ship shoots on its own |
+
+**Choose your own keys**: write a `controls.cfg` file in the folder you start
+the game from (or give its path with `--controls FILE`). Each line gives the
+keys of one action and replaces its default keys:
+
+```text
+# action = key key...
+fire = Enter Space
+autofire = Tab
+```
+
+- Actions: `up`, `down`, `left`, `right`, `fire`, `autofire`.
+- Keys: `Up`, `Down`, `Left`, `Right`, `Space`, `Enter`, `Tab`, `LeftShift`,
+  `RightShift`, `LeftCtrl`, `RightCtrl`, `LeftAlt`, `RightAlt`, the letters
+  `A` to `Z` and the digits `0` to `9`. With the default (Raylib) client a
+  letter is the key at that place on a US keyboard: W A S D are the keys
+  Z Q S D of a French AZERTY keyboard.
+- A line the game cannot read is reported when it starts, and that action
+  keeps its default keys.
 
 ## Getting started
 
