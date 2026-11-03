@@ -109,6 +109,23 @@ class NetworkClient {
      **/
     [[nodiscard]] State state() const { return m_state; }
 
+    /**
+     * @brief Returns the bytes of every datagram received from the server
+     * since the start, for the network benchmark.
+     * @return The number of bytes received.
+     **/
+    [[nodiscard]] std::uint64_t bytesReceived() const
+    {
+        return m_bytesReceived;
+    }
+
+    /**
+     * @brief Returns the bytes of every datagram sent since the start, for
+     * the network benchmark.
+     * @return The number of bytes sent.
+     **/
+    [[nodiscard]] std::uint64_t bytesSent() const { return m_bytesSent; }
+
   private:
     void receivePending(TimePoint now,
                         std::vector<rtype::protocol::Payload> &received);
@@ -125,6 +142,8 @@ class NetworkClient {
     TimePoint m_lastSent;
     TimePoint m_nextConnect;
     std::uint32_t m_inputSequence = 0;
+    std::uint64_t m_bytesReceived = 0;
+    std::uint64_t m_bytesSent = 0;
 };
 
 } // namespace client

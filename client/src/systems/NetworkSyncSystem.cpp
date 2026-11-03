@@ -114,7 +114,7 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
                                              });
     const bool local = entity.networkId == state.localShip;
     registry.emplace<Sprite>(created, spriteOf(entity.type, local));
-    if (!local) {
+    if (!local && state.interpolate) {
         const bool ownMissile =
             state.localSlot != 0 &&
             EntityFlag::ownerOf(entity.flags) == state.localSlot;

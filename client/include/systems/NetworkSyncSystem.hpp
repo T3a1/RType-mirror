@@ -36,6 +36,9 @@ namespace client {
  * @param dying Destroyed entities still drawn until the render clock
  * reaches the given tick: the tick they were destroyed at, minus their
  * lead.
+ * @param interpolate Whether the other entities are interpolated; when
+ * false they jump to each snapshot, as in the Part 1 prototype (benchmark
+ * baseline).
  **/
 struct SyncState {
     std::unordered_map<std::uint32_t, engine::Entity> entities;
@@ -46,6 +49,7 @@ struct SyncState {
     std::vector<rtype::protocol::PlayerInfo> players;
     rtype::RenderClock clock;
     std::vector<std::pair<engine::Entity, double>> dying;
+    bool interpolate = true;
 };
 
 /**

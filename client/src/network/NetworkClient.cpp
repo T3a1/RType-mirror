@@ -84,6 +84,7 @@ void NetworkClient::receivePending(TimePoint now,
         if (datagram->sender != m_server) {
             continue;
         }
+        m_bytesReceived += datagram->size;
         const auto result =
             decodePacket({m_buffer.data(), datagram->size}, Side::Server);
         if (const auto *decodeError = std::get_if<DecodeError>(&result)) {
@@ -141,6 +142,8 @@ void NetworkClient::send(const Payload &payload, TimePoint now)
         m_socket->sendTo(m_server, {writer.data().data(), writer.size()});
     if (error) {
         BB_DEBUG("Send failed: " << error.message());
+    } else {
+        m_bytesSent += writer.size();
     }
     m_lastSent = now;
 }

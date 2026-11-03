@@ -32,13 +32,18 @@ constexpr int statusFontSize = 30;
 
 } // namespace
 
-Game::Game(const std::string &host, std::uint16_t port)
+Game::Game(const std::string &host, std::uint16_t port,
+           const GameOptions &options)
     : m_network(host, port), m_graphics(gfx::createGraphics({
                                  .width = windowWidth,
                                  .height = windowHeight,
                                  .title = "R-Type",
                              }))
 {
+    m_sync.interpolate = options.interpolate;
+    if (options.bench) {
+        m_bench.emplace(*options.bench);
+    }
     spawnBackground();
 }
 
@@ -51,7 +56,7 @@ void Game::run()
 
     Clock::time_point previous = Clock::now();
 
-    while (!m_graphics->shouldClose()) {
+    while (!m_graphics->shouldClose() && !(m_bench && m_bench->finished())) {
         const Clock::time_point now = Clock::now();
         const engine::Duration dt =
             std::min(engine::Duration{now - previous}, maxFrameTime);
@@ -69,7 +74,12 @@ void Game::update(engine::Duration dt)
     const auto now = std::chrono::steady_clock::now();
     networkSyncSystem(m_registry, m_network.update(now), m_sync);
     smoothingSystem(m_registry, m_sync, dt);
-    m_network.sendInput(inputSystem(*m_graphics), now);
+    if (m_bench) {
+        m_bench->record(m_registry, m_sync, m_network, dt, now);
+        m_network.sendInput(m_bench->input(now), now);
+    } else {
+        m_network.sendInput(inputSystem(*m_graphics), now);
+    }
 
     m_registry.flush();
 }
