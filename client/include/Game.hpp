@@ -26,11 +26,13 @@ namespace client {
  * @struct GameOptions
  * @brief The command-line options of the client.
  * @param interpolate Whether the other entities are interpolated.
+ * @param predict Whether the local ship is predicted.
  * @param bench The network benchmark to run instead of the keyboard, if
  * any.
  **/
 struct GameOptions {
     bool interpolate = true;
+    bool predict = true;
     std::optional<BenchConfig> bench;
 };
 

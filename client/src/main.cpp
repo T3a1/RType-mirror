@@ -24,7 +24,7 @@ constexpr int ExitError = 84;
 
 constexpr const char *Usage =
     "Usage: r-type_client [host] [port] [--no-interpolation]\n"
-    "                     [--bench SECONDS FILE.csv]\n";
+    "                     [--no-prediction] [--bench SECONDS FILE.csv]\n";
 
 /**
  * @struct Arguments
@@ -55,6 +55,8 @@ Arguments parseArguments(std::span<char *> args)
         const std::string_view arg = args[i];
         if (arg == "--no-interpolation") {
             parsed.options.interpolate = false;
+        } else if (arg == "--no-prediction") {
+            parsed.options.predict = false;
         } else if (arg == "--bench") {
             if (i + 2 >= args.size()) {
                 throw std::invalid_argument("--bench needs SECONDS FILE");

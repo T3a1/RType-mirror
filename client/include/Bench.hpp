@@ -49,7 +49,9 @@ struct BenchConfig {
  *   frame showing the local ship moving that way (-1 if it never did before
  *   the next press); direction is -1 for Up, 1 for Down;
  * - `net,t,received,sent`: the bytes received and sent since the start,
- *   once per second.
+ *   once per second;
+ * - `correction,t,distance,0`: a correction of the local ship's prediction
+ *   (the server disagreed), in playfield units.
  **/
 class Bench {
   public:
@@ -64,7 +66,7 @@ class Bench {
     /**
      * @brief Measures the frame about to be drawn. Starts the benchmark on
      * the first frame with the local ship, and writes the CSV file once the
-     * duration is over. Call it after the sync and smoothing systems.
+     * duration is over. Call it last in the update, after the prediction.
      * @param registry The client's registry.
      * @param state The sync state.
      * @param network The connection, for the traffic counters.

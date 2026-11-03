@@ -68,12 +68,13 @@ std::vector<Payload> NetworkClient::update(TimePoint now)
     return received;
 }
 
-void NetworkClient::sendInput(std::uint8_t actions, TimePoint now)
+std::uint32_t NetworkClient::sendInput(std::uint8_t actions, TimePoint now)
 {
     if (m_state != State::Connected) {
-        return;
+        return 0;
     }
     send(Input{.sequence = ++m_inputSequence, .actions = actions}, now);
+    return m_inputSequence;
 }
 
 void NetworkClient::receivePending(TimePoint now,

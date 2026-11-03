@@ -25,6 +25,7 @@ constexpr double DownStart = 1.7;
 constexpr double PressSeconds = 0.3;
 constexpr double TrafficInterval = 1.0;
 constexpr float MovedThreshold = 1.0F;
+constexpr float MinCorrection = 0.01F;
 constexpr int CsvPrecision = 9;
 
 } // namespace
@@ -57,6 +58,14 @@ void Bench::record(engine::Registry &registry, const SyncState &state,
     m_shipY = registry.get<rtype::Transform>(ship->second).position.y;
     m_rows.push_back({.kind = "frame", .time = time, .a = dt.count(), .b = 0});
     measureDelay(m_shipY, now);
+    if (state.prediction.lastCorrection > MinCorrection) {
+        m_rows.push_back({
+            .kind = "correction",
+            .time = time,
+            .a = state.prediction.lastCorrection,
+            .b = 0,
+        });
+    }
     measureMoves(registry, state, dt, now);
     if (time >= m_nextTraffic) {
         m_rows.push_back({

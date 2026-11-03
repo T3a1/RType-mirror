@@ -338,7 +338,8 @@ The client renders as fast as the display allows (or with V-Sync) and uses the
 real elapsed time (delta time) for animations and the star-field scrolling.
 Remote entities are drawn slightly in the past and **interpolated** between the
 two latest snapshots, so their movement looks smooth even with 20 snapshots per
-second.
+second. The local ship is **predicted**: it moves as soon as a key is pressed,
+and the server's snapshots correct it (section 6.9).
 
 ## 6. Threading and networking
 
@@ -656,6 +657,16 @@ The client uses the same pattern with roles reversed:
   snapshot system keeps the last few snapshots in a small buffer, and the
   interpolation system draws remote entities about **100 ms in the past**
   (two snapshot intervals), between the two snapshots around that time.
+- **Prediction of the local ship:** the client keeps the inputs it sent and
+  moves its ship with the same code as the server (`shipVelocity`, then
+  `keepInPlayfield`), without waiting for the server. Each snapshot gives the
+  ship's position on the server and, in the players block, the sequence of the
+  player's last input the server applied (`lastInput`). The client restarts
+  from that position, drops the applied inputs and replays the others
+  (**reconciliation**). When the result differs from what it drew, the
+  difference is not applied at once: it fades out in about 0.3 s, so the ship
+  never jumps (except for a difference over 150 units). Missiles are not
+  predicted: they appear when the server creates them.
 
 ### 6.10 Shutdown
 
@@ -714,8 +725,6 @@ The client uses the same pattern with roles reversed:
   depend on the choice).
 - **Network library**: Asio, behind `engine::net::IUdpSocket` (see
   [2.1](#21-network-abstraction)); raw sockets would be a new backend.
-- **Client-side prediction** of the local player's ship, to hide latency. Not
-  planned for v1.
 - **Tick and snapshot rates**: 60 and 20 per second are starting values, to be
   tuned once the prototype runs. The same goes for the network values of
   section 6: 5 s timeout, 100 ms resend interval, 100 ms interpolation delay,

@@ -100,8 +100,9 @@ class NetworkClient {
      * connection alive and carries the ack. Does nothing until connected.
      * @param actions The held actions, as Action bits.
      * @param now The current time.
+     * @return The sequence number of the Input, 0 if it was not sent.
      **/
-    void sendInput(std::uint8_t actions, TimePoint now);
+    std::uint32_t sendInput(std::uint8_t actions, TimePoint now);
 
     /**
      * @brief Returns where the connection stands, for the status display.
