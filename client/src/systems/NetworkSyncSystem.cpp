@@ -13,6 +13,7 @@
 #include "common/components/Player.hpp"
 #include "common/components/SnapshotHistory.hpp"
 #include "common/components/Transform.hpp"
+#include "common/systems/PredictionSystem.hpp"
 #include "engine/Logger.hpp"
 
 #include <algorithm>
@@ -54,11 +55,16 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
         if (auto *history =
                 registry.tryGet<rtype::SnapshotHistory>(it->second)) {
             rtype::pushSample(*history, sample);
+            return;
+        }
+        if (entity.networkId == state.localShip && state.predict) {
+            state.shipTick = tick;
+            state.shipPosition = sample.position;
         } else {
             registry.get<rtype::Transform>(it->second).position =
                 sample.position;
-            registry.get<rtype::Health>(it->second).current = sample.health;
         }
+        registry.get<rtype::Health>(it->second).current = sample.health;
         return;
     }
     const engine::Entity created = registry.create();
@@ -74,7 +80,11 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
     const bool local = entity.networkId == state.localShip;
     attachSprite(registry, created, sheets, entity.type,
                  local ? state.localSlot : 0);
-    if (!local) {
+    if (local) {
+        state.shipTick = tick;
+        state.shipPosition = sample.position;
+    }
+    if (!local && state.interpolate) {
         const bool ownMissile =
             state.localSlot != 0 &&
             EntityFlag::ownerOf(entity.flags) == state.localSlot;
@@ -104,6 +114,12 @@ void applySnapshot(engine::Registry &registry, const SnapshotPart &snapshot,
     state.lastTick = snapshot.tick;
     if (snapshot.part == 0) {
         state.players = snapshot.players;
+        for (const PlayerInfo &player : snapshot.players) {
+            if (player.slot == state.localSlot) {
+                state.ackTick = snapshot.tick;
+                state.ackInput = player.lastInput;
+            }
+        }
     }
     for (const EntityState &entity : snapshot.entities) {
         applyEntity(registry, entity, snapshot.tick, state, sheets);
@@ -191,6 +207,12 @@ void networkSyncSystem(engine::Registry &registry,
             applyWelcome(registry, *welcome, state, sheets);
         }
     }
+    if (state.predict && state.shipTick == state.ackTick &&
+        state.shipTick > state.acknowledgedTick) {
+        rtype::acknowledgeInputs(state.prediction, state.ackInput,
+                                 state.shipPosition);
+        state.acknowledgedTick = state.shipTick;
+    }
 }
 
 void smoothingSystem(engine::Registry &registry, SyncState &state,
@@ -206,6 +228,21 @@ void smoothingSystem(engine::Registry &registry, SyncState &state,
         registry.destroy(dying.first);
         return true;
     });
+}
+
+void predictionSystem(engine::Registry &registry, SyncState &state,
+                      std::uint32_t sequence, std::uint8_t actions,
+                      engine::Duration dt)
+{
+    if (!state.predict) {
+        return;
+    }
+    rtype::recordInput(state.prediction, sequence, actions, dt);
+    const auto position = rtype::predictShip(state.prediction, dt);
+    const auto ship = state.entities.find(state.localShip);
+    if (position && ship != state.entities.end()) {
+        registry.get<rtype::Transform>(ship->second).position = *position;
+    }
 }
 
 } // namespace client

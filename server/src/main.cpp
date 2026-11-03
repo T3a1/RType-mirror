@@ -13,8 +13,11 @@
 #include "engine/network/IUdpSocket.hpp"
 #include "network/NetworkMessages.hpp"
 #include "network/NetworkServer.hpp"
+#include <algorithm>
 #include <cstdint>
 #include <memory>
+#include <span>
+#include <string_view>
 
 #include <csignal>
 
@@ -36,8 +39,12 @@ void onSignal(int signal)
 
 } // namespace
 
-int main(int /*argc*/, char * /*argv*/[])
+int main(int argc, char *argv[])
 {
+    const std::span args(argv, static_cast<std::size_t>(argc));
+    const bool invincible = std::ranges::any_of(args, [](const char *arg) {
+        return std::string_view{arg} == "--invincible";
+    });
     engine::Logger::instance().start(engine::LogLevel::Info);
 
     engine::MessageQueue<server::InboundMessage> inbound(1024);
@@ -52,7 +59,10 @@ int main(int /*argc*/, char * /*argv*/[])
         return ExitError;
     }
 
-    server::Game game(inbound, outbound);
+    server::Game game(inbound, outbound, invincible);
+    if (invincible) {
+        BB_INFO("Players are invincible (--invincible)");
+    }
     if (std::signal(SIGINT, onSignal) == SIG_ERR ||
         std::signal(SIGTERM, onSignal) == SIG_ERR) {
         BB_FATAL("Failed to install the signal handlers");

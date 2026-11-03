@@ -100,8 +100,10 @@ tc qdisc show dev lo
 | Connection cut (less than 5 s) | The game resumes and everything gets back in place. |
 | Connection cut (more than 5 s) | The client shows "Connection to the server lost", the server frees the slot and tells the other players. |
 
-To compare with the Part 1 prototype, build the `v1.0` tag in a separate folder
-and run the same scenarios on both versions:
+For measured numbers instead of a visual check, the
+[network performance comparison](NETWORK_COMPARISON.md) runs these scenarios
+automatically. To compare with the Part 1 prototype by eye, build the `v1.0`
+tag in a separate folder and run the same scenarios on both versions:
 
 ```bash
 git worktree add ../rtype-v1 v1.0

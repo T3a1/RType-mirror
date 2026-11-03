@@ -11,6 +11,7 @@ set(SOURCE_FILES
     src/Game.cpp
     src/SpriteSheets.cpp
     src/systems/AnimationSystem.cpp
+    src/Bench.cpp
     src/systems/BackgroundRenderSystem.cpp
     src/systems/BackgroundScrollSystem.cpp
     src/systems/HudSystem.cpp

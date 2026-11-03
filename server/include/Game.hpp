@@ -62,15 +62,19 @@ class Game {
      * @brief Creates a game connected to the network queues.
      * @param inbound The messages received from the clients.
      * @param outbound The messages to send to the clients.
+     * @param invinciblePlayers Whether the players' ships take no damage,
+     * for the network benchmark.
      **/
-    Game(Inbound &inbound, Outbound &outbound)
-        : m_inbound(inbound), m_outbound(outbound)
+    Game(Inbound &inbound, Outbound &outbound, bool invinciblePlayers = false)
+        : m_inbound(inbound), m_outbound(outbound),
+          m_invinciblePlayers(invinciblePlayers)
     {
     }
 
   private:
     Inbound &m_inbound;
     Outbound &m_outbound;
+    bool m_invinciblePlayers;
     void tick(engine::Duration dt);
     engine::Registry m_registry;
     EntityFactory m_factory;

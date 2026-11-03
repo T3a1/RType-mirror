@@ -8,6 +8,7 @@
 #ifndef CLIENT_GAME_HPP
 #define CLIENT_GAME_HPP
 
+#include "Bench.hpp"
 #include "SpriteSheets.hpp"
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"
@@ -17,9 +18,24 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace client {
+
+/**
+ * @struct GameOptions
+ * @brief The command-line options of the client.
+ * @param interpolate Whether the other entities are interpolated.
+ * @param predict Whether the local ship is predicted.
+ * @param bench The network benchmark to run instead of the keyboard, if
+ * any.
+ **/
+struct GameOptions {
+    bool interpolate = true;
+    bool predict = true;
+    std::optional<BenchConfig> bench;
+};
 
 // The client game: its own registry (a mirror of the server's world plus
 // local-only entities such as the background), and a loop that runs once
@@ -28,7 +44,8 @@ class Game {
   public:
     // Throws if the server address cannot be resolved or the window cannot
     // be opened.
-    Game(const std::string &host, std::uint16_t port);
+    Game(const std::string &host, std::uint16_t port,
+         const GameOptions &options = {});
     ~Game();
 
     Game(const Game &) = delete;
@@ -36,7 +53,7 @@ class Game {
     Game(Game &&) = delete;
     Game &operator=(Game &&) = delete;
 
-    // Runs until the window is closed.
+    // Runs until the window is closed or the benchmark is over.
     void run();
 
   private:
@@ -57,6 +74,7 @@ class Game {
     engine::Registry m_registry;
     gfx::Texture m_backgroundTexture;
     SyncState m_sync;
+    std::optional<Bench> m_bench;
 };
 
 } // namespace client

@@ -26,7 +26,7 @@ inline constexpr std::uint8_t MaxPlayers = 4;
 // Sizes on the wire, used to split snapshots.
 inline constexpr std::size_t SnapshotHeaderSize = 8;
 inline constexpr std::size_t PlayerCountSize = 1;
-inline constexpr std::size_t PlayerRecordSize = 5;
+inline constexpr std::size_t PlayerRecordSize = 9;
 inline constexpr std::size_t EntityRecordSize = 16;
 inline constexpr std::size_t MaxSnapshotParts = 255;
 
@@ -148,10 +148,13 @@ struct Welcome {
  * @brief One player in the players block of a snapshot.
  * @param slot The player's slot, from 1 to MaxPlayers.
  * @param score The player's score, in points.
+ * @param lastInput The sequence of the player's last Input applied by the
+ * server at this tick, 0 if none, for client-side prediction.
  **/
 struct PlayerInfo {
     std::uint8_t slot = 0;
     std::uint32_t score = 0;
+    std::uint32_t lastInput = 0;
     bool operator==(const PlayerInfo &) const = default;
 };
 
