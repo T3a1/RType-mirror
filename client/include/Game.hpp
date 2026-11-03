@@ -10,19 +10,34 @@
 
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"
+#include "engine/Scheduler.hpp"
 #include "graphics/IGraphics.hpp"
 #include "network/NetworkClient.hpp"
 #include "systems/NetworkSyncSystem.hpp"
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
 
 namespace client {
 
+/**
+ * @enum Layer
+ * @brief A drawing layer of a frame. Layers are drawn in this order.
+ **/
+enum class Layer : std::uint8_t {
+    Background, ///< Screen coordinates, under the world.
+    World,      ///< Playfield coordinates, scaled to fit the window.
+    Overlay,    ///< Screen coordinates, over the world (HUD, status).
+    Count,      ///< Number of layers, not a layer.
+};
+
 // The client game: its own registry (a mirror of the server's world plus
 // local-only entities such as the background), and a loop that runs once
-// per displayed frame with a variable time step.
+// per displayed frame with a variable time step. The logic systems run in a
+// scheduler, the drawing systems in one scheduler per layer.
 class Game {
   public:
     // Throws if the server address cannot be resolved or the window cannot
@@ -40,7 +55,10 @@ class Game {
 
   private:
     void update(engine::Duration dt);
-    void render();
+    void render(engine::Duration dt);
+    void registerSystems();
+    void registerRenderSystems();
+    void addRender(Layer layer, std::string name, engine::System system);
     /**
      * @brief Loads the background texture and creates the entity scrolling it.
      *
@@ -55,6 +73,9 @@ class Game {
     engine::Registry m_registry;
     gfx::Texture m_backgroundTexture;
     SyncState m_sync;
+    engine::Scheduler m_scheduler;
+    std::array<engine::Scheduler, static_cast<std::size_t>(Layer::Count)>
+        m_layers;
 };
 
 } // namespace client

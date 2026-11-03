@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <chrono>
 #include <string>
+#include <utility>
 
 namespace client {
 
@@ -40,6 +41,8 @@ Game::Game(const std::string &host, std::uint16_t port)
                              }))
 {
     spawnBackground();
+    registerSystems();
+    registerRenderSystems();
 }
 
 Game::~Game() { m_graphics->unloadTexture(m_backgroundTexture); }
@@ -58,37 +61,88 @@ void Game::run()
         previous = now;
 
         update(dt);
-        render();
+        render(dt);
     }
 }
 
-void Game::update(engine::Duration dt)
+/**
+ * Registers the logic systems in the scheduler, stage by stage and in the
+ * order they run within a stage.
+ **/
+void Game::registerSystems()
 {
-    // Later: animation.
-    backgroundScrollSystem(m_registry, dt);
-    const auto now = std::chrono::steady_clock::now();
-    networkSyncSystem(m_registry, m_network.update(now), m_sync);
-    smoothingSystem(m_registry, m_sync, dt);
-    m_network.sendInput(inputSystem(*m_graphics), now);
+    using engine::Duration;
+    using engine::Registry;
+    using engine::Stage;
 
-    m_registry.flush();
+    m_scheduler.add(Stage::Input, "networkSync", [this](Registry &r, Duration) {
+        networkSyncSystem(r, m_network.update(std::chrono::steady_clock::now()),
+                          m_sync);
+    });
+    m_scheduler.add(Stage::Simulation, "backgroundScroll",
+                    backgroundScrollSystem);
+    m_scheduler.add(
+        Stage::Simulation, "smoothing",
+        [this](Registry &r, Duration dt) { smoothingSystem(r, m_sync, dt); });
+    m_scheduler.add(Stage::Output, "sendInput", [this](Registry &, Duration) {
+        m_network.sendInput(inputSystem(*m_graphics),
+                            std::chrono::steady_clock::now());
+    });
 }
 
-void Game::render()
+/**
+ * Adds a drawing system to a layer. Within a layer, systems draw in the
+ * order they were added.
+ * @param layer The layer the system draws in.
+ * @param name The name of the system, for logs and debugging.
+ * @param system The system to run.
+ **/
+void Game::addRender(Layer layer, std::string name, engine::System system)
+{
+    m_layers.at(static_cast<std::size_t>(layer))
+        .add(engine::Stage::Output, std::move(name), std::move(system));
+}
+
+/**
+ * Registers the drawing systems in their layer, from back to front.
+ **/
+void Game::registerRenderSystems()
+{
+    using engine::Duration;
+    using engine::Registry;
+
+    addRender(Layer::Background, "background", [this](Registry &r, Duration) {
+        backgroundRenderSystem(r, *m_graphics);
+    });
+    addRender(Layer::World, "sprites",
+              [this](Registry &r, Duration) { renderSystem(r, *m_graphics); });
+    addRender(Layer::World, "healthBars", [this](Registry &r, Duration) {
+        healthBarSystem(r, *m_graphics);
+    });
+    addRender(Layer::Overlay, "hud",
+              [this](Registry &, Duration) { hudSystem(m_sync, *m_graphics); });
+    addRender(Layer::Overlay, "status",
+              [this](Registry &, Duration) { drawStatus(); });
+}
+
+void Game::update(engine::Duration dt) { m_scheduler.run(m_registry, dt); }
+
+void Game::render(engine::Duration dt)
 {
     // The world is in playfield units: scale it to fit the window.
     const engine::Vec2f screen = m_graphics->screenSize();
     const float zoom = std::min(screen.x / rtype::PlayfieldWidth,
                                 screen.y / rtype::PlayfieldHeight);
+    const auto draw = [&](Layer layer) {
+        m_layers.at(static_cast<std::size_t>(layer)).run(m_registry, dt);
+    };
 
     m_graphics->beginFrame(gfx::colors::Black);
-    backgroundRenderSystem(m_registry, *m_graphics);
+    draw(Layer::Background);
     m_graphics->beginWorld(zoom);
-    renderSystem(m_registry, *m_graphics);
-    healthBarSystem(m_registry, *m_graphics);
+    draw(Layer::World);
     m_graphics->endWorld();
-    hudSystem(m_sync, *m_graphics);
-    drawStatus();
+    draw(Layer::Overlay);
     m_graphics->endFrame();
 }
 
