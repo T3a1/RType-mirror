@@ -17,6 +17,14 @@ namespace {
 
 constexpr engine::Duration Frame{0.01F};
 
+// The predicted position, which must exist.
+engine::Vec2f predict(rtype::Prediction &prediction)
+{
+    const auto position = rtype::predictShip(prediction, Frame);
+    EXPECT_TRUE(position.has_value());
+    return position.value_or(engine::Vec2f{});
+}
+
 } // namespace
 
 TEST(PredictionSystem, MovesTheShipLikeTheServer)
@@ -97,11 +105,10 @@ TEST(PredictionSystem, ReplaysThePendingInputsOnTheServerPosition)
         rtype::recordInput(prediction, sequence, rtype::Action::Right, Frame);
     }
 
-    const auto position = rtype::predictShip(prediction, Frame);
+    const engine::Vec2f position = predict(prediction);
 
-    ASSERT_TRUE(position.has_value());
-    EXPECT_NEAR(position->x, 500.0F + (rtype::playerSpeed * 0.1F), 1e-3);
-    EXPECT_FLOAT_EQ(position->y, 500.0F);
+    EXPECT_NEAR(position.x, 500.0F + (rtype::playerSpeed * 0.1F), 1e-3);
+    EXPECT_FLOAT_EQ(position.y, 500.0F);
 }
 
 TEST(PredictionSystem, NoCorrectionWhenTheServerAgrees)
@@ -126,21 +133,18 @@ TEST(PredictionSystem, SmoothsACorrection)
     rtype::Prediction prediction;
     rtype::acknowledgeInputs(prediction, 0, {.x = 500.0F, .y = 500.0F});
     rtype::recordInput(prediction, 1, 0, Frame);
-    const auto before = rtype::predictShip(prediction, Frame);
+    const engine::Vec2f before = predict(prediction);
 
     rtype::acknowledgeInputs(prediction, 1, {.x = 520.0F, .y = 500.0F});
-    const auto after = rtype::predictShip(prediction, Frame);
+    const engine::Vec2f after = predict(prediction);
 
-    ASSERT_TRUE(before && after);
     EXPECT_FLOAT_EQ(prediction.lastCorrection, 20.0F);
-    EXPECT_GT(after->x, before->x);
-    EXPECT_LT(after->x - before->x, 2.5F);
+    EXPECT_GT(after.x, before.x);
+    EXPECT_LT(after.x - before.x, 2.5F);
     for (int frame = 0; frame < 100; ++frame) {
-        static_cast<void>(rtype::predictShip(prediction, Frame));
+        static_cast<void>(predict(prediction));
     }
-    EXPECT_NEAR(
-        rtype::predictShip(prediction, Frame).value_or(engine::Vec2f{}).x,
-        520.0F, 0.01F);
+    EXPECT_NEAR(predict(prediction).x, 520.0F, 0.01F);
 }
 
 TEST(PredictionSystem, AppliesAHugeCorrectionAtOnce)
@@ -150,8 +154,5 @@ TEST(PredictionSystem, AppliesAHugeCorrectionAtOnce)
     static_cast<void>(rtype::predictShip(prediction, Frame));
 
     rtype::acknowledgeInputs(prediction, 0, {.x = 1500.0F, .y = 500.0F});
-    const auto position = rtype::predictShip(prediction, Frame);
-
-    ASSERT_TRUE(position.has_value());
-    EXPECT_FLOAT_EQ(position->x, 1500.0F);
+    EXPECT_FLOAT_EQ(predict(prediction).x, 1500.0F);
 }
