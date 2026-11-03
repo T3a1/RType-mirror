@@ -54,8 +54,9 @@ SCENARIOS = {
 
 # Name, client options.
 MODES = {
-    "snap": ("Part 1: snap to snapshots", ["--no-interpolation"]),
-    "interpolation": ("Interpolation", []),
+    "snap": ("Part 1: snap to snapshots", ["--no-interpolation", "--no-prediction"]),
+    "interpolation": ("Interpolation", ["--no-prediction"]),
+    "prediction": ("Interpolation + prediction", []),
 }
 
 STILL = 0.01
@@ -129,10 +130,10 @@ def run_one(server: Path, client: Path, mode: str, output: Path, duration: float
             server_process.kill()
 
 
-def run(scenarios: list[str], duration: float, use_netem: bool) -> None:
+def run(scenarios: list[str], modes: list[str], duration: float, use_netem: bool) -> None:
     server, client = binary("r-type_server"), binary("r-type_client")
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    total = len(scenarios) * len(MODES)
+    total = len(scenarios) * len(modes)
     log(f"{total} runs of {duration:g} s: do not touch the client windows.")
     if use_netem:
         log("tc needs sudo: enter your password if asked.")
@@ -142,7 +143,7 @@ def run(scenarios: list[str], duration: float, use_netem: bool) -> None:
         for scenario in scenarios:
             if use_netem:
                 netem_set(SCENARIOS[scenario][1])
-            for mode in MODES:
+            for mode in modes:
                 done += 1
                 log(f"[{done}/{total}] {SCENARIOS[scenario][0]}, {MODES[mode][0]}")
                 run_one(server, client, mode, RESULTS_DIR / f"{scenario}-{mode}.csv", duration)
@@ -163,6 +164,8 @@ class Result:
     moves: list[float] = field(default_factory=list)
     received: float = 0.0
     sent: float = 0.0
+    corrections: list[float] = field(default_factory=list)
+    predicted: bool = False
 
     @property
     def fps(self) -> float:
@@ -203,6 +206,8 @@ def load(path: Path) -> Result:
                     result.missed += 1
                 else:
                     result.delays.append(a)
+            elif kind == "correction":
+                result.corrections.append(a)
             elif kind == "net" and t > 0:
                 result.received = a / t
                 result.sent = float(row["b"]) / t
@@ -235,9 +240,12 @@ def ensure_matplotlib() -> None:
         pass
     if not VENV_PYTHON.is_file():
         raise BenchError("matplotlib is missing and .venv/ does not exist: run ./rtype.py once")
-    log("Installing matplotlib in .venv/...")
-    subprocess.run([str(VENV_PYTHON), "-m", "pip", "install", "--quiet",
-                    "--disable-pip-version-check", "matplotlib"], check=True)
+    has_it = subprocess.run([str(VENV_PYTHON), "-c", "import matplotlib"],
+                            capture_output=True, check=False).returncode == 0
+    if not has_it:
+        log("Installing matplotlib in .venv/...")
+        subprocess.run([str(VENV_PYTHON), "-m", "pip", "install", "--quiet",
+                        "--disable-pip-version-check", "matplotlib"], check=True)
     if Path(sys.prefix).resolve() != VENV_DIR.resolve():
         os.execv(str(VENV_PYTHON), [str(VENV_PYTHON), *sys.argv])
 
@@ -250,19 +258,21 @@ def charts(results: dict, scenarios: list[str]) -> list[str]:
 
     IMAGES_DIR.mkdir(parents=True, exist_ok=True)
     metrics = (
-        ("delay", "Median input-to-display delay (ms)", lambda r: r.delay_ms(0.5) or 0.0),
-        ("still", "Frames where an entity is frozen (%)", lambda r: 100 * r.still_ratio),
-        ("jump", "99th percentile of the move per frame (units)", lambda r: r.jump),
+        ("delay", "Median input-to-display delay (ms)", "%.0f",
+         lambda r: r.delay_ms(0.5) or 0.0),
+        ("still", "Frames where an entity is frozen (%)", "%.1f", lambda r: 100 * r.still_ratio),
+        ("jump", "99th percentile of the move per frame (units)", "%.1f", lambda r: r.jump),
     )
     lines = []
     width = 0.8 / len(MODES)
-    for name, label, value in metrics:
+    for name, label, value_format, value in metrics:
         figure, axes = plt.subplots(figsize=(9, 4))
         for index, mode in enumerate(MODES):
             values = [value(results[(s, mode)]) if (s, mode) in results else 0.0
                       for s in scenarios]
             positions = [i + (index - (len(MODES) - 1) / 2) * width for i in range(len(scenarios))]
-            axes.bar(positions, values, width, label=MODES[mode][0])
+            bars = axes.bar(positions, values, width, label=MODES[mode][0])
+            axes.bar_label(bars, fmt=value_format, fontsize=7, padding=2)
         axes.set_xticks(range(len(scenarios)))
         axes.set_xticklabels([SCENARIOS[s][0] for s in scenarios], rotation=20, ha="right")
         axes.set_ylabel(label)
@@ -283,6 +293,7 @@ def report(with_charts: bool) -> None:
             path = RESULTS_DIR / f"{scenario}-{mode}.csv"
             if path.is_file():
                 results[(scenario, mode)] = load(path)
+                results[(scenario, mode)].predicted = "--no-prediction" not in MODES[mode][1]
     if not results:
         raise BenchError(f"no measures in {RESULTS_DIR}: run `./tools/netbench.py run` first")
     scenarios = [s for s in SCENARIOS if any((s, m) in results for m in MODES)]
@@ -300,6 +311,10 @@ def report(with_charts: bool) -> None:
                    lambda r: fmt(100 * r.still_ratio, 1, " %"))
     lines += table(results, scenarios, "99th percentile of the move of an entity in one "
                    "frame, in playfield units", lambda r: fmt(r.jump, 1))
+    lines += table(results, scenarios, "Corrections of the predicted ship per second, and "
+                   "their median size in playfield units",
+                   lambda r: "n/a" if not r.predicted else "0" if not r.corrections else
+                   f"{len(r.corrections) / r.duration:.1f} ({statistics.median(r.corrections):.1f})")
     lines += table(results, scenarios, "Traffic of the client, received / sent, in bytes "
                    "per second", lambda r: f"{r.received:.0f} / {r.sent:.0f}")
     if with_charts:
@@ -323,6 +338,8 @@ def main() -> int:
                         help="seconds measured per run (default: 30)")
     parser.add_argument("-s", "--scenarios", nargs="+", choices=list(SCENARIOS),
                         default=list(SCENARIOS), help="network scenarios (default: all)")
+    parser.add_argument("-m", "--modes", nargs="+", choices=list(MODES),
+                        default=list(MODES), help="client modes (default: all)")
     parser.add_argument("--no-netem", action="store_true",
                         help="do not touch tc: measure the current network as is")
     parser.add_argument("--no-charts", action="store_true",
@@ -336,7 +353,7 @@ def main() -> int:
                 args.scenarios = ["normal"]
             elif not sys.platform.startswith("linux"):
                 raise BenchError("tc netem only exists on Linux (or use --no-netem)")
-            run(args.scenarios, args.duration, not args.no_netem)
+            run(args.scenarios, args.modes, args.duration, not args.no_netem)
         if args.command in (None, "report"):
             report(not args.no_charts)
     except BenchError as error:
