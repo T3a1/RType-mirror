@@ -11,6 +11,7 @@
 #include "EntityFactory.hpp"
 #include "common/components/Spawner.hpp"
 #include "common/systems/MovementSystem.hpp"
+#include "common/systems/PatternSystem.hpp"
 #include "common/systems/PlayerControlSystem.hpp"
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"

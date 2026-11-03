@@ -10,6 +10,7 @@ set(SOURCE_FILES
     src/registry_test.cpp
     src/vec2_test.cpp
     src/movement_system_test.cpp
+    src/pattern_system_test.cpp
     src/player_control_system_test.cpp
     src/interpolation_system_test.cpp
     src/prediction_system_test.cpp
