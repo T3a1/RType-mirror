@@ -9,6 +9,8 @@ set_property(CACHE RTYPE_GRAPHICS_BACKEND PROPERTY STRINGS raylib sfml ncurses)
 set(SOURCE_FILES
     src/main.cpp
     src/Game.cpp
+    src/SpriteSheets.cpp
+    src/systems/AnimationSystem.cpp
     src/Bench.cpp
     src/systems/BackgroundRenderSystem.cpp
     src/systems/BackgroundScrollSystem.cpp

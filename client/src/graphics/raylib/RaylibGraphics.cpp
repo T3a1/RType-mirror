@@ -102,7 +102,8 @@ void RaylibGraphics::beginWorld(float zoom)
 
 void RaylibGraphics::endWorld() { EndMode2D(); }
 
-Texture RaylibGraphics::loadTexture(const std::string &path)
+Texture RaylibGraphics::loadTexture(const std::string &path,
+                                    TextureFilter filter)
 {
     const std::string fullPath = std::string{GetApplicationDirectory()} + path;
     if (!FileExists(fullPath.c_str())) {
@@ -112,7 +113,9 @@ Texture RaylibGraphics::loadTexture(const std::string &path)
     if (texture.id == 0) {
         return {};
     }
-    SetTextureFilter(texture, TEXTURE_FILTER_BILINEAR);
+    SetTextureFilter(texture, filter == TextureFilter::Smooth
+                                  ? TEXTURE_FILTER_BILINEAR
+                                  : TEXTURE_FILTER_POINT);
 
     const std::uint32_t id = m_nextTexture++;
     m_textures.emplace(id, texture);

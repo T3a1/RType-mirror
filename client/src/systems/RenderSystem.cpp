@@ -38,13 +38,19 @@ void renderSystem(engine::Registry &registry, gfx::IGraphics &graphics)
     });
 
     for (const DrawCommand &command : commands) {
+        const Sprite &sprite = *command.sprite;
         const engine::Vec2f topLeft =
-            command.transform->position - command.sprite->size * 0.5;
-        graphics.drawRectangle(gfx::Rect{.x = topLeft.x,
-                                         .y = topLeft.y,
-                                         .width = command.sprite->size.x,
-                                         .height = command.sprite->size.y},
-                               command.sprite->tint);
+            command.transform->position - sprite.size * 0.5;
+        const gfx::Rect dest{.x = topLeft.x,
+                             .y = topLeft.y,
+                             .width = sprite.size.x,
+                             .height = sprite.size.y};
+        if (sprite.texture.id != 0) {
+            graphics.drawTexture(sprite.texture, sprite.source, dest,
+                                 sprite.tint);
+        } else {
+            graphics.drawRectangle(dest, sprite.tint);
+        }
     }
 }
 

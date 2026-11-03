@@ -45,7 +45,8 @@ class SfmlGraphics final : public IGraphics {
     void beginWorld(float zoom) override;
     void endWorld() override;
 
-    [[nodiscard]] Texture loadTexture(const std::string &path) override;
+    [[nodiscard]] Texture loadTexture(const std::string &path,
+                                      TextureFilter filter) override;
     void unloadTexture(Texture texture) override;
 
     void drawRectangle(Rect rect, Color color) override;

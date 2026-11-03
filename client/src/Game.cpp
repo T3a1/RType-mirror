@@ -9,6 +9,7 @@
 #include "Window.hpp"
 #include "common/Playfield.hpp"
 #include "components/Background.hpp"
+#include "systems/AnimationSystem.hpp"
 #include "systems/BackgroundRenderSystem.hpp"
 #include "systems/BackgroundScrollSystem.hpp"
 #include "systems/HudSystem.hpp"
@@ -38,7 +39,8 @@ Game::Game(const std::string &host, std::uint16_t port,
                                  .width = windowWidth,
                                  .height = windowHeight,
                                  .title = "R-Type",
-                             }))
+                             })),
+      m_sheets(*m_graphics)
 {
     m_sync.interpolate = options.interpolate;
     m_sync.predict = options.predict;
@@ -70,11 +72,10 @@ void Game::run()
 
 void Game::update(engine::Duration dt)
 {
-    // Later: animation.
     backgroundScrollSystem(m_registry, dt);
     const auto now = std::chrono::steady_clock::now();
-    networkSyncSystem(m_registry, m_network.update(now), m_sync);
-    smoothingSystem(m_registry, m_sync, dt);
+    networkSyncSystem(m_registry, m_network.update(now), m_sync, m_sheets);
+    smoothingSystem(m_registry, m_sync, dt, m_sheets);
     const std::uint8_t actions =
         m_bench ? m_bench->input(now) : inputSystem(*m_graphics);
     const std::uint32_t sequence = m_network.sendInput(actions, now);
@@ -82,6 +83,8 @@ void Game::update(engine::Duration dt)
     if (m_bench) {
         m_bench->record(m_registry, m_sync, m_network, dt, now);
     }
+    shipTiltSystem(m_registry, dt);
+    animationSystem(m_registry, dt);
 
     m_registry.flush();
 }
@@ -106,7 +109,8 @@ void Game::render()
 
 void Game::spawnBackground()
 {
-    m_backgroundTexture = m_graphics->loadTexture(backgroundPath);
+    m_backgroundTexture =
+        m_graphics->loadTexture(backgroundPath, gfx::TextureFilter::Smooth);
 
     const engine::Entity background = m_registry.create();
     m_registry.emplace<Background>(

@@ -9,6 +9,7 @@
 #define CLIENT_GAME_HPP
 
 #include "Bench.hpp"
+#include "SpriteSheets.hpp"
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"
 #include "graphics/IGraphics.hpp"
@@ -69,6 +70,7 @@ class Game {
     void drawStatus() const;
     NetworkClient m_network;
     std::unique_ptr<gfx::IGraphics> m_graphics;
+    SpriteSheets m_sheets;
     engine::Registry m_registry;
     gfx::Texture m_backgroundTexture;
     SyncState m_sync;

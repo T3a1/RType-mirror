@@ -64,6 +64,14 @@ struct Texture {
     int height = 0;
 };
 
+/** @brief How a texture is sampled when it is drawn bigger or smaller. */
+enum class TextureFilter : std::uint8_t {
+    /** @brief Bilinear: blends neighboring pixels, for photos. */
+    Smooth,
+    /** @brief Nearest pixel: keeps pixel art sharp. */
+    Pixelated,
+};
+
 /** @brief The keyboard keys the client reads. */
 enum class Key : std::uint8_t {
     Up,

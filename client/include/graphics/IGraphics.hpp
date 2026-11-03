@@ -53,11 +53,13 @@ class IGraphics {
     virtual void endWorld() = 0;
 
     /**
-     * @brief Loads an image file with bilinear filtering.
+     * @brief Loads an image file.
      * @param path Path relative to the directory of the executable.
+     * @param filter How the texture is sampled when it is scaled.
      * @return The texture, with id 0 and a zero size if loading failed.
      */
-    [[nodiscard]] virtual Texture loadTexture(const std::string &path) = 0;
+    [[nodiscard]] virtual Texture loadTexture(const std::string &path,
+                                              TextureFilter filter) = 0;
     /** @brief Frees a texture, does nothing for id 0 or an unknown id. */
     virtual void unloadTexture(Texture texture) = 0;
 

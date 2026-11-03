@@ -147,7 +147,7 @@ void SfmlGraphics::useScreenView()
         sf::View(sf::FloatRect({0.0F, 0.0F}, {screen.x, screen.y})));
 }
 
-Texture SfmlGraphics::loadTexture(const std::string &path)
+Texture SfmlGraphics::loadTexture(const std::string &path, TextureFilter filter)
 {
     const std::filesystem::path fullPath = m_directory / path;
     std::error_code error;
@@ -158,7 +158,7 @@ Texture SfmlGraphics::loadTexture(const std::string &path)
     if (!texture.loadFromFile(fullPath)) {
         return {};
     }
-    texture.setSmooth(true);
+    texture.setSmooth(filter == TextureFilter::Smooth);
 
     const sf::Vector2u size = texture.getSize();
     const std::uint32_t id = m_nextTexture++;
