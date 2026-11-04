@@ -217,8 +217,8 @@ void movementSystem(engine::Registry &registry, engine::Duration dt)
 
 Destroying an entity while a system iterates over a storage would invalidate the
 iteration. `destroy()` therefore only marks the entity. The scheduler calls
-`registry.flush()` at the end of each tick, which removes all marked entities
-and their components.
+`registry.flush()` after the Cleanup stage of each tick, which removes all marked
+entities and their components.
 
 ### 3.6 Components
 
@@ -262,14 +262,44 @@ Subsystems never call each other. They communicate only through:
 
 ### 4.2 Execution order
 
-Systems are registered in stages. Each tick runs the stages in this order:
+`engine::Scheduler` owns the systems and their order. A game registers each
+system once, at startup, in a stage. Each tick runs the stages in this order,
+and the systems of a stage in the order they were added:
 
 | Stage | Server | Client |
 |-------|--------|--------|
-| 1. Input | Drain the inbound network queue, apply players' `InputState` | Read keyboard and gamepad, send inputs to the server |
-| 2. Simulation | Player control, AI, spawning, movement, collisions, damage, death | Apply the latest server snapshot, interpolation, animation |
-| 3. Output | Build snapshots and events, push them to the outbound queue | Audio, then rendering |
-| 4. Cleanup | `registry.flush()`, clear events | `registry.flush()`, clear events |
+| 1. Input | Drain the inbound network queue, sessions, players' `InputState`, room phase, fire and AI decisions | Receive from the server, lobby messages, apply the latest snapshot, read and send the inputs |
+| 2. Simulation | Spawning, shooting, player control, patterns, movement, collisions, damage, death, lifetime, boundaries, game over | Background scroll, smoothing, prediction, ship tilt, animation |
+| 3. Cleanup | Deferred changes; the scheduler then calls `registry.flush()` | The scheduler calls `registry.flush()` |
+| 4. Output | Build snapshots and push them to the outbound queue | Nothing yet |
+
+Cleanup comes before Output so that a snapshot never contains an entity that
+was destroyed during the tick.
+
+Registration also says when a system runs, so the game's tick holds no such
+logic:
+
+```cpp
+scheduler.add(Stage::Simulation, "movement", rtype::movementSystem,
+              {.when = [this] { return m_status != RoomStatus::Waiting; }});
+scheduler.add(Stage::Output, "snapshot", snapshot, {.every = 3}); // 20 Hz
+```
+
+`every` keeps the snapshot rate out of the game code, and `when` stops a system
+during a phase: the server's world only moves once the room has left its waiting
+phase, and the client only reads the world while it is in a room.
+
+A system has the signature `void(Registry &, Duration)`. A system that needs
+something else, such as the outbound queue, is wrapped in a lambda that captures
+it. Values passed from one system to the next in a tick, such as the collisions
+found by the collision system, are members of the game.
+
+The client draws once per frame with one more scheduler per layer: `Background`
+and `Overlay` are in screen coordinates, `World` in playfield coordinates. The
+game's `render()` keeps the frame itself (`beginFrame`, the switch to world
+coordinates, `endFrame`) because it gives each layer its meaning. The lobby,
+waiting room and game over screens also act on the game, so they stay together in
+a single `screens` system of the `Overlay` layer.
 
 ### 4.3 Overview
 
@@ -318,7 +348,7 @@ while (running) {
     previous = now;
 
     while (accumulator >= tickDuration) {
-        scheduler.runTick(registry, tickDuration);
+        instance.tick(tickDuration); // runs the game's scheduler
         accumulator -= tickDuration;
     }
     sleepUntil(previous + tickDuration);
