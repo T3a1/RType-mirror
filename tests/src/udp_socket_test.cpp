@@ -111,9 +111,10 @@ TEST(UdpSocket, ReceiveSkipsTheResetOfAClosedPort)
     std::this_thread::sleep_for(50ms);
     const auto datagram = socket->receive(buffer, 0ms);
 
-    EXPECT_TRUE(datagram.has_value());
-    EXPECT_EQ(datagram.value_or(engine::net::Datagram{}).sender.port,
-              peer->localEndpoint().port);
+    ASSERT_TRUE(datagram.has_value());
+    if (datagram) {
+        EXPECT_EQ(datagram->sender.port, peer->localEndpoint().port);
+    }
 }
 
 TEST(UdpSocket, ThrowsItsOwnErrorForAPortInUse)

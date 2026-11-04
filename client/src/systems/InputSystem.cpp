@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdint>
 
 namespace client {
@@ -41,11 +42,13 @@ bool isHeld(const gfx::IGraphics &graphics, const Controls &controls,
 } // namespace
 
 std::uint8_t inputSystem(const gfx::IGraphics &graphics,
-                         const Controls &controls, AutoFire &autoFire)
+                         const Controls &controls, AutoFire &autoFire,
+                         engine::Duration dt)
 {
     const bool toggle = isHeld(graphics, controls, Control::AutoFire);
     if (toggle && !autoFire.keyHeld) {
         autoFire.enabled = !autoFire.enabled;
+        autoFire.elapsed = 0.0F;
     }
     autoFire.keyHeld = toggle;
 
@@ -56,7 +59,12 @@ std::uint8_t inputSystem(const gfx::IGraphics &graphics,
         }
     }
     if (autoFire.enabled) {
-        actions |= rtype::Action::Fire;
+        // Press, release, press...: the server fires once per press.
+        autoFire.elapsed =
+            std::fmod(autoFire.elapsed + dt.count(), AutoFirePeriod);
+        if (autoFire.elapsed < AutoFirePeriod / 2.0F) {
+            actions |= rtype::Action::Fire;
+        }
     }
     return actions;
 }

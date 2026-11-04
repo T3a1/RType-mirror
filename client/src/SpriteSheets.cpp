@@ -10,8 +10,10 @@
 #include "common/Playfield.hpp"
 #include "common/components/Transform.hpp"
 #include "components/Animation.hpp"
+#include "components/ChargeState.hpp"
 #include "components/Sprite.hpp"
 
+#include <chrono>
 #include <span>
 
 namespace client {
@@ -36,6 +38,7 @@ constexpr std::array<const char *, SheetCount> SheetPaths{
     "assets/sprites/r-typesheet26.gif", // EnemyLarge
     "assets/sprites/r-typesheet44.gif", // Explosion
     "assets/sprites/r-typesheet38.gif", // Boss
+    "assets/sprites/r-typesheet3.gif",  // PowerUp
 };
 
 /**
@@ -109,6 +112,13 @@ constexpr auto EnemyMediumFrames =
 constexpr auto EnemyLargeFrames =
     row<6>({1.0F, 66.0F, 131.0F, 198.0F, 263.0F, 328.0F}, 1.0F, 63.0F, 48.0F);
 constexpr auto BossFrames = row<2>({2.0F, 191.0F}, 2.0F, 176.0F, 108.0F);
+// Largest charged shots of the shot sheet, facing right.
+constexpr auto ChargedShotFrames =
+    row<2>({105.0F, 185.0F}, 170.0F, 80.0F, 16.0F);
+// Glow in front of a ship that charges, on the shot sheet.
+constexpr auto ChargeGlowFrames =
+    row(evenly<4>(134.0F, 33.0F), 18.0F, 32.0F, 32.0F);
+constexpr auto PowerUpFrames = row(evenly<12>(0.0F, 17.0F), 0.0F, 17.0F, 18.0F);
 constexpr auto ExplosionFrames =
     row(evenly<6>(128.0F, 33.0F), 0.0F, 33.0F, 34.0F);
 
@@ -127,6 +137,13 @@ constexpr AnimationClip EnemyMediumClip{.frames = EnemyMediumFrames,
 constexpr AnimationClip EnemyLargeClip{.frames = EnemyLargeFrames,
                                        .frameTime = 0.1F};
 constexpr AnimationClip BossClip{.frames = BossFrames, .frameTime = 0.3F};
+constexpr AnimationClip ChargedShotClip{.frames = ChargedShotFrames,
+                                        .frameTime = 0.08F};
+constexpr AnimationClip PowerUpClip{.frames = PowerUpFrames,
+                                    .frameTime = 0.08F};
+constexpr float ChargeGlowFrameTime = 0.06F;
+constexpr float ChargeGlowScale = 2.0F;
+constexpr float ChargeGlowOffset = 70.0F; // ahead of the ship's center
 constexpr AnimationClip ExplosionClip{
     .frames = ExplosionFrames, .frameTime = 0.07F, .loop = false};
 
@@ -221,6 +238,18 @@ Look lookOf(rtype::EntityType type, std::uint8_t slot)
                 .scale = 2.0F,
                 .fallback = gfx::colors::Green,
                 .clip = &EnemyLargeClip};
+    case rtype::EntityType::ChargedShot:
+        return {.sheet = Sheet::Shots,
+                .frames = ChargedShotFrames,
+                .scale = 3.0F,
+                .fallback = rgb(120, 220, 255),
+                .clip = &ChargedShotClip};
+    case rtype::EntityType::PowerUp:
+        return {.sheet = Sheet::PowerUp,
+                .frames = PowerUpFrames,
+                .scale = 3.0F,
+                .fallback = rgb(255, 160, 40),
+                .clip = &PowerUpClip};
     case rtype::EntityType::Boss:
         return {.sheet = Sheet::Boss,
                 .frames = BossFrames,
@@ -296,6 +325,38 @@ void attachSprite(engine::Registry &registry, engine::Entity entity,
     }
 }
 
+void chargeGlowSystem(engine::Registry &registry, const SpriteSheets &sheets,
+                      gfx::IGraphics &graphics)
+{
+    const gfx::Texture texture = sheets.texture(Sheet::Shots);
+    const auto seconds =
+        std::chrono::duration<float>(
+            std::chrono::steady_clock::now().time_since_epoch())
+            .count();
+    const auto index = static_cast<std::size_t>(seconds / ChargeGlowFrameTime) %
+                       ChargeGlowFrames.size();
+    const Rect &frame = ChargeGlowFrames.at(index);
+    const engine::Vec2f size{.x = frame.width * ChargeGlowScale,
+                             .y = frame.height * ChargeGlowScale};
+    registry.each<ChargeState, rtype::Transform>(
+        [&](engine::Entity, const ChargeState &charge,
+            const rtype::Transform &transform) {
+            if (!charge.charging) {
+                return;
+            }
+            const Rect dest{.x = transform.position.x + ChargeGlowOffset -
+                                 (size.x / 2.0F),
+                            .y = transform.position.y - (size.y / 2.0F),
+                            .width = size.x,
+                            .height = size.y};
+            if (texture.id != 0) {
+                graphics.drawTexture(texture, frame, dest, gfx::colors::White);
+            } else {
+                graphics.drawRectangle(dest, rgb(120, 220, 255));
+            }
+        });
+}
+
 void spawnExplosion(engine::Registry &registry, engine::Entity entity,
                     const SpriteSheets &sheets)
 {
@@ -303,7 +364,9 @@ void spawnExplosion(engine::Registry &registry, engine::Entity entity,
     const auto *transform = registry.tryGet<rtype::Transform>(entity);
     if (type == nullptr || transform == nullptr ||
         *type == rtype::EntityType::PlayerMissile ||
-        *type == rtype::EntityType::EnemyMissile) {
+        *type == rtype::EntityType::EnemyMissile ||
+        *type == rtype::EntityType::ChargedShot ||
+        *type == rtype::EntityType::PowerUp) {
         return;
     }
     const engine::Vec2f position = transform->position;

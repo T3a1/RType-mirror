@@ -1,0 +1,11 @@
+{
+    "fireInterval": 0.25,
+    "shotSpeed": 900,
+    "shotDamage": 50,
+    "enemyShotSpeed": 450,
+    "chargeTime": 1.0,
+    "beamSpeed": 1300,
+    "beamDamage": 300,
+    "spreadAngle": 0.12,
+    "maxLevel": 3
+}

@@ -15,6 +15,7 @@
 #include "common/components/SnapshotHistory.hpp"
 #include "common/components/Transform.hpp"
 #include "common/systems/PredictionSystem.hpp"
+#include "components/ChargeState.hpp"
 #include "components/ShipOwner.hpp"
 #include "engine/Logger.hpp"
 
@@ -91,7 +92,12 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
         .health = entity.health,
     };
     const auto it = state.entities.find(entity.networkId);
+    const ChargeState charge{.charging =
+                                 (entity.flags & EntityFlag::Charging) != 0};
     if (it != state.entities.end()) {
+        if (entity.type == rtype::EntityType::PlayerShip) {
+            registry.emplace<ChargeState>(it->second, charge);
+        }
         if (auto *history =
                 registry.tryGet<rtype::SnapshotHistory>(it->second)) {
             rtype::pushSample(*history, sample);
@@ -123,6 +129,7 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
     const bool local = entity.networkId == state.localShip;
     attachSprite(registry, created, sheets, entity.type, 0);
     if (entity.type == rtype::EntityType::PlayerShip) {
+        registry.emplace<ChargeState>(created, charge);
         setShipOwner(registry, created, ownerOfShip(state, entity.networkId),
                      sheets);
     }

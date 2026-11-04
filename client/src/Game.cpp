@@ -132,12 +132,12 @@ void Game::registerSystems()
             networkSyncSystem(r, m_payloads, m_sync, m_sheets);
         },
         playing);
-    m_scheduler.add(Stage::Input, "sendInput", [this](Registry &, Duration) {
+    m_scheduler.add(Stage::Input, "sendInput", [this](Registry &, Duration dt) {
         m_actions = 0;
         if (inRoom() && m_sync.started) {
-            m_actions = m_bench
-                            ? m_bench->input(m_now)
-                            : inputSystem(*m_graphics, m_controls, m_autoFire);
+            m_actions =
+                m_bench ? m_bench->input(m_now)
+                        : inputSystem(*m_graphics, m_controls, m_autoFire, dt);
         }
         m_sequence = m_network.sendInput(m_actions, m_now);
     });
@@ -201,6 +201,9 @@ void Game::registerRenderSystems()
     });
     addRender(Layer::World, "sprites",
               [this](Registry &r, Duration) { renderSystem(r, *m_graphics); });
+    addRender(Layer::World, "chargeGlow", [this](Registry &r, Duration) {
+        chargeGlowSystem(r, m_sheets, *m_graphics);
+    });
     addRender(Layer::World, "playerLabels", [this](Registry &r, Duration) {
         playerLabelSystem(r, m_sync, *m_graphics);
     });

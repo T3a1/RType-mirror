@@ -7,6 +7,7 @@
 
 #include "Game.hpp"
 #include "Level.hpp"
+#include "Weapons.hpp"
 #include "common/network/UdpSocket.hpp"
 #include "common/protocol/Connection.hpp"
 #include "engine/Logger.hpp"
@@ -240,6 +241,25 @@ loadLevels(const std::filesystem::path &directory)
         std::move(set.levels));
 }
 
+/**
+ * @brief Loads weapons.json from next to the executable, or keeps the
+ * default weapon stats and logs why.
+ * @param args The command line, program name included.
+ * @return The weapon stats.
+ **/
+server::WeaponStats loadWeapons(std::span<char *> args)
+{
+    const std::filesystem::path program =
+        args.empty() ? std::filesystem::path{} : std::filesystem::path{args[0]};
+    std::string error;
+    const server::WeaponStats stats =
+        server::loadWeapons(program.parent_path() / "weapons.json", error);
+    if (!error.empty()) {
+        BB_WARN("Default weapons used: " << error);
+    }
+    return stats;
+}
+
 } // namespace
 
 int main(int argc, char *argv[])
@@ -256,13 +276,13 @@ int main(int argc, char *argv[])
     }
     const bool invincible = options.invincible;
     engine::Logger::instance().start(engine::LogLevel::Info);
-    const auto levels =
-        loadLevels(levelsDirectory(options.levelsDirectory, args));
+    const auto levels = loadLevels(levelsDirectory(args));
+    const server::WeaponStats weapons = loadWeapons(args);
 
     server::Rooms rooms(
-        [invincible, levels](server::Rooms::Link &link) {
+        [invincible, levels, weapons](server::Rooms::Link &link) {
             return std::make_unique<server::Game>(link.inbound, link.outbound,
-                                                  invincible, levels);
+                                                  invincible, levels, weapons);
         },
         {
             .maxInstances = rtype::protocol::MaxRooms,

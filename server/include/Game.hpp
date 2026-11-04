@@ -10,6 +10,7 @@
 
 #include "EntityFactory.hpp"
 #include "Level.hpp"
+#include "Weapons.hpp"
 #include "common/components/Spawner.hpp"
 #include "common/systems/MovementSystem.hpp"
 #include "common/systems/PatternSystem.hpp"
@@ -29,9 +30,11 @@
 #include "systems/LevelSystem.hpp"
 #include "systems/LifetimeSystem.hpp"
 #include "systems/NetworkInputSystem.hpp"
+#include "systems/PowerUpSystem.hpp"
 #include "systems/RoomPhaseSystem.hpp"
 #include "systems/SessionSystem.hpp"
 #include "systems/ShootSystem.hpp"
+#include "systems/ShotStyleSystems.hpp"
 #include "systems/SnapshotSystem.hpp"
 #include "systems/SpawnSystem.hpp"
 
@@ -98,9 +101,11 @@ class Game final : public engine::IInstance {
      * for the network benchmark.
      * @param levels The levels played one after the other before the
      * random waves of the endless mode; none for endless mode only.
+     * @param weapons The weapon stats, from weapons.json.
      **/
     Game(Inbound &inbound, Outbound &outbound, bool invinciblePlayers = false,
-         std::shared_ptr<const std::vector<Level>> levels = {});
+         std::shared_ptr<const std::vector<Level>> levels = {},
+         WeaponStats weapons = {});
 
   private:
     void registerSystems();
@@ -111,6 +116,7 @@ class Game final : public engine::IInstance {
     engine::Registry m_registry;
     engine::Scheduler m_scheduler;
     EntityFactory m_factory;
+    WeaponStats m_weapons;
     rtype::protocol::RoomStatus m_status = rtype::protocol::RoomStatus::Waiting;
     std::atomic<std::uint8_t> m_publicStatus{
         static_cast<std::uint8_t>(rtype::protocol::RoomStatus::Waiting)};

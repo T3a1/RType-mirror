@@ -32,6 +32,7 @@ enum class Sheet : std::uint8_t {
     EnemyLarge,
     Explosion,
     Boss,
+    PowerUp,
     Count,
 };
 
@@ -76,6 +77,17 @@ class SpriteSheets {
 void attachSprite(engine::Registry &registry, engine::Entity entity,
                   const SpriteSheets &sheets, rtype::EntityType type,
                   std::uint8_t slot);
+
+/**
+ * @brief Draws a charging glow in front of every player ship whose shot
+ * is charging (ChargeState), in world units: call it between beginWorld()
+ * and endWorld(), after renderSystem().
+ * @param registry The client's registry.
+ * @param sheets The loaded sprite sheets.
+ * @param graphics The graphics backend to draw with.
+ **/
+void chargeGlowSystem(engine::Registry &registry, const SpriteSheets &sheets,
+                      gfx::IGraphics &graphics);
 
 /**
  * @brief Creates an explosion where a destroyed ship or enemy was, if it
