@@ -28,7 +28,9 @@ namespace server {
 
 /**
  * @brief Starts random formations at random heights on the right of the
- * playfield, after a random delay, and spawns their enemies when they are due.
+ * playfield, after a random delay, unless levels are being played (the
+ * spawner has a LevelProgress), and spawns the enemies of the queue when
+ * they are due.
  *
  * Reads and writes the countdowns of each entity with a Spawner and a
  * SpawnQueue, then creates the enemies with the factory after the loop.

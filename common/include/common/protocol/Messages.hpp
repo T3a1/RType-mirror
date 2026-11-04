@@ -250,6 +250,7 @@ struct SnapshotPart {
  * @param PlayerHit A player was hit; sends slot.
  * @param GameOver The game is over; sends nothing.
  * @param GameStarted The game of the room started; sends nothing.
+ * @param LevelStarted A level is about to start; sends level.
  **/
 enum class GameEventKind : std::uint8_t {
     EntityDestroyed,
@@ -258,6 +259,7 @@ enum class GameEventKind : std::uint8_t {
     PlayerHit,
     GameOver,
     GameStarted,
+    LevelStarted,
 };
 
 /**
@@ -268,12 +270,15 @@ enum class GameEventKind : std::uint8_t {
  * @param kind What happened.
  * @param networkId The destroyed entity, for EntityDestroyed.
  * @param slot The player concerned, for the player events.
+ * @param level The level that starts, from 1, or 0 for the endless mode,
+ * for LevelStarted.
  **/
 struct GameEvent {
     static constexpr PacketType Type = PacketType::GameEvent;
     GameEventKind kind = GameEventKind::GameOver;
     std::uint32_t networkId = 0;
     std::uint8_t slot = 0;
+    std::uint8_t level = 0;
     bool operator==(const GameEvent &) const = default;
 };
 

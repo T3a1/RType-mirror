@@ -6,6 +6,7 @@
 */
 
 #include "Game.hpp"
+#include "Level.hpp"
 #include "common/network/UdpSocket.hpp"
 #include "common/protocol/Connection.hpp"
 #include "engine/Logger.hpp"
@@ -16,10 +17,14 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <filesystem>
 #include <memory>
 #include <span>
+#include <string>
 #include <string_view>
 #include <thread>
+#include <utility>
+#include <vector>
 
 #include <csignal>
 
@@ -38,6 +43,46 @@ void onSignal(int signal)
     g_stopRequested = 1;
 }
 
+/**
+ * @brief Finds the directory of the level files: the value of --levels, or
+ * the levels directory next to the executable.
+ * @param args The command line, program name included.
+ * @return The directory.
+ **/
+std::filesystem::path levelsDirectory(std::span<char *> args)
+{
+    for (std::size_t i = 1; i + 1 < args.size(); ++i) {
+        if (std::string_view{args[i]} == "--levels") {
+            return args[i + 1];
+        }
+    }
+    const std::filesystem::path program =
+        args.empty() ? std::filesystem::path{} : std::filesystem::path{args[0]};
+    return program.parent_path() / "levels";
+}
+
+/**
+ * @brief Loads the levels and logs the files that could not be read.
+ * @param directory The directory of the level files.
+ * @return The levels, shared by every room; empty for endless mode only.
+ **/
+std::shared_ptr<const std::vector<server::Level>>
+loadLevels(const std::filesystem::path &directory)
+{
+    server::LevelSet set = server::loadLevels(directory);
+    for (const std::string &error : set.errors) {
+        BB_WARN("Level skipped: " << error);
+    }
+    if (set.levels.empty()) {
+        BB_WARN("No level in " << directory.string() << ": endless mode only");
+    } else {
+        BB_INFO(set.levels.size()
+                << " level(s) loaded from " << directory.string());
+    }
+    return std::make_shared<const std::vector<server::Level>>(
+        std::move(set.levels));
+}
+
 } // namespace
 
 int main(int argc, char *argv[])
@@ -47,11 +92,12 @@ int main(int argc, char *argv[])
         return std::string_view{arg} == "--invincible";
     });
     engine::Logger::instance().start(engine::LogLevel::Info);
+    const auto levels = loadLevels(levelsDirectory(args));
 
     server::Rooms rooms(
-        [invincible](server::Rooms::Link &link) {
+        [invincible, levels](server::Rooms::Link &link) {
             return std::make_unique<server::Game>(link.inbound, link.outbound,
-                                                  invincible);
+                                                  invincible, levels);
         },
         {
             .maxInstances = rtype::protocol::MaxRooms,

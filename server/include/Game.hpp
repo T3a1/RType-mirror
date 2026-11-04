@@ -9,6 +9,7 @@
 #define SERVER_GAME_HPP
 
 #include "EntityFactory.hpp"
+#include "Level.hpp"
 #include "common/components/Spawner.hpp"
 #include "common/systems/MovementSystem.hpp"
 #include "common/systems/PatternSystem.hpp"
@@ -24,6 +25,7 @@
 #include "systems/DeathSystem.hpp"
 #include "systems/EnemyAISystem.hpp"
 #include "systems/GameOverSystem.hpp"
+#include "systems/LevelSystem.hpp"
 #include "systems/LifetimeSystem.hpp"
 #include "systems/NetworkInputSystem.hpp"
 #include "systems/RoomPhaseSystem.hpp"
@@ -37,6 +39,7 @@
 #include <chrono>
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <thread>
 #include <vector>
 
@@ -92,8 +95,11 @@ class Game final : public engine::IInstance {
      * @param outbound The messages to send to the clients.
      * @param invinciblePlayers Whether the players' ships take no damage,
      * for the network benchmark.
+     * @param levels The levels played one after the other before the
+     * random waves of the endless mode; none for endless mode only.
      **/
-    Game(Inbound &inbound, Outbound &outbound, bool invinciblePlayers = false);
+    Game(Inbound &inbound, Outbound &outbound, bool invinciblePlayers = false,
+         std::shared_ptr<const std::vector<Level>> levels = {});
 
   private:
     void registerSystems();

@@ -1,0 +1,23 @@
+{
+    "name": "The swarm",
+    "waves": [
+        { "time": 2, "enemy": "small", "count": 8, "spacing": 0.18, "y": 540 },
+        { "time": 6, "enemy": "wave", "count": 5, "spacing": 0.3 },
+        { "time": 9, "enemy": "shooter", "count": 3, "stepY": 280, "y": 540 },
+        {
+            "time": 14, "enemy": "basic", "count": 5, "spacing": 0.4, "stepY": 120,
+            "pattern": { "kind": "dive", "diveDelay": 1.5, "diveSpeed": 750 }
+        },
+        {
+            "time": 19, "enemy": "small", "count": 10, "spacing": 0.15, "y": 540,
+            "pattern": { "kind": "zigzag", "amplitude": 300, "frequency": 0.6 }
+        },
+        { "time": 25, "enemy": "medium", "count": 3, "stepY": 300, "y": 540 },
+        { "time": 31, "enemy": "basic", "count": 7, "spacing": 0.25, "stepY": 80, "fromCenter": true, "y": 540 },
+        { "time": 36, "enemy": "wave", "count": 6, "spacing": 0.3, "y": 300 },
+        { "time": 37, "enemy": "wave", "count": 6, "spacing": 0.3, "y": 780 },
+        { "time": 44, "enemy": "large", "y": 540 },
+        { "time": 46, "enemy": "small", "count": 6, "spacing": 0.2, "y": 200 },
+        { "time": 48, "enemy": "small", "count": 6, "spacing": 0.2, "y": 880 }
+    ]
+}

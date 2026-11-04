@@ -146,6 +146,11 @@ void Game::registerSystems()
         Stage::Simulation, "gameOverTimer",
         [this](Registry &, Duration dt) { m_gameOverTime += dt.count(); },
         {.when = [this] { return m_sync.gameOver; }});
+    m_scheduler.add(Stage::Simulation, "levelBanner",
+                    [this](Registry &, Duration dt) {
+                        m_sync.levelBanner =
+                            std::max(m_sync.levelBanner - dt.count(), 0.0F);
+                    });
     m_scheduler.add(Stage::Simulation, "shipTilt", shipTiltSystem);
     m_scheduler.add(Stage::Simulation, "animation", animationSystem);
 }
@@ -253,6 +258,9 @@ void Game::drawScreens()
         }
     } else {
         hudSystem(m_sync, m_autoFire.enabled, *m_graphics);
+        if (!m_sync.gameOver) {
+            levelBannerScreen(m_sync, *m_graphics);
+        }
         const bool keyboard =
             m_menuKeys.confirm && m_gameOverTime >= GameOverKeyDelay;
         if (m_sync.gameOver && gameOverScreen(m_sync, *m_graphics, keyboard)) {

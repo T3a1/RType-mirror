@@ -6,10 +6,14 @@
 */
 
 #include "Game.hpp"
+#include "components/LevelProgress.hpp"
+
+#include <utility>
 
 namespace server {
 
-Game::Game(Inbound &inbound, Outbound &outbound, bool invinciblePlayers)
+Game::Game(Inbound &inbound, Outbound &outbound, bool invinciblePlayers,
+           std::shared_ptr<const std::vector<Level>> levels)
     : m_inbound(inbound), m_outbound(outbound),
       m_invinciblePlayers(invinciblePlayers)
 {
@@ -20,6 +24,10 @@ Game::Game(Inbound &inbound, Outbound &outbound, bool invinciblePlayers)
                                            .maxDelay = engine::Duration{4.5F},
                                        });
     m_registry.emplace<SpawnQueue>(world);
+    if (levels && !levels->empty()) {
+        m_registry.emplace<LevelProgress>(
+            world, LevelProgress{.levels = std::move(levels)});
+    }
     registerSystems();
 }
 
@@ -59,6 +67,22 @@ void Game::registerSystems()
         Stage::Input, "enemyAI",
         [](Registry &r, Duration) { server::enemyAISystem(r); }, playing);
 
+    m_scheduler.add(
+        Stage::Simulation, "level",
+        [this](Registry &r, Duration dt) {
+            if (const auto level = server::levelSystem(r, dt)) {
+                m_outbound.push(OutboundMessage{
+                    .to = Recipient::All,
+                    .payload =
+                        rtype::protocol::GameEvent{
+                            .kind =
+                                rtype::protocol::GameEventKind::LevelStarted,
+                            .level = *level,
+                        },
+                });
+            }
+        },
+        playing);
     m_scheduler.add(
         Stage::Simulation, "spawn",
         [this](Registry &r, Duration dt) {

@@ -50,7 +50,7 @@ flowchart BT
 |-----------|--------|----------|----------------------|
 | `engine/` | `r-type_engine` | Generic ECS (entities, components, registry, systems), scheduler, clock, math types, the UDP socket interface (`engine::net`). Knows nothing about R-Type. | Standard library only |
 | `common/` | `r-type_common` | R-Type components shared by both programs (`Transform`, `Velocity`, `Health`...), protocol messages and their serialization, the socket backend. | `r-type_engine`; Asio as a **private** dependency (Conan, or the Alpine package `asio-dev` in the `Dockerfile`) |
-| `server/` | `r-type_server` (and `r-type_server_network`) | Server game loop, gameplay systems (movement, collisions, spawning, AI), client sessions, network thread. | `r-type_common`, server-side packages from the `Dockerfile` |
+| `server/` | `r-type_server` (and `r-type_server_network`, `r-type_server_spawn`) | Server game loop, gameplay systems (movement, collisions, spawning, levels, AI), client sessions, network thread. | `r-type_common`; nlohmann-json for the level files (Conan, or the Alpine package `nlohmann-json` in the `Dockerfile`) |
 | `client/` | `r-type_client` (and `r-type_client_network`) | Rendering, input, audio, interpolation, connection to the server. | `r-type_common`, graphics library (Conan) |
 
 Rules:

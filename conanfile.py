@@ -31,6 +31,9 @@ class RType(ConanFile):
 
     def requirements(self):
         self.requires("asio/1.36.0")
+        # Level files of the server. Same version as the Alpine package
+        # nlohmann-json used by the Dockerfile.
+        self.requires("nlohmann_json/3.11.3")
         if self.options.graphics == "raylib":
             self.requires("raylib/5.5")
         elif self.options.graphics == "sfml":
