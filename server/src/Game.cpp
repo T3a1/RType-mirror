@@ -9,12 +9,39 @@
 
 namespace server {
 
+Game::Game(Inbound &inbound, Outbound &outbound, bool invinciblePlayers)
+    : m_inbound(inbound), m_outbound(outbound),
+      m_invinciblePlayers(invinciblePlayers)
+{
+    const engine::Entity world = m_registry.create();
+    m_registry.emplace<rtype::Spawner>(world,
+                                       rtype::Spawner{
+                                           .minDelay = engine::Duration{2.5F},
+                                           .maxDelay = engine::Duration{4.5F},
+                                       });
+    m_registry.emplace<SpawnQueue>(world);
+}
+
 void Game::tick(engine::Duration dt)
 {
     const auto messages = m_inbound.drain();
     server::sessionSystem(m_registry, messages, m_players, m_factory,
                           m_outbound, m_tick);
     server::networkInputSystem(m_registry, messages, m_players);
+    server::roomPhaseSystem(messages, m_status, m_outbound);
+    if (m_status != rtype::protocol::RoomStatus::Waiting) {
+        simulate(dt);
+    }
+    m_registry.flush();
+    if (m_tick % 3 == 0) {
+        server::snapshotSystem(m_registry, m_players, m_outbound, m_tick);
+    }
+    m_publicStatus = static_cast<std::uint8_t>(m_status);
+    ++m_tick;
+}
+
+void Game::simulate(engine::Duration dt)
+{
     rtype::playerFireSystem(m_registry);
     server::enemyAISystem(m_registry);
     server::spawnSystem(m_registry, m_factory, dt);
@@ -30,44 +57,9 @@ void Game::tick(engine::Duration dt)
     server::lifetimeSystem(m_registry, dt, m_outbound);
     server::boundarySystem(m_registry, m_outbound);
     server::gameOverSystem(m_registry, m_players, m_outbound, m_gameOver);
-    m_registry.flush();
-    if (m_tick % 3 == 0) {
-        server::snapshotSystem(m_registry, m_players, m_outbound, m_tick);
-    }
-    ++m_tick;
-}
-
-void Game::run()
-{
-    using Clock = std::chrono::steady_clock;
-    constexpr Clock::duration tickStep =
-        std::chrono::duration_cast<Clock::duration>(
-            std::chrono::duration<double>(1.0 / 60.0));
-    constexpr Clock::duration maxCatchUp = std::chrono::milliseconds(250);
-
-    Clock::duration accumulator{0};
-    Clock::time_point previous = Clock::now();
-
-    const engine::Entity world = m_registry.create();
-    m_registry.emplace<rtype::Spawner>(
-        world, rtype::Spawner{.minDelay = engine::Duration{2.5F},
-                              .maxDelay = engine::Duration{4.5F}});
-    m_registry.emplace<SpawnQueue>(world);
-
-    while (m_running) {
-        const Clock::time_point now = Clock::now();
-        accumulator = std::min(accumulator + (now - previous), maxCatchUp);
-        previous = now;
-
-        while (accumulator >= tickStep) {
-            tick(engine::Duration{tickStep});
-            accumulator -= tickStep;
-        }
-
-        std::this_thread::sleep_until(now + (tickStep - accumulator));
+    if (m_gameOver) {
+        m_status = rtype::protocol::RoomStatus::Over;
     }
 }
-
-void Game::stop() { m_running = false; }
 
 } // namespace server

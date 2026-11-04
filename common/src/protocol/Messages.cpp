@@ -48,6 +48,29 @@ void encode(const Connect & /*message*/, ByteWriter & /*out*/) {}
 
 void encode(const Accept & /*message*/, ByteWriter & /*out*/) {}
 
+void encode(const RoomList &message, ByteWriter &out)
+{
+    out.u8(static_cast<std::uint8_t>(message.rooms.size()));
+    for (const RoomInfo &room : message.rooms) {
+        out.u32(room.room);
+        out.u8(room.players);
+        out.u8(static_cast<std::uint8_t>(room.status));
+    }
+}
+
+void encode(const JoinRoom &message, ByteWriter &out) { out.u32(message.room); }
+
+void encode(const LeaveRoom & /*message*/, ByteWriter & /*out*/) {}
+
+void encode(const StartGame & /*message*/, ByteWriter & /*out*/) {}
+
+void encode(const RoomJoined &message, ByteWriter &out)
+{
+    out.u32(message.room);
+}
+
+void encode(const RoomRefused & /*message*/, ByteWriter & /*out*/) {}
+
 void encode(const Reject &message, ByteWriter &out)
 {
     out.u8(static_cast<std::uint8_t>(message.reason));
@@ -118,6 +141,43 @@ void encode(const GameEvent &message, ByteWriter &out)
 bool decode(ByteReader & /*in*/, Connect & /*message*/) { return true; }
 
 bool decode(ByteReader & /*in*/, Accept & /*message*/) { return true; }
+
+bool decode(ByteReader &in, RoomList &message)
+{
+    const std::uint8_t count = in.u8();
+    if (count > MaxRooms) {
+        return false;
+    }
+    for (std::uint8_t i = 0; i < count; ++i) {
+        RoomInfo room;
+        room.room = in.u32();
+        room.players = in.u8();
+        if (!readEnum(in, RoomStatus::Over, room.status) || room.room == 0 ||
+            room.players > MaxPlayers) {
+            return false;
+        }
+        message.rooms.push_back(room);
+    }
+    return true;
+}
+
+bool decode(ByteReader &in, JoinRoom &message)
+{
+    message.room = in.u32();
+    return true;
+}
+
+bool decode(ByteReader & /*in*/, LeaveRoom & /*message*/) { return true; }
+
+bool decode(ByteReader & /*in*/, StartGame & /*message*/) { return true; }
+
+bool decode(ByteReader &in, RoomJoined &message)
+{
+    message.room = in.u32();
+    return message.room != 0;
+}
+
+bool decode(ByteReader & /*in*/, RoomRefused & /*message*/) { return true; }
 
 bool decode(ByteReader &in, Reject &message)
 {
@@ -200,7 +260,7 @@ bool decode(ByteReader &in, SnapshotPart &message)
 
 bool decode(ByteReader &in, GameEvent &message)
 {
-    if (!readEnum(in, GameEventKind::GameOver, message.kind)) {
+    if (!readEnum(in, GameEventKind::GameStarted, message.kind)) {
         return false;
     }
     switch (message.kind) {
@@ -213,6 +273,7 @@ bool decode(ByteReader &in, GameEvent &message)
         message.slot = in.u8();
         return isValidSlot(message.slot);
     case GameEventKind::GameOver:
+    case GameEventKind::GameStarted:
         return true;
     }
     return false;

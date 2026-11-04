@@ -18,6 +18,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -27,7 +28,7 @@ constexpr int ExitError = 84;
 constexpr const char *Usage =
     "Usage: r-type_client [host] [port] [--controls FILE]\n"
     "                     [--no-interpolation] [--no-prediction]\n"
-    "                     [--bench SECONDS FILE.csv]\n";
+    "                     [--room N] [--bench SECONDS FILE.csv]\n";
 constexpr const char *DefaultControlsPath = "controls.cfg";
 
 /**
@@ -46,8 +47,56 @@ struct Arguments {
 };
 
 /**
+ * @brief Returns the value of an option.
+ * @param args The arguments.
+ * @param index The position of the value.
+ * @param option The option, for the error message.
+ * @return The value.
+ * @throws std::invalid_argument If the value is missing.
+ **/
+const char *optionValue(std::span<char *> args, std::size_t index,
+                        std::string_view option)
+{
+    if (index >= args.size()) {
+        throw std::invalid_argument(std::string{option} + " needs a value");
+    }
+    return args[index];
+}
+
+/**
+ * @brief Reads the value of --room.
+ * @param text The value.
+ * @return The room.
+ * @throws std::invalid_argument If it is not a positive 32-bit number.
+ **/
+std::uint32_t parseRoom(const char *text)
+{
+    const long long room = std::stoll(text);
+    if (room < 1 || !std::in_range<std::uint32_t>(room)) {
+        throw std::invalid_argument("invalid --room number");
+    }
+    return static_cast<std::uint32_t>(room);
+}
+
+/**
+ * @brief Reads the values of --bench.
+ * @param seconds The duration.
+ * @param output The CSV file.
+ * @return The benchmark configuration.
+ * @throws std::invalid_argument If the duration is not positive.
+ **/
+client::BenchConfig parseBench(const char *seconds, const char *output)
+{
+    const float duration = std::stof(seconds);
+    if (!(duration > 0.0F)) {
+        throw std::invalid_argument("--bench needs SECONDS > 0");
+    }
+    return {.duration = engine::Duration{duration}, .output = output};
+}
+
+/**
  * @brief Parses the command line: up to two positional arguments (host,
- * port) and the benchmark options.
+ * port), the room and the benchmark options.
  * @param args The arguments, without the program name.
  * @return The parsed arguments.
  * @throws std::invalid_argument On an unknown option, a missing value or
@@ -63,25 +112,14 @@ Arguments parseArguments(std::span<char *> args)
             parsed.options.interpolate = false;
         } else if (arg == "--no-prediction") {
             parsed.options.predict = false;
+        } else if (arg == "--room") {
+            parsed.options.room = parseRoom(optionValue(args, ++i, arg));
         } else if (arg == "--controls") {
-            if (i + 1 >= args.size()) {
-                throw std::invalid_argument("--controls needs FILE");
-            }
-            parsed.controlsPath = args[i + 1];
-            ++i;
+            parsed.controlsPath = optionValue(args, ++i, arg);
         } else if (arg == "--bench") {
-            if (i + 2 >= args.size()) {
-                throw std::invalid_argument("--bench needs SECONDS FILE");
-            }
-            const float seconds = std::stof(args[i + 1]);
-            if (!(seconds > 0.0F)) {
-                throw std::invalid_argument("--bench needs SECONDS > 0");
-            }
-            parsed.options.bench = client::BenchConfig{
-                .duration = engine::Duration{seconds},
-                .output = args[i + 2],
-            };
-            i += 2;
+            const char *seconds = optionValue(args, ++i, arg);
+            parsed.options.bench =
+                parseBench(seconds, optionValue(args, ++i, arg));
         } else if (arg.starts_with("--")) {
             throw std::invalid_argument("unknown option " + std::string{arg});
         } else {

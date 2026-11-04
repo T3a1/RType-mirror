@@ -38,14 +38,15 @@ void hudSystem(const SyncState &state, bool autoFire, gfx::IGraphics &graphics);
 
 /**
  * @brief Draws the end of the game in the middle of the window: "GAME OVER",
- * the score of every player, the team's total and a Quit button. It is drawn
- * in screen pixels: call it after endWorld().
+ * the score of every player, the team's total and a button back to the lobby.
+ * It is drawn in screen pixels: call it after endWorld().
  * @param state The sync state, for the players and the local slot.
  * @param graphics The graphics backend to draw with and read the mouse from.
- * @return Whether the player clicked Quit.
+ * @param confirm Whether the keyboard confirmed the button.
+ * @return Whether the player chose to go back to the lobby.
  **/
 [[nodiscard]] bool gameOverScreen(const SyncState &state,
-                                  gfx::IGraphics &graphics);
+                                  gfx::IGraphics &graphics, bool confirm);
 
 } // namespace client
 

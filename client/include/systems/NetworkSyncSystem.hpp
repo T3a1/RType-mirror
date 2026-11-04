@@ -71,6 +71,7 @@ struct SyncState {
     engine::Vec2f shipPosition;
     std::uint32_t acknowledgedTick = 0;
     bool gameOver = false;
+    bool started = false;
 };
 
 /**

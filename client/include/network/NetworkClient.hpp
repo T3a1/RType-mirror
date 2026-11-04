@@ -111,6 +111,26 @@ class NetworkClient {
     [[nodiscard]] State state() const { return m_state; }
 
     /**
+     * @brief Asks to enter a room, answered by RoomJoined or RoomRefused.
+     * Does nothing until connected.
+     * @param room The room, or AnyRoom or NewRoom.
+     * @param now The current time.
+     **/
+    void joinRoom(std::uint32_t room, TimePoint now);
+
+    /**
+     * @brief Leaves the current room and goes back to the lobby.
+     * @param now The current time.
+     **/
+    void leaveRoom(TimePoint now);
+
+    /**
+     * @brief Asks to start the game of the current room.
+     * @param now The current time.
+     **/
+    void startGame(TimePoint now);
+
+    /**
      * @brief Returns the bytes of every datagram received from the server
      * since the start, for the network benchmark.
      * @return The number of bytes received.
@@ -133,6 +153,7 @@ class NetworkClient {
     void handlePacket(const rtype::protocol::Packet &packet,
                       std::vector<rtype::protocol::Payload> &received);
     void send(const rtype::protocol::Payload &payload, TimePoint now);
+    void sendPacket(const rtype::protocol::Packet &packet, TimePoint now);
 
     std::unique_ptr<engine::net::IUdpSocket> m_socket;
     engine::net::Endpoint m_server;

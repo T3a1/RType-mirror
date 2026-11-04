@@ -6,6 +6,7 @@
 */
 
 #include "FakeNetwork.hpp"
+#include "FakeRooms.hpp"
 #include "network/NetworkMessages.hpp"
 #include "network/NetworkServer.hpp"
 
@@ -35,10 +36,11 @@ Endpoint clientEndpoint(std::uint16_t port)
 class NetworkServerTest : public ::testing::Test {
   public:
     FakeNetwork m_network;
-    server::Inbound m_inbound;
-    server::Outbound m_outbound;
-    server::NetworkServer m_server{m_network.open(ServerEndpoint), m_inbound,
-                                   m_outbound};
+    tests::FakeRooms m_fakeRooms;
+    server::Inbound &m_inbound = m_fakeRooms.inbound;
+    server::Outbound &m_outbound = m_fakeRooms.outbound;
+    server::NetworkServer m_server{m_network.open(ServerEndpoint),
+                                   m_fakeRooms.rooms};
     std::vector<server::InboundMessage> m_received;
 
     void SetUp() override { m_server.start(); }
@@ -69,11 +71,13 @@ class NetworkServerTest : public ::testing::Test {
         return found.value_or(server::InboundMessage{});
     }
 
-    // Connects a peer and returns its ClientId.
+    // Puts a peer in a room and returns its ClientId.
     std::uint32_t connect(FakePeer &client)
     {
         client.send(Connect{});
         EXPECT_TRUE(client.waitFor<Accept>().has_value());
+        client.send(JoinRoom{});
+        EXPECT_TRUE(client.waitFor<RoomJoined>().has_value());
         const auto connected = waitInbound(server::InboundKind::Connected);
         m_received.clear();
         return connected.clientId;
@@ -86,8 +90,10 @@ TEST_F(NetworkServerTest, HandshakeAcceptsTheClientAndTellsTheGame)
 {
     FakePeer client = peer(5000);
     client.send(Connect{});
-
     EXPECT_TRUE(client.waitFor<Accept>().has_value());
+    client.send(JoinRoom{});
+
+    EXPECT_TRUE(client.waitFor<RoomJoined>().has_value());
     const auto connected = waitInbound(server::InboundKind::Connected);
     EXPECT_EQ(connected.kind, server::InboundKind::Connected);
     EXPECT_EQ(connected.clientId, 1U);
@@ -145,7 +151,7 @@ TEST_F(NetworkServerTest, SurvivesMalformedDatagrams)
     EXPECT_TRUE(client.waitFor<Accept>().has_value());
 }
 
-TEST_F(NetworkServerTest, RejectsAClientPastMaxPlayers)
+TEST_F(NetworkServerTest, RefusesARoomPastMaxPlayers)
 {
     std::vector<FakePeer> clients;
     for (std::uint16_t i = 0; i < MaxPlayers; ++i) {
@@ -155,9 +161,10 @@ TEST_F(NetworkServerTest, RejectsAClientPastMaxPlayers)
     FakePeer late = peer(6000);
 
     late.send(Connect{});
+    EXPECT_TRUE(late.waitFor<Accept>().has_value());
+    late.send(JoinRoom{});
 
-    EXPECT_EQ(late.waitFor<Reject>(),
-              Reject{.reason = RejectReason::ServerFull});
+    EXPECT_TRUE(late.waitFor<RoomRefused>().has_value());
 }
 
 TEST_F(NetworkServerTest, ReportsAClientThatLeaves)

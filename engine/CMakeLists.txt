@@ -5,6 +5,7 @@ find_package(Threads REQUIRED)
 
 set(SOURCE_FILES
     src/Clock.cpp
+    src/InstanceRunner.cpp
     src/Logger.cpp
     src/Registry.cpp
     src/Scheduler.cpp

@@ -217,6 +217,10 @@ void applyEvent(engine::Registry &registry, const GameEvent &event,
         BB_INFO("Game over");
         state.gameOver = true;
         break;
+    case GameEventKind::GameStarted:
+        BB_INFO("Game started");
+        state.started = true;
+        break;
     }
 }
 

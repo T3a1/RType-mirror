@@ -23,6 +23,9 @@ set(SOURCE_FILES
     src/reliable_channel_test.cpp
     src/udp_socket_test.cpp
     src/network_server_test.cpp
+    src/room_routing_test.cpp
+    src/room_phase_system_test.cpp
+    src/instance_manager_test.cpp
     src/game_over_system_test.cpp
 )
 
