@@ -19,6 +19,7 @@
 #include <gtest/gtest.h>
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -187,7 +188,9 @@ class LevelSystemTest : public testing::Test {
     {
         const auto ticks = static_cast<int>(seconds / Tick.count());
         for (int i = 0; i < ticks; ++i) {
-            server::levelSystem(m_registry, Tick);
+            if (const auto level = server::levelSystem(m_registry, Tick)) {
+                m_announced.push_back(*level);
+            }
             server::spawnSystem(m_registry, m_factory, Tick);
             m_registry.flush();
         }
@@ -195,11 +198,16 @@ class LevelSystemTest : public testing::Test {
 
     engine::Registry &registry() { return m_registry; }
     [[nodiscard]] engine::Entity world() const { return m_world; }
+    [[nodiscard]] const std::vector<std::uint8_t> &announced() const
+    {
+        return m_announced;
+    }
 
   private:
     engine::Registry m_registry;
     server::EntityFactory m_factory;
     engine::Entity m_world = m_registry.create();
+    std::vector<std::uint8_t> m_announced;
 };
 
 TEST_F(LevelSystemTest, SpawnsTheWavesOfTheLevelOnTime)
@@ -234,4 +242,18 @@ TEST_F(LevelSystemTest, GoesEndlessAfterTheLastLevel)
     EXPECT_FALSE(registry().has<server::LevelProgress>(world()));
     run(1.0F);
     EXPECT_GT(countEnemies(registry()), 0U);
+}
+
+TEST_F(LevelSystemTest, AnnouncesEachLevelThenTheEndlessMode)
+{
+    run(0.1F);
+    EXPECT_EQ(announced(), (std::vector<std::uint8_t>{1}));
+    run(1.1F);
+    destroyEnemies(registry());
+    run(0.1F);
+    EXPECT_EQ(announced(), (std::vector<std::uint8_t>{1, 2}));
+    run(server::LevelPause.count() + 0.8F);
+    destroyEnemies(registry());
+    run(0.1F);
+    EXPECT_EQ(announced(), (std::vector<std::uint8_t>{1, 2, 0}));
 }

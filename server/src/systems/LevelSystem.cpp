@@ -14,6 +14,8 @@
 #include "engine/Entity.hpp"
 #include "engine/Logger.hpp"
 
+#include <algorithm>
+#include <limits>
 #include <vector>
 
 namespace server {
@@ -51,12 +53,21 @@ void queueDueWaves(LevelProgress &progress, rtype::Spawner &spawner,
     }
 }
 
+/** @brief The level number sent to the clients, from 1, capped at 255. */
+std::uint8_t levelNumber(std::size_t index)
+{
+    return static_cast<std::uint8_t>(std::min<std::size_t>(
+        index + 1, std::numeric_limits<std::uint8_t>::max()));
+}
+
 } // namespace
 
-void levelSystem(engine::Registry &registry, engine::Duration dt)
+std::optional<std::uint8_t> levelSystem(engine::Registry &registry,
+                                        engine::Duration dt)
 {
     const bool enemiesLeft = anyEnemy(registry);
     std::vector<engine::Entity> finished;
+    std::optional<std::uint8_t> announced;
 
     registry.each<LevelProgress, rtype::Spawner, SpawnQueue>(
         [&](engine::Entity entity, LevelProgress &progress,
@@ -77,6 +88,7 @@ void levelSystem(engine::Registry &registry, engine::Duration dt)
             if (progress.elapsed.count() == 0.0F && progress.nextWave == 0 &&
                 progress.level == 0) {
                 BB_INFO("Level 1: " << progress.levels->front().name);
+                announced = levelNumber(0);
             }
             progress.elapsed += dt;
             queueDueWaves(progress, spawner, queue);
@@ -92,11 +104,15 @@ void levelSystem(engine::Registry &registry, engine::Duration dt)
             if (progress.level >= progress.levels->size()) {
                 BB_INFO("Every level cleared: endless mode");
                 finished.push_back(entity);
+                announced = 0;
+            } else {
+                announced = levelNumber(progress.level);
             }
         });
     for (const engine::Entity entity : finished) {
         registry.remove<LevelProgress>(entity);
     }
+    return announced;
 }
 
 } // namespace server

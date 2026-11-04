@@ -52,7 +52,16 @@ void Game::simulate(engine::Duration dt)
 {
     rtype::playerFireSystem(m_registry);
     server::enemyAISystem(m_registry);
-    server::levelSystem(m_registry, dt);
+    if (const auto level = server::levelSystem(m_registry, dt)) {
+        m_outbound.push(OutboundMessage{
+            .to = Recipient::All,
+            .payload =
+                rtype::protocol::GameEvent{
+                    .kind = rtype::protocol::GameEventKind::LevelStarted,
+                    .level = *level,
+                },
+        });
+    }
     server::spawnSystem(m_registry, m_factory, dt);
     server::shootSystem(m_registry, m_factory, dt);
     rtype::playerControlSystem(m_registry);

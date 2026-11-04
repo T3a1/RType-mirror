@@ -11,6 +11,9 @@
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"
 
+#include <cstdint>
+#include <optional>
+
 namespace server {
 
 /** @brief The pause between two levels. */
@@ -25,8 +28,13 @@ inline constexpr engine::Duration LevelPause{3.0F};
  * @param registry The registry holding the spawner (Spawner, SpawnQueue
  * and LevelProgress) and the enemies.
  * @param dt The time elapsed since the last tick.
+ * @return The level announced this tick, for GameEvent{LevelStarted}: 1
+ * on the first tick, the next level (from 2) as soon as one is cleared,
+ * before its pause, or 0 when the endless mode follows the last level.
+ * Nothing on the other ticks.
  **/
-void levelSystem(engine::Registry &registry, engine::Duration dt);
+[[nodiscard]] std::optional<std::uint8_t>
+levelSystem(engine::Registry &registry, engine::Duration dt);
 
 } // namespace server
 
