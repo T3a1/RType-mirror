@@ -6,6 +6,7 @@
 */
 
 #include "common/systems/PatternSystem.hpp"
+#include "common/components/Enemy.hpp"
 #include "common/components/Player.hpp"
 #include "common/components/Transform.hpp"
 #include "common/components/Velocity.hpp"
@@ -23,48 +24,75 @@ namespace rtype {
 namespace {
 
 /**
- * @brief Returns the position of the player closest to a point.
- * @param players The positions of the players.
- * @param from The point.
- * @return The closest position, or nothing if there is no player.
+ * @struct Target
+ * @brief An entity a dive can rush toward.
+ * @param entity The entity.
+ * @param position Its position.
  **/
-std::optional<engine::Vec2f>
-nearestPlayer(const std::vector<engine::Vec2f> &players, engine::Vec2f from)
+struct Target {
+    engine::Entity entity;
+    engine::Vec2f position;
+};
+
+/**
+ * @brief Returns the positions of every entity with a C and a Transform.
+ * @param registry The registry.
+ * @return The targets.
+ **/
+template <typename C> std::vector<Target> targets(engine::Registry &registry)
 {
-    std::optional<engine::Vec2f> nearest;
-    float best = std::numeric_limits<float>::max();
-    for (const engine::Vec2f &player : players) {
-        const engine::Vec2f delta = player - from;
-        const float distance = (delta.x * delta.x) + (delta.y * delta.y);
-        if (distance < best) {
-            best = distance;
-            nearest = player;
-        }
-    }
-    return nearest;
+    std::vector<Target> found;
+    registry.each<C, Transform>(
+        [&found](engine::Entity entity, const C &, const Transform &transform) {
+            found.push_back({.entity = entity, .position = transform.position});
+        });
+    return found;
 }
 
 /**
- * @brief Returns the direction of a dive starting at a point: toward the
- * nearest player, or straight to the left if there is none or it is right
- * there.
- * @param players The positions of the players.
- * @param from The point where the dive starts.
+ * @brief Returns the unit vector of a direction, or nothing if it is null.
+ * @param direction The direction.
+ * @return The direction with a length of 1.
+ **/
+std::optional<engine::Vec2f> normalized(engine::Vec2f direction)
+{
+    const float length = std::hypot(direction.x, direction.y);
+    if (length <= 0.0F) {
+        return std::nullopt;
+    }
+    return direction * (1.0F / length);
+}
+
+/**
+ * @brief Returns the direction of a dive: toward the closest target other
+ * than the diving entity, or on along its current velocity if there is
+ * none (straight to the left if it is not moving).
+ * @param candidates The possible targets.
+ * @param self The diving entity.
+ * @param from Where the dive starts.
+ * @param velocity The current velocity of the diving entity.
  * @return A direction of length 1.
  **/
-engine::Vec2f diveDirection(const std::vector<engine::Vec2f> &players,
-                            engine::Vec2f from)
+engine::Vec2f diveDirection(const std::vector<Target> &candidates,
+                            engine::Entity self, engine::Vec2f from,
+                            engine::Vec2f velocity)
 {
-    const std::optional<engine::Vec2f> target = nearestPlayer(players, from);
-    if (!target) {
-        return {.x = -1.0F, .y = 0.0F};
+    std::optional<engine::Vec2f> nearest;
+    float best = std::numeric_limits<float>::max();
+    for (const Target &target : candidates) {
+        const engine::Vec2f delta = target.position - from;
+        const float distance = (delta.x * delta.x) + (delta.y * delta.y);
+        if (target.entity != self && distance < best) {
+            best = distance;
+            nearest = delta;
+        }
     }
-    const engine::Vec2f delta = *target - from;
-    const float length = std::hypot(delta.x, delta.y);
-    if (length <= 0.0F) {
-        return {.x = -1.0F, .y = 0.0F};
+    if (nearest) {
+        if (const auto direction = normalized(*nearest)) {
+            return *direction;
+        }
     }
-    return delta * (1.0F / length);
+    return normalized(velocity).value_or(engine::Vec2f{.x = -1.0F, .y = 0.0F});
 }
 
 } // namespace
@@ -93,21 +121,27 @@ void patternSystem(engine::Registry &registry, engine::Duration dt)
     if (dt.count() <= 0.0F) {
         return;
     }
-    std::vector<engine::Vec2f> players;
-    registry.each<Player, Transform>(
-        [&players](engine::Entity, const Player &, const Transform &transform) {
-            players.push_back(transform.position);
-        });
+    const std::vector<Target> players = targets<Player>(registry);
+    const std::vector<Target> enemies = targets<Enemy>(registry);
 
     registry.each<MovementPattern, Transform, Velocity>(
-        [&players, dt](engine::Entity, MovementPattern &pattern,
-                       const Transform &transform, Velocity &velocity) {
+        [&players, &enemies,
+         dt](engine::Entity entity, MovementPattern &pattern,
+             const Transform &transform, Velocity &velocity) {
+            if (!pattern.anchored) {
+                pattern.baseY = transform.position.y -
+                                patternOffset(pattern, pattern.elapsed);
+                pattern.anchored = true;
+            }
             pattern.elapsed += dt;
             if (pattern.kind == MovementKind::Dive &&
                 pattern.elapsed >= pattern.diveDelay) {
                 if (pattern.diveDirection == engine::Vec2f{}) {
-                    pattern.diveDirection =
-                        diveDirection(players, transform.position);
+                    pattern.diveDirection = diveDirection(
+                        pattern.diveTarget == DiveTarget::NearestEnemy
+                            ? enemies
+                            : players,
+                        entity, transform.position, velocity.value);
                 }
                 velocity.value = pattern.diveDirection * pattern.diveSpeed;
                 return;

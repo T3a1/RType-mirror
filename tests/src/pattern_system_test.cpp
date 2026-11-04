@@ -5,6 +5,7 @@
 ** pattern_system_test
 */
 
+#include "common/components/Enemy.hpp"
 #include "common/components/MovementPattern.hpp"
 #include "common/components/Player.hpp"
 #include "common/components/Transform.hpp"
@@ -107,17 +108,108 @@ TEST(PatternSystem, EntityStaysOnItsSinePath)
 TEST(PatternSystem, StraightComesBackToItsLine)
 {
     engine::Registry registry;
-    const engine::Entity entity =
-        spawn(registry,
-              rtype::MovementPattern{.kind = rtype::MovementKind::Straight,
-                                     .baseY = 300.0F},
-              100.0F);
+    const engine::Entity entity = spawn(
+        registry, rtype::MovementPattern{.kind = rtype::MovementKind::Straight},
+        100.0F);
+    run(registry, 1);
     registry.get<rtype::Transform>(entity).position.y = 350.0F;
 
     run(registry, 1);
 
-    EXPECT_NEAR(registry.get<rtype::Transform>(entity).position.y, 300.0F,
-                1e-3);
+    EXPECT_NEAR(registry.get<rtype::Transform>(entity).position.y, 0.0F, 1e-3);
+}
+
+TEST(PatternSystem, PathStartsWhereTheEntitySpawned)
+{
+    engine::Registry registry;
+    const rtype::MovementPattern sine{
+        .kind = rtype::MovementKind::Sine,
+        .amplitude = 100.0F,
+        .frequency = 1.0F,
+        .phase = std::numbers::pi_v<float> / 2.0F,
+    };
+    const engine::Entity entity = spawn(registry, sine, 100.0F);
+    registry.get<rtype::Transform>(entity).position.y = 700.0F;
+
+    run(registry, 1);
+
+    const rtype::MovementPattern &pattern =
+        registry.get<rtype::MovementPattern>(entity);
+    EXPECT_TRUE(pattern.anchored);
+    EXPECT_NEAR(pattern.baseY, 600.0F, 1e-3);
+    EXPECT_NEAR(registry.get<rtype::Transform>(entity).position.y,
+                600.0F + rtype::patternOffset(sine, Tick), 1e-2);
+}
+
+TEST(PatternSystem, PlayerMissileDivesTowardTheNearestEnemy)
+{
+    engine::Registry registry;
+    const engine::Entity player = registry.create();
+    registry.emplace<rtype::Player>(player, rtype::Player{.slot = 1});
+    registry.emplace<rtype::Transform>(
+        player, rtype::Transform{.position = {.x = 100.0F, .y = 100.0F}});
+    const engine::Entity enemy = registry.create();
+    registry.emplace<rtype::Enemy>(enemy);
+    registry.emplace<rtype::Transform>(
+        enemy, rtype::Transform{.position = {.x = 1000.0F, .y = 800.0F}});
+
+    const engine::Entity missile = registry.create();
+    registry.emplace<rtype::Transform>(
+        missile, rtype::Transform{.position = {.x = 200.0F, .y = 500.0F}});
+    registry.emplace<rtype::Velocity>(
+        missile, rtype::Velocity{.value = {.x = 900.0F, .y = 0.0F}});
+    registry.emplace<rtype::MovementPattern>(
+        missile,
+        rtype::MovementPattern{.kind = rtype::MovementKind::Dive,
+                               .diveSpeed = 1000.0F,
+                               .diveTarget = rtype::DiveTarget::NearestEnemy});
+
+    run(registry, 1);
+
+    const engine::Vec2f velocity = registry.get<rtype::Velocity>(missile).value;
+    EXPECT_GT(velocity.x, 0.0F);
+    EXPECT_GT(velocity.y, 0.0F);
+    EXPECT_NEAR(std::hypot(velocity.x, velocity.y), 1000.0F, 1e-2);
+}
+
+TEST(PatternSystem, DiveWithoutTargetKeepsItsHeading)
+{
+    engine::Registry registry;
+    const engine::Entity missile = registry.create();
+    registry.emplace<rtype::Transform>(
+        missile, rtype::Transform{.position = {.x = 200.0F, .y = 500.0F}});
+    registry.emplace<rtype::Velocity>(
+        missile, rtype::Velocity{.value = {.x = 900.0F, .y = 0.0F}});
+    registry.emplace<rtype::MovementPattern>(
+        missile,
+        rtype::MovementPattern{.kind = rtype::MovementKind::Dive,
+                               .diveSpeed = 1000.0F,
+                               .diveTarget = rtype::DiveTarget::NearestEnemy});
+
+    run(registry, 1);
+
+    EXPECT_FLOAT_EQ(registry.get<rtype::Velocity>(missile).value.x, 1000.0F);
+    EXPECT_FLOAT_EQ(registry.get<rtype::Velocity>(missile).value.y, 0.0F);
+}
+
+TEST(PatternSystem, EnemyNeverDivesTowardItself)
+{
+    engine::Registry registry;
+    const engine::Entity other = registry.create();
+    registry.emplace<rtype::Enemy>(other);
+    registry.emplace<rtype::Transform>(
+        other, rtype::Transform{.position = {.x = 1000.0F, .y = 900.0F}});
+    const engine::Entity diver = spawn(
+        registry,
+        rtype::MovementPattern{.kind = rtype::MovementKind::Dive,
+                               .diveSpeed = 500.0F,
+                               .diveTarget = rtype::DiveTarget::NearestEnemy},
+        100.0F);
+    registry.emplace<rtype::Enemy>(diver);
+
+    run(registry, 1);
+
+    EXPECT_GT(registry.get<rtype::Velocity>(diver).value.y, 0.0F);
 }
 
 TEST(PatternSystem, DiveRushesTowardTheNearestPlayer)
