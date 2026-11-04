@@ -10,6 +10,7 @@
 
 #include "common/components/Enemy.hpp"
 #include "common/components/MovementPattern.hpp"
+#include "components/ShotStyles.hpp"
 #include "engine/Entity.hpp"
 #include "engine/Vec2.hpp"
 
@@ -48,19 +49,37 @@ struct SpawnPlayer {
  * @param position The position to spawn the projectile at.
  * @param velocity The velocity of the projectile.
  * @param fromPlayer Whether the projectile was fired by a player or an enemy.
+ * @param damage The damage it deals.
+ * @param charged Whether it is a player's charged shot: larger, and it goes
+ * through the enemies it hits.
  **/
 struct SpawnProjectile {
     engine::Entity owner{};
     engine::Vec2f position{};
     engine::Vec2f velocity{};
     bool fromPlayer = true;
+    int damage = 50;
+    bool charged = false;
+};
+
+/**
+ * A request to spawn a power-up, dropped by a destroyed enemy.
+ * @param position Where it appears.
+ * @param kind The shot style it gives.
+ **/
+struct SpawnPowerUp {
+    engine::Vec2f position{};
+    PowerUpKind kind = PowerUpKind::Spread;
 };
 
 /// A deferred entity creation.
-using SpawnCommand = std::variant<SpawnEnemy, SpawnProjectile>;
+using SpawnCommand = std::variant<SpawnEnemy, SpawnProjectile, SpawnPowerUp>;
 
 /// The creations requested during a tick, applied in the Cleanup stage.
 using SpawnCommands = std::vector<SpawnCommand>;
+
+/** Distance between the center of a ship and the start of its shots. */
+inline constexpr float MuzzleOffset = 40.0F;
 
 } // namespace server
 

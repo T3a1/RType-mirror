@@ -27,6 +27,7 @@ namespace client {
  * @param rooms The last list of the rooms from the server.
  * @param room The current room, for the InRoom screen.
  * @param refused Whether the server refused the last room asked for.
+ * @param closed Whether an administrator closed the room of the player.
  * @param selected The item of the menu selected with the keyboard.
  **/
 struct LobbyState {
@@ -43,6 +44,7 @@ struct LobbyState {
     std::vector<rtype::protocol::RoomInfo> rooms;
     std::uint32_t room = rtype::protocol::AnyRoom;
     bool refused = false;
+    bool closed = false;
     std::size_t selected = 0;
 };
 

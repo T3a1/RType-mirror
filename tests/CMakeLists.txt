@@ -15,6 +15,7 @@ set(SOURCE_FILES
     src/formations_test.cpp
     src/level_test.cpp
     src/boss_test.cpp
+    src/weapons_test.cpp
     src/player_control_system_test.cpp
     src/interpolation_system_test.cpp
     src/prediction_system_test.cpp
@@ -27,6 +28,9 @@ set(SOURCE_FILES
     src/udp_socket_test.cpp
     src/network_server_test.cpp
     src/room_routing_test.cpp
+    src/command_console_test.cpp
+    src/access_list_test.cpp
+    src/admin_commands_test.cpp
     src/room_phase_system_test.cpp
     src/instance_manager_test.cpp
     src/game_over_system_test.cpp
@@ -55,4 +59,5 @@ gtest_discover_tests(${PROJECT_NAME})
 # The level files shipped with the server, checked by level_test.cpp.
 target_compile_definitions(${PROJECT_NAME}
     PRIVATE RTYPE_LEVELS_DIR="${CMAKE_SOURCE_DIR}/server/levels"
+    RTYPE_WEAPONS_FILE="${CMAKE_SOURCE_DIR}/server/weapons.json"
 )

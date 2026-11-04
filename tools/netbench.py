@@ -109,7 +109,7 @@ def binary(name: str) -> Path:
 
 def run_one(server: Path, client: Path, mode: str, output: Path, duration: float) -> None:
     """Runs one fresh server and one benchmarked client until the client is done."""
-    server_process = subprocess.Popen([str(server), "--invincible"],
+    server_process = subprocess.Popen([str(server), "--invincible", "--no-console"],
                                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         time.sleep(0.5)

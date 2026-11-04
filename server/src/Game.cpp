@@ -13,9 +13,10 @@
 namespace server {
 
 Game::Game(Inbound &inbound, Outbound &outbound, bool invinciblePlayers,
-           std::shared_ptr<const std::vector<Level>> levels)
+           std::shared_ptr<const std::vector<Level>> levels,
+           WeaponStats weapons)
     : m_inbound(inbound), m_outbound(outbound),
-      m_invinciblePlayers(invinciblePlayers)
+      m_invinciblePlayers(invinciblePlayers), m_weapons(weapons)
 {
     const engine::Entity world = m_registry.create();
     m_registry.emplace<rtype::Spawner>(world,
@@ -92,7 +93,13 @@ void Game::registerSystems()
     m_scheduler.add(
         Stage::Simulation, "shoot",
         [this](Registry &r, Duration dt) {
-            server::shootSystem(r, m_commands, dt);
+            server::shootSystem(r, m_commands, dt, m_weapons);
+        },
+        playing);
+    m_scheduler.add(
+        Stage::Simulation, "spreadShot",
+        [this](Registry &r, Duration) {
+            server::spreadShotSystem(r, m_commands, m_weapons);
         },
         playing);
     m_scheduler.add(
@@ -119,6 +126,19 @@ void Game::registerSystems()
         [this](Registry &r, Duration) {
             server::damageSystem(r, m_collisions, m_outbound,
                                  m_invinciblePlayers);
+        },
+        playing);
+    m_scheduler.add(
+        Stage::Simulation, "pickup",
+        [this](Registry &r, Duration) {
+            server::pickupSystem(r, m_collisions, m_outbound,
+                                 m_weapons.maxLevel);
+        },
+        playing);
+    m_scheduler.add(
+        Stage::Simulation, "powerUpDrop",
+        [this](Registry &r, Duration) {
+            server::powerUpDropSystem(r, m_commands);
         },
         playing);
     m_scheduler.add(

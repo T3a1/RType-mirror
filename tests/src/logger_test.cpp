@@ -56,6 +56,23 @@ TEST(Logger, FormatsLevelFileLineAndMessage)
               std::string::npos);
 }
 
+TEST(Logger, FramesTheConsoleLinesAndFlushes)
+{
+    std::ostringstream console;
+    engine::Logger logger(console);
+    logger.start();
+    logger.setConsoleFrame("<", ">");
+
+    logger.log(engine::LogLevel::Info, "file.cpp", 1, "framed");
+    logger.flush();
+    logger.print("answer");
+
+    const std::string text = console.str();
+    EXPECT_EQ(text.front(), '<');
+    EXPECT_NE(text.find("framed\n>answer"), std::string::npos) << text;
+    logger.stop();
+}
+
 TEST(Logger, SkipsLevelsBelowTheMinimum)
 {
     std::ostringstream out;

@@ -24,7 +24,7 @@ namespace rtype::protocol {
 using Payload =
     std::variant<Connect, Accept, Reject, Disconnect, Ack, Input, Welcome,
                  SnapshotPart, GameEvent, RoomList, JoinRoom, LeaveRoom,
-                 StartGame, RoomJoined, RoomRefused>;
+                 StartGame, RoomJoined, RoomRefused, RoomClosed>;
 
 /**
  * @struct Packet

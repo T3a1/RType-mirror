@@ -21,6 +21,7 @@ inline constexpr std::uint32_t Enemy = 1U << 1U;
 inline constexpr std::uint32_t PlayerProjectile = 1U << 2U;
 inline constexpr std::uint32_t EnemyProjectile = 1U << 3U;
 inline constexpr std::uint32_t Obstacle = 1U << 4U;
+inline constexpr std::uint32_t Pickup = 1U << 5U;
 } // namespace CollisionLayer
 
 // Axis-aligned box centered on Transform::position, in playfield units.

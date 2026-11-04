@@ -111,6 +111,24 @@ class NetworkClient {
     [[nodiscard]] State state() const { return m_state; }
 
     /**
+     * @brief Returns why the server refused the client.
+     * @return The reason, meaningful in the Rejected state.
+     **/
+    [[nodiscard]] rtype::protocol::RejectReason rejectReason() const
+    {
+        return m_rejectReason;
+    }
+
+    /**
+     * @brief Returns why the server ended the connection.
+     * @return The reason, meaningful in the Closed state.
+     **/
+    [[nodiscard]] rtype::protocol::DisconnectReason disconnectReason() const
+    {
+        return m_disconnectReason;
+    }
+
+    /**
      * @brief Asks to enter a room, answered by RoomJoined or RoomRefused.
      * Does nothing until connected.
      * @param room The room, or AnyRoom or NewRoom.
@@ -164,6 +182,10 @@ class NetworkClient {
     TimePoint m_lastSent;
     TimePoint m_nextConnect;
     std::uint32_t m_inputSequence = 0;
+    rtype::protocol::RejectReason m_rejectReason =
+        rtype::protocol::RejectReason::ServerFull;
+    rtype::protocol::DisconnectReason m_disconnectReason =
+        rtype::protocol::DisconnectReason::ServerClosing;
     std::uint64_t m_bytesReceived = 0;
     std::uint64_t m_bytesSent = 0;
 };

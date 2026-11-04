@@ -71,6 +71,8 @@ void encode(const RoomJoined &message, ByteWriter &out)
 
 void encode(const RoomRefused & /*message*/, ByteWriter & /*out*/) {}
 
+void encode(const RoomClosed & /*message*/, ByteWriter & /*out*/) {}
+
 void encode(const Reject &message, ByteWriter &out)
 {
     out.u8(static_cast<std::uint8_t>(message.reason));
@@ -183,9 +185,11 @@ bool decode(ByteReader &in, RoomJoined &message)
 
 bool decode(ByteReader & /*in*/, RoomRefused & /*message*/) { return true; }
 
+bool decode(ByteReader & /*in*/, RoomClosed & /*message*/) { return true; }
+
 bool decode(ByteReader &in, Reject &message)
 {
-    return readEnum(in, RejectReason::VersionMismatch, message.reason);
+    return readEnum(in, RejectReason::NotWhitelisted, message.reason);
 }
 
 bool decode(ByteReader &in, Disconnect &message)
@@ -245,7 +249,7 @@ bool decode(ByteReader &in, SnapshotPart &message)
     for (std::uint16_t i = 0; i < entityCount; ++i) {
         EntityState entity;
         entity.networkId = in.u32();
-        if (!readEnum(in, EntityType::Boss, entity.type)) {
+        if (!readEnum(in, EntityType::PowerUp, entity.type)) {
             return false;
         }
         entity.flags = in.u8();

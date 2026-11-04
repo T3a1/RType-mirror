@@ -400,22 +400,25 @@ def start_docker_server(port: int) -> None:
     run("docker", "build", "-t", IMAGE, ".", error="Docker build failed")
     succeeds("docker", "rm", "-f", CONTAINER)
     log(f"Starting server in Docker on port {port}/udp...")
-    run("docker", "run", "-d", "--rm", "--init", "--name", CONTAINER,
+    run("docker", "run", "-dit", "--rm", "--init", "--name", CONTAINER,
         "-p", f"{port}:4242/udp", IMAGE, quiet=True,
         error="Could not start the server container")
 
 
-def start_native_server(port: int, in_terminal: bool) -> subprocess.Popen:
+def start_native_server(port: int, in_terminal: bool,
+                        access_args: list[str]) -> subprocess.Popen:
     """Builds and starts the server on this machine. When the client draws in
-    this terminal, the server's output goes to BUILD_DIR/server.log."""
+    this terminal, the server's output goes to BUILD_DIR/server.log, and the
+    keys are for the client, not for the server's administration console."""
     server_bin = ensure_binary("r-type_server", SERVER_BIN)
     log(f"Starting native server on port {port}...")
     if not in_terminal:
-        return subprocess.Popen([str(server_bin), str(port)])
+        log("Type the server's administration commands here (help for the list).")
+        return subprocess.Popen([str(server_bin), str(port), *access_args])
     server_log = BUILD_DIR / "server.log"
     log(f"Server output: {server_log}")
     with server_log.open("w") as output:
-        return subprocess.Popen([str(server_bin), str(port)],
+        return subprocess.Popen([str(server_bin), str(port), "--no-console", *access_args],
                                 stdout=output, stderr=subprocess.STDOUT)
 
 
@@ -435,6 +438,9 @@ def play(args: argparse.Namespace) -> int:
     server: subprocess.Popen | None = None
     clients: list[subprocess.Popen] = []
     container_started = False
+    if (args.banlist or args.whitelist) and not args.native:
+        raise LauncherError("--banlist and --whitelist need --native: the Docker image "
+                            "has no file system to keep them")
     # The ncurses client draws in this terminal: nothing else may write to it.
     in_terminal = GRAPHICS == "ncurses"
     if in_terminal and args.clients > 1:
@@ -443,7 +449,12 @@ def play(args: argparse.Namespace) -> int:
     try:
         client_bin = ensure_binary("r-type_client", CLIENT_BIN, "-DBUILD_CLIENT=ON")
         if args.native:
-            server = start_native_server(args.port, in_terminal)
+            access_args = []
+            if args.banlist:
+                access_args += ["--banlist", str(args.banlist)]
+            if args.whitelist:
+                access_args += ["--whitelist", str(args.whitelist)]
+            server = start_native_server(args.port, in_terminal, access_args)
         else:
             start_docker_server(args.port)
             container_started = True
@@ -689,6 +700,10 @@ def parse_args() -> argparse.Namespace:
                       help="address the clients connect to (default: 127.0.0.1)")
     game.add_argument("-r", "--room", type=positive, metavar="N",
                       help="room the clients join (default: the first with a free slot)")
+    game.add_argument("--banlist", metavar="FILE",
+                      help="file of the addresses banned from the server (with --native)")
+    game.add_argument("--whitelist", metavar="FILE",
+                      help="only accept the addresses of this file (with --native)")
     game.add_argument("-g", "--graphics", choices=GRAPHICS_CHOICES, default=GRAPHICS,
                       help=f"graphics library of the client (default: {GRAPHICS})")
     tools = parser.add_argument_group("developer tools (run one, then exit)")

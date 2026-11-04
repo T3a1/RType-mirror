@@ -4,7 +4,6 @@ project(r-type_server)
 set(SOURCE_FILES
     src/main.cpp
     src/Game.cpp
-    src/Despawn.cpp
     src/systems/CollisionSystem.cpp
     src/systems/DamageSystem.cpp
     src/systems/DeathSystem.cpp
@@ -14,7 +13,6 @@ set(SOURCE_FILES
     src/systems/SessionSystem.cpp
     src/systems/SnapshotSystem.cpp
     src/systems/BoundarySystem.cpp
-    src/systems/ShootSystem.cpp
     src/systems/LifetimeSystem.cpp
 )
 
@@ -33,7 +31,11 @@ target_link_libraries(r-type_server_game_over
 )
 
 # The network thread is a library so the tests can run it on a fake socket.
-add_library(r-type_server_network STATIC src/network/NetworkServer.cpp)
+add_library(r-type_server_network STATIC
+    src/network/NetworkServer.cpp
+    src/network/AdminCommands.cpp
+    src/AccessList.cpp
+)
 
 target_include_directories(r-type_server_network
     PUBLIC include
@@ -60,8 +62,13 @@ add_library(r-type_server_spawn STATIC
     src/EntityFactory.cpp
     src/Formations.cpp
     src/Level.cpp
+    src/Despawn.cpp
+    src/Weapons.cpp
     src/systems/BossSystem.cpp
     src/systems/LevelSystem.cpp
+    src/systems/PowerUpSystem.cpp
+    src/systems/ShootSystem.cpp
+    src/systems/ShotStyleSystems.cpp
     src/systems/SpawnCommandSystem.cpp
     src/systems/SpawnSystem.cpp
 )
@@ -89,10 +96,13 @@ target_link_libraries(${PROJECT_NAME}
     PRIVATE r-type_server_game_over
 )
 
-# The levels are read next to the executable.
+# The levels and the weapons are read next to the executable.
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/levels
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/levels
-    COMMENT "Copying the server levels"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_SOURCE_DIR}/weapons.json
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/weapons.json
+    COMMENT "Copying the server levels and weapons"
 )

@@ -10,6 +10,15 @@
 
 namespace server {
 
+namespace {
+
+constexpr engine::Vec2f ShotSize{.x = 16.0F, .y = 8.0F};
+constexpr engine::Vec2f ChargedShotSize{.x = 200.0F, .y = 40.0F};
+constexpr engine::Vec2f PowerUpSize{.x = 51.0F, .y = 54.0F};
+constexpr float PowerUpSpeed = 120.0F;
+
+} // namespace
+
 static_assert(rtype::Damage{}.points >= rtype::PlayerMaxHealth,
               "a single collision with an enemy must kill a player");
 
@@ -88,11 +97,13 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
                     .layer = rtype::CollisionLayer::Player,
                     .mask = rtype::CollisionLayer::Enemy |
                             rtype::CollisionLayer::EnemyProjectile |
-                            rtype::CollisionLayer::Obstacle,
+                            rtype::CollisionLayer::Obstacle |
+                            rtype::CollisionLayer::Pickup,
                 });
 
     registry.emplace<KeepInPlayfield>(player);
     registry.emplace<rtype::Weapon>(player);
+    registry.emplace<SpreadShot>(player);
 
     BB_DEBUG("Player " << static_cast<int>(request.slot) << " spawned with id "
                        << networkId);
@@ -113,24 +124,30 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
         projectile, rtype::Velocity{.value = request.velocity});
     registry.emplace<rtype::Projectile>(
         projectile, rtype::Projectile{.owner = request.owner});
-    registry.emplace<rtype::Damage>(projectile, rtype::Damage{.points = 50});
+    registry.emplace<rtype::Damage>(projectile,
+                                    rtype::Damage{.points = request.damage});
 
     if (request.fromPlayer) {
-        registry.emplace<rtype::EntityType>(projectile,
-                                            rtype::EntityType::PlayerMissile);
+        registry.emplace<rtype::EntityType>(
+            projectile, request.charged ? rtype::EntityType::ChargedShot
+                                        : rtype::EntityType::PlayerMissile);
+        if (request.charged) {
+            registry.emplace<Piercing>(projectile);
+        }
         registry.emplace<rtype::Collider>(
-            projectile, rtype::Collider{
-                            .size = {.x = 16.0F, .y = 8.0F},
-                            .layer = rtype::CollisionLayer::PlayerProjectile,
-                            .mask = rtype::CollisionLayer::Enemy |
-                                    rtype::CollisionLayer::Obstacle,
-                        });
+            projectile,
+            rtype::Collider{
+                .size = request.charged ? ChargedShotSize : ShotSize,
+                .layer = rtype::CollisionLayer::PlayerProjectile,
+                .mask = rtype::CollisionLayer::Enemy |
+                        rtype::CollisionLayer::Obstacle,
+            });
     } else {
         registry.emplace<rtype::EntityType>(projectile,
                                             rtype::EntityType::EnemyMissile);
         registry.emplace<rtype::Collider>(
             projectile, rtype::Collider{
-                            .size = {.x = 16.0F, .y = 8.0F},
+                            .size = ShotSize,
                             .layer = rtype::CollisionLayer::EnemyProjectile,
                             .mask = rtype::CollisionLayer::Player |
                                     rtype::CollisionLayer::Obstacle,
@@ -145,6 +162,32 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
     BB_DEBUG("Projectile spawned with id " << networkId
                                            << " at x=" << request.position.x);
     return projectile;
+}
+
+engine::Entity EntityFactory::create(engine::Registry &registry,
+                                     const SpawnPowerUp &request)
+{
+    const engine::Entity powerUp = registry.create();
+    const std::uint32_t networkId = m_nextNetworkId++;
+
+    registry.emplace<rtype::NetworkId>(powerUp,
+                                       rtype::NetworkId{.value = networkId});
+    registry.emplace<rtype::Transform>(
+        powerUp, rtype::Transform{.position = request.position});
+    registry.emplace<rtype::Velocity>(
+        powerUp, rtype::Velocity{.value = {.x = -PowerUpSpeed, .y = 0.0F}});
+    registry.emplace<rtype::EntityType>(powerUp, rtype::EntityType::PowerUp);
+    registry.emplace<rtype::Collider>(
+        powerUp, rtype::Collider{
+                     .size = PowerUpSize,
+                     .layer = rtype::CollisionLayer::Pickup,
+                     .mask = rtype::CollisionLayer::Player,
+                 });
+    registry.emplace<PowerUp>(powerUp, PowerUp{.kind = request.kind});
+    registry.emplace<DestroyOffScreen>(powerUp);
+
+    BB_DEBUG("Power-up spawned with id " << networkId);
+    return powerUp;
 }
 
 } // namespace server

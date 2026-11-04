@@ -50,7 +50,7 @@ flowchart BT
 |-----------|--------|----------|----------------------|
 | `engine/` | `r-type_engine` | Generic ECS (entities, components, registry, systems), scheduler, clock, math types, the UDP socket interface (`engine::net`). Knows nothing about R-Type. | Standard library only |
 | `common/` | `r-type_common` | R-Type components shared by both programs (`Transform`, `Velocity`, `Health`...), protocol messages and their serialization, the socket backend. | `r-type_engine`; Asio as a **private** dependency (Conan, or the Alpine package `asio-dev` in the `Dockerfile`) |
-| `server/` | `r-type_server` (and `r-type_server_network`, `r-type_server_spawn`) | Server game loop, gameplay systems (movement, collisions, spawning, levels, AI), client sessions, network thread. | `r-type_common`; nlohmann-json for the level files (Conan, or the Alpine package `nlohmann-json` in the `Dockerfile`) |
+| `server/` | `r-type_server` (and `r-type_server_network`, `r-type_server_spawn`) | Server game loop, gameplay systems (movement, collisions, spawning, levels, weapons, AI), client sessions, network thread. | `r-type_common`; nlohmann-json for the level and weapon files (Conan, or the Alpine package `nlohmann-json` in the `Dockerfile`) |
 | `client/` | `r-type_client` (and `r-type_client_network`) | Rendering, input, audio, interpolation, connection to the server. | `r-type_common`, graphics library (Conan) |
 
 Rules:
@@ -737,7 +737,36 @@ const auto membership = instances.join(engine::AnyInstance);
   messages. Another game can reuse `InstanceManager` and `IUdpSocket`, but
   writes its own session layer.
 
-### 6.11 Shutdown
+### 6.11 Administration console
+
+The operator types commands in the terminal of the server: `status`, `rooms`,
+`players`, `kick`, `ban`, `unban`, `banlist`, `stop-room`, `whitelist`, `quit`
+and `help`.
+
+| Part | Where | Job |
+|------|-------|-----|
+| `engine::CommandConsole` | Engine | Turns a line of text into a call of a registered command, with `help` and usage errors. No input or output, nothing about R-Type |
+| `AccessList` | Server | The banned and allowed addresses, and their files |
+| `NetworkServer` commands | Server | What each command does, on the sessions and the rooms |
+| Console thread | `server/src/main.cpp` | Reads the standard input and prints the answers |
+
+- **The commands run on the network thread.** It alone owns the sessions and
+  `InstanceManager`, so the console thread never touches them: it pushes the
+  line in an `AdminQueue` and waits for the answer in a `std::future`. A
+  blocked network thread gives "The server did not answer", not a blocked
+  console.
+- **The console thread is detached:** a blocking read of the standard input
+  cannot be interrupted at shutdown. It only shares the queue, through a
+  `shared_ptr`, so it can outlive the server. If the input ends (no terminal),
+  it stops and the server goes on.
+- **Access** comes down to the machine: whoever reaches the terminal controls
+  the server, and nothing listens on the network.
+- **Limits:** bans and the white list work on IPv4 addresses, as there are no
+  accounts. A ban also hits everyone behind the same address, and a player who
+  changes address gets around it. `players` shows neither the slots nor the
+  scores, as only the game threads know them.
+
+### 6.12 Shutdown
 
 - `SIGINT` and `SIGTERM` (sent by `docker stop`) set the atomic `running` flag
   to `false`. The signal handler does nothing else.
@@ -748,7 +777,7 @@ const auto membership = instances.join(engine::AnyInstance);
 - A client closing its window does the same on its side: it sends a disconnect
   message, stops its network thread and exits.
 
-### 6.12 Summary of network-related systems
+### 6.13 Summary of network-related systems
 
 | Side | Stage | System | Job |
 |------|-------|--------|-----|

@@ -31,6 +31,7 @@ namespace server {
  * @param fireInterval Time between two shots, in seconds; 0 if it does not
  * shoot.
  * @param pattern The path it follows, unless its spawn request overrides it.
+ * @param dropsPowerUp Whether it leaves a power-up when it is destroyed.
  **/
 struct EnemyDef {
     float speed = 0.0F;
@@ -40,6 +41,7 @@ struct EnemyDef {
     std::uint32_t score = 0;
     engine::Duration fireInterval{0.0F};
     rtype::MovementPattern pattern{};
+    bool dropsPowerUp = false;
 };
 
 /**
@@ -93,6 +95,7 @@ inline constexpr std::array<EnemyDef, 7> ENEMY_DEFS = {
             .pattern = {.kind = rtype::MovementKind::Zigzag,
                         .amplitude = 150.0F,
                         .frequency = 0.35F},
+            .dropsPowerUp = true,
         },
         {
             .speed = 70.0F,
@@ -101,6 +104,7 @@ inline constexpr std::array<EnemyDef, 7> ENEMY_DEFS = {
             .entityType = rtype::EntityType::EnemyLarge,
             .score = 500,
             .fireInterval = engine::Duration{1.0F},
+            .dropsPowerUp = true,
         },
         {
             // Moved and armed by bossSystem(), not by its pattern or Weapon.
@@ -109,6 +113,7 @@ inline constexpr std::array<EnemyDef, 7> ENEMY_DEFS = {
             .size = {.x = 380.0F, .y = 230.0F},
             .entityType = rtype::EntityType::Boss,
             .score = 5000,
+            .dropsPowerUp = true,
         },
     },
 };

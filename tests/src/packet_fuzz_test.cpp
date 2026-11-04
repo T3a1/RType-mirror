@@ -60,6 +60,7 @@ std::vector<Bytes> validPackets()
         encodeBytes(StartGame{}),
         encodeBytes(RoomJoined{.room = 3}),
         encodeBytes(RoomRefused{}),
+        encodeBytes(RoomClosed{}),
     };
 }
 

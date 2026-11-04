@@ -15,6 +15,7 @@
 #include "common/components/Health.hpp"
 #include "common/components/Player.hpp"
 #include "common/components/Projectile.hpp"
+#include "components/Piercing.hpp"
 #include "engine/Entity.hpp"
 #include "engine/Logger.hpp"
 #include "engine/Registry.hpp"
