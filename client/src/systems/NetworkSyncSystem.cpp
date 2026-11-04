@@ -212,7 +212,10 @@ void applyEvent(engine::Registry &registry, const GameEvent &event,
         BB_INFO("Player " << static_cast<int>(event.slot) << " left");
         break;
     case GameEventKind::PlayerHit:
+        break;
     case GameEventKind::GameOver:
+        BB_INFO("Game over");
+        state.gameOver = true;
         break;
     }
 }

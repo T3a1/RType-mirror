@@ -34,6 +34,17 @@ void playerLabelSystem(engine::Registry &registry, const SyncState &state,
  **/
 void hudSystem(const SyncState &state, gfx::IGraphics &graphics);
 
+/**
+ * @brief Draws the end of the game in the middle of the window: "GAME OVER",
+ * the score of every player, the team's total and a Quit button. It is drawn
+ * in screen pixels: call it after endWorld().
+ * @param state The sync state, for the players and the local slot.
+ * @param graphics The graphics backend to draw with and read the mouse from.
+ * @return Whether the player clicked Quit.
+ **/
+[[nodiscard]] bool gameOverScreen(const SyncState &state,
+                                  gfx::IGraphics &graphics);
+
 } // namespace client
 
 #endif // CLIENT_SYSTEMS_HUDSYSTEM_HPP

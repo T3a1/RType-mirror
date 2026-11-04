@@ -28,6 +28,7 @@ void Game::tick(engine::Duration dt)
     server::deathSystem(m_registry, m_outbound);
     server::lifetimeSystem(m_registry, dt, m_outbound);
     server::boundarySystem(m_registry, m_outbound);
+    server::gameOverSystem(m_registry, m_players, m_outbound, m_gameOver);
     m_registry.flush();
     if (m_tick % 3 == 0) {
         server::snapshotSystem(m_registry, m_players, m_outbound, m_tick);

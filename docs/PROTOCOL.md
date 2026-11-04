@@ -241,7 +241,7 @@ A one-off fact. The body depends on the kind:
 | 1 | PlayerJoined | slot (`u8`, 1 to 4) | Another player joined |
 | 2 | PlayerLeft | slot (`u8`, 1 to 4) | A player left, timed out or was kicked |
 | 3 | PlayerHit | slot (`u8`, 1 to 4) | A player was hit (sound, screen flash) |
-| 4 | GameOver | none | The game is over |
+| 4 | GameOver | none | The ship of every connected player is destroyed: the game is over. Snapshots keep carrying the final scores |
 
 ## 7. Reliability
 

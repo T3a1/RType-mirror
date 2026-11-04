@@ -20,6 +20,17 @@ set(SOURCE_FILES
     src/EntityFactory.cpp
 )
 
+# The end of the game is a library so the tests can run it without the game loop.
+add_library(r-type_server_game_over STATIC src/systems/GameOverSystem.cpp)
+
+target_include_directories(r-type_server_game_over
+    PUBLIC include
+)
+
+target_link_libraries(r-type_server_game_over
+    PUBLIC r-type_common
+)
+
 # The network thread is a library so the tests can run it on a fake socket.
 add_library(r-type_server_network STATIC src/network/NetworkServer.cpp)
 
@@ -39,4 +50,8 @@ target_include_directories(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE r-type_server_network
+)
+
+target_link_libraries(${PROJECT_NAME}
+    PRIVATE r-type_server_game_over
 )

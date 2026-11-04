@@ -73,6 +73,11 @@ class IGraphics {
                           int fontSize, Color color) = 0;
 
     [[nodiscard]] virtual bool isKeyDown(Key key) const = 0;
+    /** @brief The position of the mouse cursor, in screen pixels. */
+    [[nodiscard]] virtual engine::Vec2f mousePosition() const = 0;
+    /** @brief Whether the left mouse button was pressed since the last
+     * shouldClose(). */
+    [[nodiscard]] virtual bool isMousePressed() const = 0;
 };
 
 /** @brief Settings of the window opened by createGraphics(). */

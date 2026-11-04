@@ -11,7 +11,8 @@ of enemies.
 - **Classic arcade action**: move your ship around the screen, shoot the
   enemies coming from the right, and avoid getting hit.
 - **One hit, one life**: a single enemy shot or collision destroys your ship,
-  and every player earns points for each enemy shot down.
+  and every player earns points for each enemy shot down. If you die, you watch
+  the others until the whole team is out and the final scores are shown.
 - **Fair play**: the server is the only judge of what happens in the game, so
   every player sees the same game.
 

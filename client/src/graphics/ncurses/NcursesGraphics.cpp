@@ -200,6 +200,8 @@ NcursesGraphics::NcursesGraphics(const WindowConfig &config)
     nodelay(stdscr, TRUE);
     curs_set(0);
     set_escdelay(EscapeDelayMs);
+    mousemask(BUTTON1_PRESSED, nullptr);
+    mouseinterval(0);
     if (has_colors()) {
         start_color();
         m_colors = true;
@@ -232,7 +234,14 @@ NcursesGraphics::~NcursesGraphics()
 bool NcursesGraphics::shouldClose()
 {
     const Clock::time_point now = Clock::now();
+    m_mousePressed = false;
     for (int character = getch(); character != ERR; character = getch()) {
+        MEVENT mouse{};
+        if (character == KEY_MOUSE && getmouse(&mouse) == OK) {
+            m_mousePosition = {.x = static_cast<float>(mouse.x) * CellWidth,
+                               .y = static_cast<float>(mouse.y) * CellHeight};
+            m_mousePressed = true;
+        }
         if (character == 'q' || character == 'Q' || character == CtrlC ||
             character == Escape) {
             m_closeRequested = true;
@@ -362,6 +371,10 @@ bool NcursesGraphics::isKeyDown(Key key) const
 {
     return Clock::now() < m_heldUntil.at(static_cast<std::size_t>(key));
 }
+
+engine::Vec2f NcursesGraphics::mousePosition() const { return m_mousePosition; }
+
+bool NcursesGraphics::isMousePressed() const { return m_mousePressed; }
 
 int NcursesGraphics::colorPair(short foreground, short background)
 {

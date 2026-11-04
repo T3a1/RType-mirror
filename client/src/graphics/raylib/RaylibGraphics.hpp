@@ -48,6 +48,8 @@ class RaylibGraphics final : public IGraphics {
                   Color color) override;
 
     [[nodiscard]] bool isKeyDown(Key key) const override;
+    [[nodiscard]] engine::Vec2f mousePosition() const override;
+    [[nodiscard]] bool isMousePressed() const override;
 
   private:
     std::unordered_map<std::uint32_t, Texture2D> m_textures;

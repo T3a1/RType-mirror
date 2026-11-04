@@ -83,21 +83,19 @@ entityStates(engine::Registry &registry)
 
 /**
  * @brief Builds the players block of a snapshot.
- * @param registry The registry holding the ships, for the scores.
+ * @param registry The registry holding the ships.
  * @param players The connected players.
- * @return One record per player; the score and the ship id are 0 if its
- * ship is gone.
+ * @return One record per player; the ship id is 0 if its ship is gone.
  **/
 std::vector<rtype::protocol::PlayerInfo> playerInfos(engine::Registry &registry,
                                                      const Players &players)
 {
     std::vector<rtype::protocol::PlayerInfo> infos;
     for (const auto &[clientId, player] : players) {
-        const auto *component = registry.tryGet<rtype::Player>(player.ship);
         const auto *networkId = registry.tryGet<rtype::NetworkId>(player.ship);
         infos.push_back({
             .slot = player.slot,
-            .score = component != nullptr ? component->score : 0,
+            .score = player.score,
             .lastInput = player.lastSequence,
             .shipId = networkId != nullptr ? networkId->value : 0,
         });

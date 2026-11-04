@@ -33,7 +33,8 @@ namespace client::gfx {
  *
  * A terminal only sends key presses and their auto-repeat, never releases:
  * a key counts as held for a short time after each press, and only one key
- * can be held at once. Escape, q or Ctrl+C closes the client.
+ * can be held at once. Escape, q or Ctrl+C closes the client. The mouse is
+ * only known where it clicks, and only in terminals that report it.
  *
  * While it runs, stderr (the logs) is redirected to r-type_client.log in the
  * current directory, so the logs do not draw over the game.
@@ -71,6 +72,8 @@ class NcursesGraphics final : public IGraphics {
                   Color color) override;
 
     [[nodiscard]] bool isKeyDown(Key key) const override;
+    [[nodiscard]] engine::Vec2f mousePosition() const override;
+    [[nodiscard]] bool isMousePressed() const override;
 
   private:
     using Clock = std::chrono::steady_clock;
@@ -87,6 +90,8 @@ class NcursesGraphics final : public IGraphics {
     bool m_colors = false;
     bool m_vsync = true;
     bool m_closeRequested = false;
+    bool m_mousePressed = false;
+    engine::Vec2f m_mousePosition;
     float m_zoom = 1.0F;
     short m_clear = 0;
     std::unordered_map<std::uint32_t, int> m_pairs;
