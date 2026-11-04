@@ -63,6 +63,17 @@ sf::Color toSfml(Color color) { return {color.r, color.g, color.b, color.a}; }
 
 sf::Keyboard::Key toSfml(Key key)
 {
+    const auto index = static_cast<int>(key);
+    if (key >= Key::A && key <= Key::Z) {
+        return static_cast<sf::Keyboard::Key>(
+            static_cast<int>(sf::Keyboard::Key::A) + index -
+            static_cast<int>(Key::A));
+    }
+    if (key >= Key::Num0 && key <= Key::Num9) {
+        return static_cast<sf::Keyboard::Key>(
+            static_cast<int>(sf::Keyboard::Key::Num0) + index -
+            static_cast<int>(Key::Num0));
+    }
     switch (key) {
     case Key::Up:
         return sf::Keyboard::Key::Up;
@@ -74,8 +85,25 @@ sf::Keyboard::Key toSfml(Key key)
         return sf::Keyboard::Key::Right;
     case Key::Space:
         return sf::Keyboard::Key::Space;
+    case Key::Enter:
+        return sf::Keyboard::Key::Enter;
+    case Key::Tab:
+        return sf::Keyboard::Key::Tab;
+    case Key::LeftShift:
+        return sf::Keyboard::Key::LShift;
+    case Key::RightShift:
+        return sf::Keyboard::Key::RShift;
+    case Key::LeftControl:
+        return sf::Keyboard::Key::LControl;
+    case Key::RightControl:
+        return sf::Keyboard::Key::RControl;
+    case Key::LeftAlt:
+        return sf::Keyboard::Key::LAlt;
+    case Key::RightAlt:
+        return sf::Keyboard::Key::RAlt;
+    default:
+        return sf::Keyboard::Key::Unknown;
     }
-    return sf::Keyboard::Key::Unknown;
 }
 
 } // namespace

@@ -29,10 +29,11 @@ set(SOURCE_FILES
     src/game_over_system_test.cpp
 )
 
-# The client's network code only exists when the client is built.
+# The client's network code and controls only exist when the client is
+# built.
 if(TARGET r-type_client_network)
-    list(APPEND SOURCE_FILES src/network_client_test.cpp)
-    set(CLIENT_NETWORK_LIBRARY r-type_client_network)
+    list(APPEND SOURCE_FILES src/network_client_test.cpp src/controls_test.cpp)
+    set(CLIENT_NETWORK_LIBRARY r-type_client_network r-type_client_controls)
 endif()
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})

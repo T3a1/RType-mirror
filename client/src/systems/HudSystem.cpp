@@ -58,7 +58,7 @@ void playerLabelSystem(engine::Registry &registry, const SyncState &state,
         });
 }
 
-void hudSystem(const SyncState &state, gfx::IGraphics &graphics)
+void hudSystem(const SyncState &state, bool autoFire, gfx::IGraphics &graphics)
 {
     float y = HudY;
     for (const auto &player : state.players) {
@@ -70,6 +70,10 @@ void hudSystem(const SyncState &state, gfx::IGraphics &graphics)
         graphics.drawText(text, {.x = HudX, .y = y}, HudFontSize,
                           playerColor(player.slot));
         y += HudLineHeight;
+    }
+    if (autoFire) {
+        graphics.drawText("Auto-fire ON", {.x = HudX, .y = y}, HudFontSize,
+                          gfx::colors::OffWhite);
     }
 }
 

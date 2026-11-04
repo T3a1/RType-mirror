@@ -47,7 +47,8 @@ Game::Game(const std::string &host, std::uint16_t port,
       m_sheets(*m_graphics),
       m_autoJoin(options.bench && !options.room
                      ? std::optional<std::uint32_t>{rtype::protocol::AnyRoom}
-                     : options.room)
+                     : options.room),
+      m_controls(options.controls)
 {
     m_sync.interpolate = options.interpolate;
     m_sync.predict = options.predict;
@@ -95,7 +96,8 @@ void Game::update(engine::Duration dt)
     }
     std::uint8_t actions = 0;
     if (inRoom && m_sync.started) {
-        actions = m_bench ? m_bench->input(now) : inputSystem(*m_graphics);
+        actions = m_bench ? m_bench->input(now)
+                          : inputSystem(*m_graphics, m_controls, m_autoFire);
     }
     const std::uint32_t sequence = m_network.sendInput(actions, now);
     if (inRoom) {
@@ -191,7 +193,7 @@ void Game::render()
                 leaveRoom();
             }
         } else {
-            hudSystem(m_sync, *m_graphics);
+            hudSystem(m_sync, m_autoFire.enabled, *m_graphics);
             const bool keyboard =
                 keys.confirm && m_gameOverTime >= GameOverKeyDelay;
             if (m_sync.gameOver &&
