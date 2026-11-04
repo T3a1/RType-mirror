@@ -1,5 +1,6 @@
 {
     "name": "First contact",
+    "boss": "warship",
     "waves": [
         { "time": 2, "enemy": "basic", "count": 3, "spacing": 0.6, "y": 300 },
         { "time": 6, "enemy": "basic", "count": 3, "spacing": 0.6, "y": 780 },

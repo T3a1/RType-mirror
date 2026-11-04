@@ -17,7 +17,7 @@
 #include <cstdint>
 #include <map>
 #include <span>
-#include <system_error>
+#include <thread>
 
 using namespace std::chrono_literals;
 using engine::net::Endpoint;
@@ -70,7 +70,7 @@ TEST(UdpSocket, ExchangesDatagramsOverLoopback)
     const std::array<std::uint8_t, 4> sent{1, 2, 3, 4};
     std::array<std::uint8_t, 16> buffer{};
 
-    EXPECT_EQ(client->sendTo(serverEndpoint, sent), std::error_code{});
+    EXPECT_FALSE(client->sendTo(serverEndpoint, sent));
     const auto datagram =
         server->receive(buffer, 1s).value_or(engine::net::Datagram{});
 
@@ -89,6 +89,30 @@ TEST(UdpSocket, ReceiveReturnsNothingAfterItsTimeout)
     EXPECT_FALSE(socket->receive(buffer, 20ms).has_value());
 
     EXPECT_GE(std::chrono::steady_clock::now() - start, 20ms);
+}
+
+TEST(UdpSocket, ReceiveSkipsTheResetOfAClosedPort)
+{
+    const auto socket = rtype::network::openUdpSocket();
+    const auto peer = rtype::network::openUdpSocket();
+    std::uint16_t closedPort = 0;
+    {
+        const auto closed = rtype::network::openUdpSocket();
+        closedPort = closed->localEndpoint().port;
+    }
+    const std::array<std::uint8_t, 4> sent{1, 2, 3, 4};
+    std::array<std::uint8_t, 16> buffer{};
+
+    EXPECT_FALSE(
+        socket->sendTo({.address = Loopback, .port = closedPort}, sent));
+    std::this_thread::sleep_for(50ms);
+    EXPECT_FALSE(peer->sendTo(
+        {.address = Loopback, .port = socket->localEndpoint().port}, sent));
+    std::this_thread::sleep_for(50ms);
+    const auto datagram = socket->receive(buffer, 0ms);
+
+    ASSERT_TRUE(datagram.has_value());
+    EXPECT_EQ(datagram->sender.port, peer->localEndpoint().port);
 }
 
 TEST(UdpSocket, ThrowsItsOwnErrorForAPortInUse)

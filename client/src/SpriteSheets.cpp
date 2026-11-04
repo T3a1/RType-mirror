@@ -35,6 +35,7 @@ constexpr std::array<const char *, SheetCount> SheetPaths{
     "assets/sprites/r-typesheet27.gif", // EnemyMedium
     "assets/sprites/r-typesheet26.gif", // EnemyLarge
     "assets/sprites/r-typesheet44.gif", // Explosion
+    "assets/sprites/r-typesheet38.gif", // Boss
 };
 
 /**
@@ -107,6 +108,7 @@ constexpr auto EnemyMediumFrames =
     row(evenly<2>(1.0F, 34.0F), 4.0F, 32.0F, 21.0F);
 constexpr auto EnemyLargeFrames =
     row<6>({1.0F, 66.0F, 131.0F, 198.0F, 263.0F, 328.0F}, 1.0F, 63.0F, 48.0F);
+constexpr auto BossFrames = row<2>({2.0F, 191.0F}, 2.0F, 176.0F, 108.0F);
 constexpr auto ExplosionFrames =
     row(evenly<6>(128.0F, 33.0F), 0.0F, 33.0F, 34.0F);
 
@@ -124,10 +126,12 @@ constexpr AnimationClip EnemyMediumClip{.frames = EnemyMediumFrames,
                                         .frameTime = 0.2F};
 constexpr AnimationClip EnemyLargeClip{.frames = EnemyLargeFrames,
                                        .frameTime = 0.1F};
+constexpr AnimationClip BossClip{.frames = BossFrames, .frameTime = 0.3F};
 constexpr AnimationClip ExplosionClip{
     .frames = ExplosionFrames, .frameTime = 0.07F, .loop = false};
 
 constexpr float ExplosionScale = 2.5F;
+constexpr float BossExplosionScale = 10.0F;
 constexpr int EffectLayer = 3;
 
 /**
@@ -217,6 +221,12 @@ Look lookOf(rtype::EntityType type, std::uint8_t slot)
                 .scale = 2.0F,
                 .fallback = gfx::colors::Green,
                 .clip = &EnemyLargeClip};
+    case rtype::EntityType::Boss:
+        return {.sheet = Sheet::Boss,
+                .frames = BossFrames,
+                .scale = 2.5F,
+                .fallback = rgb(150, 40, 60),
+                .clip = &BossClip};
     }
     return {.frames = ShipFrames.back()};
 }
@@ -303,7 +313,9 @@ void spawnExplosion(engine::Registry &registry, engine::Entity entity,
     }
     const Look look{.sheet = Sheet::Explosion,
                     .frames = ExplosionFrames,
-                    .scale = ExplosionScale,
+                    .scale = *type == rtype::EntityType::Boss
+                                 ? BossExplosionScale
+                                 : ExplosionScale,
                     .fallback = rgb(255, 200, 60),
                     .layer = EffectLayer};
     const engine::Entity explosion = registry.create();

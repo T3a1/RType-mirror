@@ -54,6 +54,9 @@ AsioUdpSocket::receive(std::span<std::uint8_t> buffer,
             return engine::net::Datagram{.sender = toEndpoint(sender),
                                          .size = size};
         }
+        if (error == asio::error::connection_reset) {
+            continue;
+        }
         const auto now = std::chrono::steady_clock::now();
         if (now >= deadline) {
             return std::nullopt;

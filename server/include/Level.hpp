@@ -51,10 +51,13 @@ struct Wave {
  * @brief A level, as read from its JSON file.
  * @param name The name shown to the players.
  * @param waves Its waves, sorted by time.
+ * @param boss The boss that comes once every wave is cleared, if any; the
+ * level ends when it is destroyed.
  **/
 struct Level {
     std::string name;
     std::vector<Wave> waves;
+    std::optional<rtype::EnemyType> boss;
 };
 
 /**

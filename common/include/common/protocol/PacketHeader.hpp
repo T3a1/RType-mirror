@@ -21,7 +21,7 @@
 namespace rtype::protocol {
 
 inline constexpr std::array<std::uint8_t, 2> Magic{'R', 'T'};
-inline constexpr std::uint8_t ProtocolVersion = 7;
+inline constexpr std::uint8_t ProtocolVersion = 8;
 inline constexpr std::size_t HeaderSize = 12;
 inline constexpr std::size_t MaxPayloadSize = MaxPacketSize - HeaderSize;
 inline constexpr std::size_t PayloadSizeOffset = 10;

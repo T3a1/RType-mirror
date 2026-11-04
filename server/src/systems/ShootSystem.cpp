@@ -11,6 +11,10 @@ namespace server {
 
 namespace {
 
+// Speeds of the shots, in playfield units per second.
+constexpr float PlayerShotSpeed = 900.0F;
+constexpr float EnemyShotSpeed = 450.0F;
+
 /**
  * Builds the projectile fired by a shooter.
  * @param shooter The entity that fires.
@@ -30,7 +34,9 @@ SpawnProjectile shotRequest(engine::Entity shooter,
                 .x = transform.position.x + (direction * 40.0F),
                 .y = transform.position.y,
             },
-        .velocity = {.x = direction * 300.0F, .y = 0.0F},
+        .velocity = {.x = direction *
+                          (fromPlayer ? PlayerShotSpeed : EnemyShotSpeed),
+                     .y = 0.0F},
         .fromPlayer = fromPlayer,
     };
 }

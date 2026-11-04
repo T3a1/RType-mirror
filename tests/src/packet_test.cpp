@@ -136,7 +136,7 @@ TEST(Packet, MatchesTheDocumentedLayout)
     }));
     const std::vector<std::uint8_t> expected{
         0x52, 0x54,             // magic "RT"
-        0x07,                   // version
+        0x08,                   // version
         0x10,                   // type Input
         0x00,                   // flags
         0x00,                   // reserved
@@ -255,7 +255,7 @@ TEST(Packet, MarksReliableTypesReliable)
     const auto bytes =
         encodeBytes(packetOf(Welcome{.slot = 2, .shipId = 58, .tick = 1200}));
     const std::vector<std::uint8_t> expected{
-        0x52, 0x54, 0x07, 0x21, // magic, version, type Welcome
+        0x52, 0x54, 0x08, 0x21, // magic, version, type Welcome
         0x01, 0x00,             // flags Reliable, reserved
         0x2A, 0x01, 0x11, 0x00, // sequence 298, ack 17
         0x09, 0x00,             // payload size 9

@@ -14,6 +14,7 @@ set(SOURCE_FILES
     src/pattern_system_test.cpp
     src/formations_test.cpp
     src/level_test.cpp
+    src/boss_test.cpp
     src/player_control_system_test.cpp
     src/interpolation_system_test.cpp
     src/prediction_system_test.cpp

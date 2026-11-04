@@ -10,8 +10,9 @@ rebuild of the code, only a restart of the server.
    in the order of the file names (hence the `01-`, `02-` prefixes).
 2. Every room plays the levels one after the other. A level starts its waves
    at the times written in its file, counted from its start.
-3. A level ends once all its waves have arrived and no enemy is left. The next
-   level starts 3 seconds later.
+3. Once all its waves have arrived and no enemy is left, the level's boss
+   comes, if it has one. The level ends when the boss is destroyed, or right
+   away without a boss. The next level starts 3 seconds later.
 4. After the last level comes the **endless mode**: random waves, until the
    game is over.
 
@@ -41,6 +42,7 @@ crashes the server.
 ```json
 {
     "name": "First contact",
+    "boss": "warship",
     "waves": [
         { "time": 2, "enemy": "basic", "count": 3, "spacing": 0.6, "y": 300 },
         { "time": 15, "enemy": "basic", "count": 5, "spacing": 0.3, "stepY": 90, "fromCenter": true },
@@ -58,6 +60,13 @@ crashes the server.
 |-----|:--------:|-------|
 | `name` | yes | The name of the level, 1 to 64 characters. |
 | `waves` | yes | The list of its waves, 1 to 1000. Their order in the file does not matter: they are sorted by `time`. |
+| `boss` | no | The boss that comes after the waves: `warship`. Without it, the level ends with its last wave. |
+
+### Bosses
+
+| Name | What it does |
+|------|--------------|
+| `warship` | Comes in from the right, stops, then moves up and down. 2500 health points, shown in a bar at the bottom of the screen. Three phases as it is damaged: aimed shots, then a spread of 3 shots plus an aimed one, then a faster fan of 5 shots while moving faster. |
 
 ### Wave
 
