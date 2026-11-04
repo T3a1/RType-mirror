@@ -63,10 +63,14 @@ struct Accept {
  * @param ServerFull The server has as many clients as all its rooms can
  * hold.
  * @param VersionMismatch The client speaks another protocol version.
+ * @param Banned The address of the client is banned.
+ * @param NotWhitelisted The server only accepts listed addresses.
  **/
 enum class RejectReason : std::uint8_t {
     ServerFull,
     VersionMismatch,
+    Banned,
+    NotWhitelisted,
 };
 
 /**
@@ -86,7 +90,7 @@ struct Reject {
  * @brief Why a connection ended.
  * @param Left The player quit.
  * @param Timeout Nothing was received from the peer for PeerTimeout.
- * @param Kicked The peer broke the protocol.
+ * @param Kicked The peer broke the protocol, or an administrator removed it.
  * @param ServerClosing The server is shutting down.
  **/
 enum class DisconnectReason : std::uint8_t {
@@ -373,6 +377,17 @@ struct RoomRefused {
 };
 
 /**
+ * @struct RoomClosed
+ * @brief An administrator closed the room of the client, which is back in the
+ * lobby (reliable). Empty.
+ * @param Type The packet type that carries this payload.
+ **/
+struct RoomClosed {
+    static constexpr PacketType Type = PacketType::RoomClosed;
+    bool operator==(const RoomClosed &) const = default;
+};
+
+/**
  * @brief Writes the payload of a Connect.
  * @param message The payload to write; writes nothing (empty payload).
  * @param out The writer to append to.
@@ -450,6 +465,12 @@ void encode(const RoomJoined &message, ByteWriter &out);
  * @param out Where to write.
  **/
 void encode(const RoomRefused &message, ByteWriter &out);
+/**
+ * @brief Writes the payload of a RoomClosed.
+ * @param message The message.
+ * @param out Where to write.
+ **/
+void encode(const RoomClosed &message, ByteWriter &out);
 /**
  * @brief Writes the payload of a SnapshotPart.
  * @param message The payload to write; writes its fields.
@@ -565,6 +586,13 @@ void encode(const GameEvent &message, ByteWriter &out);
  * @return Always true.
  **/
 [[nodiscard]] bool decode(ByteReader &in, RoomRefused &message);
+/**
+ * @brief Reads the payload of a RoomClosed, which is empty.
+ * @param in Where to read.
+ * @param message The message to fill.
+ * @return Always true.
+ **/
+[[nodiscard]] bool decode(ByteReader &in, RoomClosed &message);
 /**
  * @brief Reads and validates the payload of a SnapshotPart. Fails on a part
  * index out of range, more than MaxPlayers players, players outside part

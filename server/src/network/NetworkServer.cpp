@@ -17,8 +17,16 @@ constexpr std::chrono::milliseconds RoomListInterval{500};
 
 } // namespace
 
+NetworkServer::NetworkServer(std::unique_ptr<engine::net::IUdpSocket> socket,
+                             Rooms &rooms, AccessList access)
+    : m_socket(std::move(socket)), m_rooms(rooms), m_access(std::move(access))
+{
+    registerCommands();
+}
+
 void NetworkServer::start()
 {
+    m_startTime = std::chrono::steady_clock::now();
     m_running = true;
     m_serverThread = std::thread([this] {
         try {
@@ -81,6 +89,7 @@ void NetworkServer::update(TimePoint now)
     for (const engine::InstanceId room : m_rooms.reap()) {
         closeFailedRoom(room);
     }
+    runAdminRequests();
     if (now >= m_nextRoomList) {
         sendRoomLists(now);
         m_nextRoomList = now + RoomListInterval;
@@ -251,6 +260,13 @@ void NetworkServer::pushInbound(const Session &session, InboundMessage message)
 void NetworkServer::handleNewPeer(const engine::net::Endpoint &endpoint,
                                   TimePoint now)
 {
+    if (const auto refused = m_access.check(endpoint.address)) {
+        BB_INFO("Refused " << endpoint.toString());
+        sendPacket(endpoint, {.payload = rtype::protocol::Reject{
+                                  .reason = *refused,
+                              }});
+        return;
+    }
     if (m_sessions.size() >= MaxSessions) {
         BB_DEBUG("Too many clients");
         sendPacket(

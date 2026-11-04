@@ -114,9 +114,8 @@ the options. Before building, it sets up everything that is missing:
 | `--check-format [FILE...]` | Checks the formatting like the CI, without changing anything. |
 | `-d`, `--docs` | Generates the HTML code documentation with Doxygen. |
 
-> The server currently always listens on port 4242. In Docker mode, `--port`
-> changes the port published on your machine; in native mode, keep the
-> default.
+> In Docker mode, `--port` changes the port published on your machine; inside the
+> container, the server stays on 4242.
 
 The client (and the server with `--native`) is rebuilt from the current
 sources at every launch, which takes a second when nothing changed. The build
@@ -177,16 +176,52 @@ CMake options:
 ./build/r-type_server
 ```
 
-The server listens on UDP port 4242 and stops cleanly on Ctrl+C.
+The server listens on UDP port 4242, or on the port given as its first argument
+(`./build/r-type_server 5000`), and stops cleanly on Ctrl+C.
 
 To run it in Docker without the launcher:
 
 ```bash
 docker build -t rtype-server .
-docker run -d --rm --init --name rtype-server -p 4242:4242/udp rtype-server
+docker run -dit --rm --init --name rtype-server -p 4242:4242/udp rtype-server
 docker logs -f rtype-server     # follow its output
+docker attach rtype-server      # type administration commands (leave: Ctrl+P, Ctrl+Q)
 docker stop rtype-server        # stop and remove it
 ```
+
+#### Administration console
+
+Type these commands in the terminal of the server, while it runs:
+
+| Command | Effect |
+|---------|--------|
+| `help` | Lists the commands. |
+| `status` | Uptime, number of rooms and clients, access rules. |
+| `rooms` | Lists the rooms, their status and players. |
+| `players [room]` | Lists the clients: id, address, room, last packet. |
+| `kick <id>` | Disconnects a client. |
+| `ban <id or ip>` | Bans an address and disconnects its clients. |
+| `unban <ip>`, `banlist` | Removes a ban, lists the bans. |
+| `stop-room <room>` | Closes a room; its players go back to the lobby. |
+| `whitelist on`, `off` | Only accepts the listed addresses, or everyone. |
+| `whitelist add <ip>`, `remove <ip>`, `list` | Edits or shows the listed addresses. |
+| `quit` | Stops the server. |
+
+Bans and white lists use IPv4 addresses, and can be kept in text files, one
+address per line (`#` starts a comment). They are read at startup and rewritten
+at each change:
+
+```bash
+./build/r-type_server --banlist bans.txt --whitelist allowed.txt
+```
+
+There are no player accounts, so these lists can only name addresses: a ban hits
+everyone behind the same address, and a player who changes address gets around
+it.
+
+`--whitelist` also turns the white list on. `--no-console` does not read the
+standard input, for a server started by a script. The launcher has the same
+`--banlist` and `--whitelist` options, with `--native` only.
 
 The image contains a single static binary and runs as an unprivileged user.
 

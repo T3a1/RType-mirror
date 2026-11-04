@@ -25,6 +25,8 @@ set(SOURCE_FILES
     src/network_server_test.cpp
     src/room_routing_test.cpp
     src/command_console_test.cpp
+    src/access_list_test.cpp
+    src/admin_commands_test.cpp
     src/room_phase_system_test.cpp
     src/instance_manager_test.cpp
     src/game_over_system_test.cpp

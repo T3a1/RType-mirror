@@ -32,6 +32,7 @@ namespace rtype::protocol {
  * @param StartGame A player starts the game of its room (reliable).
  * @param RoomJoined The server put the client in a room (reliable).
  * @param RoomRefused The server refused JoinRoom (reliable).
+ * @param RoomClosed An administrator closed the client's room (reliable).
  **/
 enum class PacketType : std::uint8_t {
     Connect = 0x01,
@@ -49,6 +50,7 @@ enum class PacketType : std::uint8_t {
     StartGame = 0x33,
     RoomJoined = 0x34,
     RoomRefused = 0x35,
+    RoomClosed = 0x36,
 };
 
 inline constexpr std::array AllPacketTypes{
@@ -57,6 +59,7 @@ inline constexpr std::array AllPacketTypes{
     PacketType::Snapshot,   PacketType::Welcome,    PacketType::GameEvent,
     PacketType::RoomList,   PacketType::JoinRoom,   PacketType::LeaveRoom,
     PacketType::StartGame,  PacketType::RoomJoined, PacketType::RoomRefused,
+    PacketType::RoomClosed,
 };
 
 /**
@@ -108,6 +111,7 @@ enum class Side : std::uint8_t {
     case PacketType::RoomList:
     case PacketType::RoomJoined:
     case PacketType::RoomRefused:
+    case PacketType::RoomClosed:
         return side == Side::Server;
     }
     return false;
@@ -131,6 +135,7 @@ enum class Side : std::uint8_t {
     case PacketType::StartGame:
     case PacketType::RoomJoined:
     case PacketType::RoomRefused:
+    case PacketType::RoomClosed:
         return true;
     default:
         return false;
