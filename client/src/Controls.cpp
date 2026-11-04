@@ -151,14 +151,14 @@ std::string keyName(Key key)
     }
     const auto index = static_cast<int>(key);
     const int letter = index - static_cast<int>(Key::A);
-    if (letter >= 0 && letter < LetterCount) {
-        return std::string(1, static_cast<char>('A' + letter));
-    }
     const int digit = index - static_cast<int>(Key::Num0);
-    if (digit >= 0 && digit < DigitCount) {
-        return std::string(1, static_cast<char>('0' + digit));
+    std::string name = "?";
+    if (letter >= 0 && letter < LetterCount) {
+        name = static_cast<char>('A' + letter);
+    } else if (digit >= 0 && digit < DigitCount) {
+        name = static_cast<char>('0' + digit);
     }
-    return "?";
+    return name;
 }
 
 std::optional<Control> controlFromName(std::string_view name)

@@ -40,11 +40,10 @@ Game::Game(const std::string &host, std::uint16_t port,
                                  .height = windowHeight,
                                  .title = "R-Type",
                              })),
-      m_sheets(*m_graphics)
+      m_sheets(*m_graphics), m_controls(options.controls)
 {
     m_sync.interpolate = options.interpolate;
     m_sync.predict = options.predict;
-    m_controls = options.controls;
     if (options.bench) {
         m_bench.emplace(*options.bench);
     }

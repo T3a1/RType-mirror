@@ -45,6 +45,10 @@ TEST(Controls, KeyNamesRoundTrip)
         EXPECT_EQ(client::keyFromName(client::keyName(key)), key)
             << client::keyName(key);
     }
+}
+
+TEST(Controls, KeyNamesIgnoreCase)
+{
     EXPECT_EQ(client::keyFromName("space"), Key::Space);
     EXPECT_EQ(client::keyFromName("z"), Key::Z);
     EXPECT_EQ(client::keyFromName("7"), Key::Num7);
