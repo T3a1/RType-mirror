@@ -20,6 +20,7 @@ void Game::tick(engine::Duration dt)
     server::spawnSystem(m_registry, m_factory, dt);
     server::shootSystem(m_registry, m_factory, dt);
     rtype::playerControlSystem(m_registry);
+    rtype::patternSystem(m_registry, dt);
     rtype::movementSystem(m_registry, dt);
     const std::vector<Collision> collisions =
         server::collisionSystem(m_registry);
@@ -48,7 +49,10 @@ void Game::run()
     Clock::time_point previous = Clock::now();
 
     const engine::Entity world = m_registry.create();
-    m_registry.emplace<rtype::Spawner>(world);
+    m_registry.emplace<rtype::Spawner>(
+        world, rtype::Spawner{.minDelay = engine::Duration{2.5F},
+                              .maxDelay = engine::Duration{4.5F}});
+    m_registry.emplace<SpawnQueue>(world);
 
     while (m_running) {
         const Clock::time_point now = Clock::now();

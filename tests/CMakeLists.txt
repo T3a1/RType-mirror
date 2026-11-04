@@ -10,6 +10,8 @@ set(SOURCE_FILES
     src/registry_test.cpp
     src/vec2_test.cpp
     src/movement_system_test.cpp
+    src/pattern_system_test.cpp
+    src/formations_test.cpp
     src/player_control_system_test.cpp
     src/interpolation_system_test.cpp
     src/prediction_system_test.cpp
@@ -33,7 +35,7 @@ endif()
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 target_link_libraries(${PROJECT_NAME}
-    PRIVATE r-type_server_network ${CLIENT_NETWORK_LIBRARY}
+    PRIVATE r-type_server_network r-type_server_spawn ${CLIENT_NETWORK_LIBRARY}
     GTest::gtest GTest::gtest_main GTest::gmock
 )
 
