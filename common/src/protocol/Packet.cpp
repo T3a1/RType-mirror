@@ -104,6 +104,8 @@ decodePacket(std::span<const std::uint8_t> datagram, Side sender)
         return decodePayload<RoomJoined>(header, in);
     case PacketType::RoomRefused:
         return decodePayload<RoomRefused>(header, in);
+    case PacketType::RoomClosed:
+        return decodePayload<RoomClosed>(header, in);
     }
     return DecodeError::UnknownType;
 }

@@ -36,6 +36,26 @@ constexpr float statusX = 20.0F;
 constexpr float statusBottomMargin = 50.0F;
 constexpr int statusFontSize = 30;
 
+/**
+ * @brief Returns what to show when the server refuses the client.
+ * @param reason Why it refused.
+ * @return The text.
+ **/
+const char *rejectText(rtype::protocol::RejectReason reason)
+{
+    switch (reason) {
+    case rtype::protocol::RejectReason::ServerFull:
+        return "The server is full";
+    case rtype::protocol::RejectReason::VersionMismatch:
+        return "The server runs another version of the game";
+    case rtype::protocol::RejectReason::Banned:
+        return "You are banned from this server";
+    case rtype::protocol::RejectReason::NotWhitelisted:
+        return "This server only accepts listed players";
+    }
+    return "Connection refused by the server";
+}
+
 } // namespace
 
 Game::Game(const std::string &host, std::uint16_t port,
@@ -214,6 +234,10 @@ void Game::handleLobbyMessages(const std::vector<rtype::protocol::Payload> &all)
                        payload)) {
             m_lobby.screen = LobbyState::Screen::Lobby;
             m_lobby.refused = true;
+        } else if (std::holds_alternative<rtype::protocol::RoomClosed>(
+                       payload)) {
+            leaveRoom();
+            m_lobby.closed = true;
         }
     }
 }
@@ -223,6 +247,7 @@ void Game::applyLobbyChoice(std::optional<std::uint32_t> room)
     if (room) {
         m_lobby.screen = LobbyState::Screen::Joining;
         m_lobby.refused = false;
+        m_lobby.closed = false;
         m_network.joinRoom(*room, std::chrono::steady_clock::now());
     }
 }
@@ -317,13 +342,16 @@ void Game::drawStatus() const
     case NetworkClient::State::Connected:
         return;
     case NetworkClient::State::Rejected:
-        text = "Connection refused by the server";
+        text = rejectText(m_network.rejectReason());
         break;
     case NetworkClient::State::Lost:
         text = "Connection to the server lost";
         break;
     case NetworkClient::State::Closed:
-        text = "Disconnected by the server";
+        text = m_network.disconnectReason() ==
+                       rtype::protocol::DisconnectReason::Kicked
+                   ? "Kicked from the server"
+                   : "Disconnected by the server";
         break;
     }
     m_graphics->drawText(
