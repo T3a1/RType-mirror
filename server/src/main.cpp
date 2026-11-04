@@ -120,11 +120,13 @@ Options parseOptions(std::span<char *> args)
                 throw std::invalid_argument(std::string{arg} +
                                             " needs a value");
             }
-            std::string &value = arg == "--banlist" ? options.banFile
-                                 : arg == "--whitelist"
-                                     ? options.whitelistFile
-                                     : options.levelsDirectory;
-            value = args[++i];
+            std::string *value = &options.levelsDirectory;
+            if (arg == "--banlist") {
+                value = &options.banFile;
+            } else if (arg == "--whitelist") {
+                value = &options.whitelistFile;
+            }
+            *value = args[++i];
         } else if (arg.starts_with("--")) {
             throw std::invalid_argument("unknown option " + std::string{arg});
         } else if (hasPort) {
