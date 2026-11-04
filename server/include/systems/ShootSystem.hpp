@@ -10,6 +10,7 @@
 
 #include "EntityFactory.hpp"
 #include "SpawnRequests.hpp"
+#include "Weapons.hpp"
 #include "common/components/Player.hpp"
 #include "common/components/Transform.hpp"
 #include "common/components/Weapon.hpp"
@@ -23,8 +24,18 @@
 
 namespace server {
 
+/**
+ * @brief Fires the weapons whose cooldown is over. An enemy fires one shot
+ * to the left. A player fires 2 * level - 1 shots in a spread; holding the
+ * key also charges, and releasing it after stats.chargeTime fires a
+ * charged shot that goes through enemies.
+ * @param registry The registry holding the weapons.
+ * @param factory The factory that creates the shots.
+ * @param dt The time since the last tick.
+ * @param stats The weapon stats, from weapons.json.
+ **/
 void shootSystem(engine::Registry &registry, EntityFactory &factory,
-                 engine::Duration dt);
+                 engine::Duration dt, const WeaponStats &stats);
 
 } // namespace server
 

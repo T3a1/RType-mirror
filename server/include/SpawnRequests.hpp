@@ -46,12 +46,25 @@ struct SpawnPlayer {
  * @param position The position to spawn the projectile at.
  * @param velocity The velocity of the projectile.
  * @param fromPlayer Whether the projectile was fired by a player or an enemy.
+ * @param damage The damage it deals.
+ * @param charged Whether it is a player's charged shot: larger, and it goes
+ * through the enemies it hits.
  **/
 struct SpawnProjectile {
     engine::Entity owner{};
     engine::Vec2f position{};
     engine::Vec2f velocity{};
     bool fromPlayer = true;
+    int damage = 50;
+    bool charged = false;
+};
+
+/**
+ * A request to spawn a power-up, dropped by a destroyed enemy.
+ * @param position Where it appears.
+ **/
+struct SpawnPowerUp {
+    engine::Vec2f position{};
 };
 
 } // namespace server

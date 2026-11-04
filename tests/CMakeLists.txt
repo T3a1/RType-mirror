@@ -15,6 +15,7 @@ set(SOURCE_FILES
     src/formations_test.cpp
     src/level_test.cpp
     src/boss_test.cpp
+    src/weapons_test.cpp
     src/player_control_system_test.cpp
     src/interpolation_system_test.cpp
     src/prediction_system_test.cpp
@@ -55,4 +56,5 @@ gtest_discover_tests(${PROJECT_NAME})
 # The level files shipped with the server, checked by level_test.cpp.
 target_compile_definitions(${PROJECT_NAME}
     PRIVATE RTYPE_LEVELS_DIR="${CMAKE_SOURCE_DIR}/server/levels"
+    RTYPE_WEAPONS_FILE="${CMAKE_SOURCE_DIR}/server/weapons.json"
 )

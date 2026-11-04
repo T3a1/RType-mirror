@@ -1,4 +1,4 @@
-# R-Type network protocol (version 7)
+# R-Type network protocol (version 9)
 
 This document specifies the binary protocol spoken between the R-Type server
 and its clients. It is precise enough to write a compatible client or server
@@ -73,7 +73,7 @@ Every packet starts with this 12-byte header:
 | Offset | Size | Field | Value |
 |-------:|-----:|-------|-------|
 | 0 | 2 | magic | `52 54` (ASCII `"RT"`). Recognizes our packets: a random datagram almost never starts with these bytes |
-| 2 | 1 | version | `7`. See [Versioning](#12-versioning) |
+| 2 | 1 | version | `9`. See [Versioning](#12-versioning) |
 | 3 | 1 | type | Which payload follows. See [Packet types](#5-packet-types) |
 | 4 | 1 | flags | Bit 0: **Reliable**. Bits 1 to 7 are reserved and **MUST** be 0 |
 | 5 | 1 | reserved | **MUST** be 0 |
@@ -94,7 +94,7 @@ The names are the `DecodeError` values of the reference implementation.
 | 1 | At most 1200 bytes | `TooLarge` |
 | 2 | At least 12 bytes | `TooShort` |
 | 3 | Magic is `"RT"` | `BadMagic` |
-| 4 | Version is 7 | `BadVersion` |
+| 4 | Version is 9 | `BadVersion` |
 | 5 | Type is listed in section 5 | `UnknownType` |
 | 6 | No reserved flag bit, and Reliable set exactly on reliable types | `BadFlags` |
 | 7 | Reserved byte is 0 | `BadReserved` |
@@ -240,7 +240,7 @@ not fit in one datagram is split into several **parts**
 |-------:|-----:|-------|--------|
 | 0 | 4 | networkId | `u32`, identifies the entity. Never reused by the server |
 | 4 | 1 | type | Entity type, see below. The client chooses the sprite from it |
-| 5 | 1 | flags | Bit 0 (`0x01`) Invincible (blinking), bit 1 (`0x02`) Charging. Bits 2 to 4 (`0x1C`) Owner: the slot (`1` to `4`) of the player who fired a `PlayerMissile`, `0` for every other entity. Bits 5 to 7 **MUST** be 0 |
+| 5 | 1 | flags | Bit 0 (`0x01`) Invincible (blinking), bit 1 (`0x02`) Charging (a player ship whose fire key is held: its charged shot is coming). Bits 2 to 4 (`0x1C`) Owner: the slot (`1` to `4`) of the player who fired a `PlayerMissile`, `0` for every other entity. Bits 5 to 7 **MUST** be 0 |
 | 6 | 2 | health | `u16`, the health points |
 | 8 | 4 | x | `f32`, center, in playfield units |
 | 12 | 4 | y | `f32`, center, in playfield units |
@@ -261,6 +261,8 @@ right edge) but **MUST** be finite: NaN and infinities are invalid.
 | 7 | EnemyMedium |
 | 8 | EnemyLarge |
 | 9 | Boss (end-level boss; its full health is `BossMaxHealth`, 2500, for the client's health bar) |
+| 10 | ChargedShot (a player's charged shot, which goes through enemies) |
+| 11 | PowerUp (a bonus: the player who touches it gets one more weapon level) |
 
 ### `GameEvent` (0x22)
 
@@ -509,7 +511,7 @@ All bytes in hexadecimal.
 Unreliable sequence 298, acknowledging reliable packet 17, input number 1000:
 
 ```text
-52 54 07 10 00 00 2A 01 11 00 05 00   header: "RT", v7, Input, no flags,
+52 54 09 10 00 00 2A 01 11 00 05 00   header: "RT", v9, Input, no flags,
                                               sequence 298, ack 17, size 5
 E8 03 00 00                           sequence 1000
 11                                    actions 0x11 = Up | Fire
@@ -520,7 +522,7 @@ E8 03 00 00                           sequence 1000
 Reliable sequence 2, slot 2, ship 58, tick 1200:
 
 ```text
-52 54 07 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
+52 54 09 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
                                               sequence 2, ack 0, size 9
 02                                    slot 2
 3A 00 00 00                           shipId 58
@@ -530,7 +532,7 @@ B0 04 00 00                           tick 1200
 ### `Snapshot` with one player and one entity
 
 ```text
-52 54 07 20 00 00 2B 01 11 00 26 00   header: Snapshot, size 38
+52 54 09 20 00 00 2B 01 11 00 26 00   header: Snapshot, size 38
 2C 01 00 00                           tick 300
 00 01                                 part 0 of 1
 01 00                                 1 entity
@@ -564,3 +566,4 @@ B0 04 00 00                           tick 1200
 | 5 | Lobby: `Connect` and `Accept` are empty again; new `RoomList`, `JoinRoom`, `LeaveRoom`, `StartGame`, `RoomJoined` and `RoomRefused`; new event `GameStarted`. |
 | 6 | New event `LevelStarted` (levels read from files, [LEVELS.md](LEVELS.md)). |
 | 7 | New entity type `Boss`. |
+| 9 | New entity types `ChargedShot` and `PowerUp`; the `Charging` flag is now sent ([WEAPONS.md](WEAPONS.md)). Version 8 is the administration console. |

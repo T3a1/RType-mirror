@@ -245,7 +245,7 @@ bool decode(ByteReader &in, SnapshotPart &message)
     for (std::uint16_t i = 0; i < entityCount; ++i) {
         EntityState entity;
         entity.networkId = in.u32();
-        if (!readEnum(in, EntityType::Boss, entity.type)) {
+        if (!readEnum(in, EntityType::PowerUp, entity.type)) {
             return false;
         }
         entity.flags = in.u8();

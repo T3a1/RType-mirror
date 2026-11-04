@@ -46,10 +46,18 @@ void hit(engine::Registry &registry, engine::Entity attacker,
 {
     const auto *damage = registry.tryGet<rtype::Damage>(attacker);
     auto *health = registry.tryGet<rtype::Health>(target);
+    auto *piercing = registry.tryGet<Piercing>(attacker);
 
     if (damage == nullptr || health == nullptr || health->current <= 0 ||
         std::ranges::find(alreadyHit, attacker) != alreadyHit.end()) {
         return;
+    }
+    // A piercing shot damages each entity once and goes on.
+    if (piercing != nullptr) {
+        if (std::ranges::find(piercing->hit, target) != piercing->hit.end()) {
+            return;
+        }
+        piercing->hit.push_back(target);
     }
     if (!invinciblePlayers || !registry.has<rtype::Player>(target)) {
         health->current -= damage->points;
@@ -59,7 +67,7 @@ void hit(engine::Registry &registry, engine::Entity attacker,
         awardKill(registry, attacker, target);
     }
 
-    if (registry.has<rtype::Projectile>(attacker)) {
+    if (piercing == nullptr && registry.has<rtype::Projectile>(attacker)) {
         alreadyHit.push_back(attacker);
         despawn(registry, attacker, outbound);
     }
