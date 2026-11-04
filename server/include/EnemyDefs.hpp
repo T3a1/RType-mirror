@@ -46,7 +46,7 @@ struct EnemyDef {
  * An array of all enemy definitions, in the order of rtype::EnemyType. The
  * colliders match the sizes the clients draw (client/src/SpriteSheets.cpp).
  **/
-inline constexpr std::array<EnemyDef, 6> ENEMY_DEFS = {
+inline constexpr std::array<EnemyDef, 7> ENEMY_DEFS = {
     {
         {
             .speed = 200.0F,
@@ -101,6 +101,14 @@ inline constexpr std::array<EnemyDef, 6> ENEMY_DEFS = {
             .entityType = rtype::EntityType::EnemyLarge,
             .score = 500,
             .fireInterval = engine::Duration{1.0F},
+        },
+        {
+            // Moved and armed by bossSystem(), not by its pattern or Weapon.
+            .speed = 160.0F,
+            .health = rtype::BossMaxHealth,
+            .size = {.x = 380.0F, .y = 230.0F},
+            .entityType = rtype::EntityType::Boss,
+            .score = 5000,
         },
     },
 };

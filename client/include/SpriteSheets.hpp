@@ -31,6 +31,7 @@ enum class Sheet : std::uint8_t {
     EnemyMedium,
     EnemyLarge,
     Explosion,
+    Boss,
     Count,
 };
 

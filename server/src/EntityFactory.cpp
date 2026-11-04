@@ -26,8 +26,14 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
         enemy, rtype::Transform{.position = request.position});
     registry.emplace<rtype::Velocity>(
         enemy, rtype::Velocity{.value = {.x = -stat.speed, .y = 0.0F}});
-    registry.emplace<rtype::MovementPattern>(
-        enemy, request.pattern.value_or(stat.pattern));
+    const bool boss = request.type == rtype::EnemyType::Boss;
+    if (boss) {
+        // bossSystem() moves it, and it never leaves the playfield.
+        registry.emplace<Boss>(enemy);
+    } else {
+        registry.emplace<rtype::MovementPattern>(
+            enemy, request.pattern.value_or(stat.pattern));
+    }
     registry.emplace<rtype::Health>(
         enemy, rtype::Health{.current = stat.health, .max = stat.health});
     registry.emplace<rtype::Damage>(enemy);
@@ -42,7 +48,9 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
                            rtype::CollisionLayer::PlayerProjectile,
                });
 
-    registry.emplace<DestroyOffScreen>(enemy);
+    if (!boss) {
+        registry.emplace<DestroyOffScreen>(enemy);
+    }
     if (stat.fireInterval.count() > 0.0F) {
         registry.emplace<rtype::Weapon>(
             enemy, rtype::Weapon{.fireInterval = stat.fireInterval});
@@ -129,7 +137,9 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
                         });
     }
 
-    registry.emplace<rtype::Lifetime>(projectile);
+    // Long enough to cross the whole playfield, even at the slowest speed.
+    registry.emplace<rtype::Lifetime>(
+        projectile, rtype::Lifetime{.remaining = engine::Duration{5.0F}});
     registry.emplace<DestroyOffScreen>(projectile);
 
     BB_DEBUG("Projectile spawned with id " << networkId

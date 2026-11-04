@@ -100,6 +100,12 @@ void Game::registerSystems()
         [](Registry &r, Duration) { rtype::playerControlSystem(r); }, playing);
     m_scheduler.add(Stage::Simulation, "pattern", rtype::patternSystem,
                     playing);
+    m_scheduler.add(
+        Stage::Simulation, "boss",
+        [this](Registry &r, Duration dt) {
+            server::bossSystem(r, m_factory, dt);
+        },
+        playing);
     m_scheduler.add(Stage::Simulation, "movement", rtype::movementSystem,
                     playing);
     m_scheduler.add(

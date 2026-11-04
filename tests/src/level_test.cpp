@@ -134,6 +134,7 @@ TEST(Level, RejectsInvalidFiles)
         R"({ "name": "x", "waves": [ { "time": 1, "enemy": "basic", "pattern": { "kind": "loop" } } ] })",
         R"({ "name": "x", "waves": [ { "time": "1", "enemy": "basic" } ] })",
         R"({ "name": "x", "extra": 1, "waves": [ { "time": 1, "enemy": "basic" } ] })",
+        R"({ "name": "x", "boss": "dragon", "waves": [ { "time": 1, "enemy": "basic" } ] })",
     };
     for (const std::string &text : invalid) {
         std::string error;
@@ -259,4 +260,51 @@ TEST_F(LevelSystemTest, AnnouncesEachLevelThenTheEndlessMode)
     destroyEnemies(registry());
     run(0.1F);
     EXPECT_EQ(announced(), (std::vector<std::uint8_t>{1, 2, 0}));
+}
+
+TEST(Level, ReadsTheBoss)
+{
+    const auto parsed = parse(R"({ "name": "x", "boss": "warship",
+        "waves": [ { "time": 1, "enemy": "basic" } ] })");
+
+    ASSERT_TRUE(parsed.has_value());
+    EXPECT_EQ(parsed.value_or(server::Level{}).boss, rtype::EnemyType::Boss);
+}
+
+TEST(LevelSystem, TheBossComesAfterTheWavesAndEndsTheLevel)
+{
+    engine::Registry registry;
+    server::EntityFactory factory;
+    server::Level level = oneEnemyAt(0.0F);
+    level.boss = rtype::EnemyType::Boss;
+    const engine::Entity world = registry.create();
+    registry.emplace<rtype::Spawner>(world);
+    registry.emplace<server::SpawnQueue>(world);
+    registry.emplace<server::LevelProgress>(
+        world, server::LevelProgress{
+                   .levels = std::make_shared<const std::vector<server::Level>>(
+                       std::vector{level, oneEnemyAt(0.0F)})});
+    const auto run = [&](int ticks) {
+        for (int i = 0; i < ticks; ++i) {
+            static_cast<void>(server::levelSystem(registry, Tick));
+            server::spawnSystem(registry, factory, Tick);
+            registry.flush();
+        }
+    };
+
+    run(2);
+    destroyEnemies(registry);
+    run(2);
+    ASSERT_EQ(countEnemies(registry), 1U);
+    std::size_t bosses = 0;
+    registry.each<rtype::Enemy>(
+        [&bosses](engine::Entity, const rtype::Enemy &enemy) {
+            bosses += enemy.type == rtype::EnemyType::Boss ? 1U : 0U;
+        });
+    EXPECT_EQ(bosses, 1U);
+    EXPECT_EQ(registry.get<server::LevelProgress>(world).level, 0U);
+
+    destroyEnemies(registry);
+    run(2);
+    EXPECT_EQ(registry.get<server::LevelProgress>(world).level, 1U);
 }
