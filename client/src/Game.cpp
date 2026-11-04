@@ -59,7 +59,8 @@ void Game::run()
 
     Clock::time_point previous = Clock::now();
 
-    while (!m_graphics->shouldClose() && !(m_bench && m_bench->finished())) {
+    while (!m_quitRequested && !m_graphics->shouldClose() &&
+           !(m_bench && m_bench->finished())) {
         const Clock::time_point now = Clock::now();
         const engine::Duration dt =
             std::min(engine::Duration{now - previous}, maxFrameTime);
@@ -104,6 +105,9 @@ void Game::render()
     m_graphics->endWorld();
     hudSystem(m_sync, *m_graphics);
     drawStatus();
+    if (m_sync.gameOver && gameOverScreen(m_sync, *m_graphics)) {
+        m_quitRequested = true;
+    }
     m_graphics->endFrame();
 }
 

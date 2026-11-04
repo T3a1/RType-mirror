@@ -74,6 +74,7 @@ class Game {
     engine::Registry m_registry;
     gfx::Texture m_backgroundTexture;
     SyncState m_sync;
+    bool m_quitRequested = false;
     std::optional<Bench> m_bench;
 };
 
