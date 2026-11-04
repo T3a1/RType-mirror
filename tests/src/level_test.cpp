@@ -275,6 +275,7 @@ TEST(LevelSystem, TheBossComesAfterTheWavesAndEndsTheLevel)
 {
     engine::Registry registry;
     server::EntityFactory factory;
+    server::SpawnCommands commands;
     server::Level level = oneEnemyAt(0.0F);
     level.boss = rtype::EnemyType::Boss;
     const engine::Entity world = registry.create();
@@ -287,7 +288,8 @@ TEST(LevelSystem, TheBossComesAfterTheWavesAndEndsTheLevel)
     const auto run = [&](int ticks) {
         for (int i = 0; i < ticks; ++i) {
             static_cast<void>(server::levelSystem(registry, Tick));
-            server::spawnSystem(registry, factory, Tick);
+            server::spawnSystem(registry, commands, Tick);
+            server::spawnCommandSystem(registry, commands, factory);
             registry.flush();
         }
     };

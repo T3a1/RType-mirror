@@ -17,6 +17,7 @@
 #include "engine/Entity.hpp"
 #include "engine/Registry.hpp"
 #include "systems/BossSystem.hpp"
+#include "systems/SpawnCommandSystem.hpp"
 
 #include <gtest/gtest.h>
 
@@ -53,8 +54,9 @@ class BossTest : public testing::Test {
     {
         const auto ticks = static_cast<int>(seconds / Tick.count());
         for (int i = 0; i < ticks; ++i) {
-            server::bossSystem(m_registry, m_factory, Tick);
+            server::bossSystem(m_registry, m_commands, Tick);
             rtype::movementSystem(m_registry, Tick);
+            server::spawnCommandSystem(m_registry, m_commands, m_factory);
             m_registry.flush();
         }
     }
@@ -65,6 +67,7 @@ class BossTest : public testing::Test {
   private:
     engine::Registry m_registry;
     server::EntityFactory m_factory;
+    server::SpawnCommands m_commands;
     engine::Entity m_boss{};
 };
 

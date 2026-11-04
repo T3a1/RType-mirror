@@ -8,7 +8,7 @@
 #ifndef SERVER_SYSTEMS_BOSSSYSTEM_HPP
 #define SERVER_SYSTEMS_BOSSSYSTEM_HPP
 
-#include "EntityFactory.hpp"
+#include "SpawnRequests.hpp"
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"
 
@@ -35,10 +35,10 @@ inline constexpr std::uint8_t BossPhases = 3;
  * an aimed one (phase 2), a fan of 5 shots, faster, while moving faster
  * (phase 3). Runs after patternSystem() and before movementSystem().
  * @param registry The registry holding the bosses and the players.
- * @param factory The factory that creates the shots.
+ * @param commands Where the shots are requested.
  * @param dt The time elapsed since the last tick.
  **/
-void bossSystem(engine::Registry &registry, EntityFactory &factory,
+void bossSystem(engine::Registry &registry, SpawnCommands &commands,
                 engine::Duration dt);
 
 } // namespace server

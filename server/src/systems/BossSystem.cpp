@@ -123,14 +123,13 @@ std::uint8_t bossPhase(int health, int maxHealth)
     return health * 3 > maxHealth ? 2 : 3;
 }
 
-void bossSystem(engine::Registry &registry, EntityFactory &factory,
+void bossSystem(engine::Registry &registry, SpawnCommands &commands,
                 engine::Duration dt)
 {
     const EnemyDef &stat = enemyDef(rtype::EnemyType::Boss);
     const float stopX = rtype::PlayfieldWidth - StopFromRight;
     const float top = (stat.size.y / 2.0F) + VerticalMargin;
     const float bottom = rtype::PlayfieldHeight - top;
-    std::vector<SpawnProjectile> shots;
 
     registry.each<Boss, rtype::Transform, rtype::Velocity, rtype::Health>(
         [&](engine::Entity entity, Boss &boss,
@@ -166,11 +165,9 @@ void bossSystem(engine::Registry &registry, EntityFactory &factory,
                                        .y = transform.position.y};
             const auto attackShots = attack(
                 entity, muzzle, towardsNearestPlayer(registry, muzzle), phase);
-            shots.insert(shots.end(), attackShots.begin(), attackShots.end());
+            commands.insert(commands.end(), attackShots.begin(),
+                            attackShots.end());
         });
-    for (const SpawnProjectile &shot : shots) {
-        factory.create(registry, shot);
-    }
 }
 
 } // namespace server

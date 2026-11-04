@@ -103,7 +103,7 @@ void Game::registerSystems()
     m_scheduler.add(
         Stage::Simulation, "boss",
         [this](Registry &r, Duration dt) {
-            server::bossSystem(r, m_factory, dt);
+            server::bossSystem(r, m_commands, dt);
         },
         playing);
     m_scheduler.add(Stage::Simulation, "movement", rtype::movementSystem,
