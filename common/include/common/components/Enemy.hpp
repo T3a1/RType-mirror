@@ -18,6 +18,9 @@ enum class EnemyType : std::uint8_t {
     Basic,
     Wave,
     Shooter,
+    Small,
+    Medium,
+    Large,
 };
 
 // Behavior of an enemy, read by the AI system.
