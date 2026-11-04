@@ -12,6 +12,7 @@
 #include "components/ShipOwner.hpp"
 #include "engine/Entity.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <string>
 
@@ -36,6 +37,9 @@ constexpr float TitleHeight = 72.0F;
 constexpr float ButtonWidth = 300.0F;
 constexpr float ButtonHeight = 52.0F;
 constexpr gfx::Color PanelColor = gfx::rgb(24, 24, 36);
+
+constexpr float BannerFade = 0.5F;
+constexpr gfx::Color BannerColor = gfx::rgb(255, 214, 90);
 
 } // namespace
 
@@ -75,6 +79,40 @@ void hudSystem(const SyncState &state, bool autoFire, gfx::IGraphics &graphics)
         graphics.drawText("Auto-fire ON", {.x = HudX, .y = y}, HudFontSize,
                           gfx::colors::OffWhite);
     }
+}
+
+void levelBannerScreen(const SyncState &state, gfx::IGraphics &graphics)
+{
+    if (!state.levelAnnounced) {
+        return;
+    }
+    const engine::Vec2f screen = graphics.screenSize();
+    const float centerX = screen.x / 2.0F;
+    const std::string name = state.level == 0
+                                 ? "Endless mode"
+                                 : "Level " + std::to_string(state.level);
+    drawCentered(graphics, name, centerX, HudY, HudFontSize,
+                 gfx::colors::OffWhite);
+    if (state.levelBanner <= 0.0F) {
+        return;
+    }
+    // Fully visible, then fades out during its last BannerFade seconds.
+    const float alpha = std::min(state.levelBanner / BannerFade, 1.0F);
+    const auto fade = [alpha](gfx::Color color) {
+        color.a =
+            static_cast<std::uint8_t>(static_cast<float>(color.a) * alpha);
+        return color;
+    };
+    float y = (screen.y - TitleHeight) / 2.0F;
+    if (state.level != 1) {
+        drawCentered(graphics, "Level cleared", centerX, y - HudLineHeight,
+                     HudFontSize, fade(gfx::colors::OffWhite));
+    }
+    y += HudLineHeight / 2.0F;
+    drawCentered(graphics,
+                 state.level == 0 ? "ENDLESS MODE"
+                                  : "LEVEL " + std::to_string(state.level),
+                 centerX, y, TitleFontSize, fade(BannerColor));
 }
 
 bool gameOverScreen(const SyncState &state, gfx::IGraphics &graphics,

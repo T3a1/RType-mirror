@@ -37,6 +37,17 @@ void playerLabelSystem(engine::Registry &registry, const SyncState &state,
 void hudSystem(const SyncState &state, bool autoFire, gfx::IGraphics &graphics);
 
 /**
+ * @brief Draws the current level at the top of the window ("Level 2" or
+ * "Endless mode"), and while a new level is announced, a large banner in
+ * the middle ("LEVEL 2", after "Level cleared" from the second level on),
+ * fading out at the end. It is drawn in screen pixels: call it after
+ * endWorld().
+ * @param state The sync state, for the level and its banner.
+ * @param graphics The graphics backend to draw with.
+ **/
+void levelBannerScreen(const SyncState &state, gfx::IGraphics &graphics);
+
+/**
  * @brief Draws the end of the game in the middle of the window: "GAME OVER",
  * the score of every player, the team's total and a button back to the lobby.
  * It is drawn in screen pixels: call it after endWorld().

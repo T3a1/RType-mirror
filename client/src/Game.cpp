@@ -109,6 +109,7 @@ void Game::update(engine::Duration dt)
     if (m_sync.gameOver) {
         m_gameOverTime += dt.count();
     }
+    m_sync.levelBanner = std::max(m_sync.levelBanner - dt.count(), 0.0F);
     shipTiltSystem(m_registry, dt);
     animationSystem(m_registry, dt);
 
@@ -194,6 +195,9 @@ void Game::render()
             }
         } else {
             hudSystem(m_sync, m_autoFire.enabled, *m_graphics);
+            if (!m_sync.gameOver) {
+                levelBannerScreen(m_sync, *m_graphics);
+            }
             const bool keyboard =
                 keys.confirm && m_gameOverTime >= GameOverKeyDelay;
             if (m_sync.gameOver &&

@@ -15,6 +15,10 @@ rebuild of the code, only a restart of the server.
 4. After the last level comes the **endless mode**: random waves, until the
    game is over.
 
+Each level is announced to the players (`GameEvent{LevelStarted}`, see the
+[protocol](PROTOCOL.md)): a large "LEVEL 2" banner, after "Level cleared",
+during the 3-second pause, and the current level at the top of the screen.
+
 The levels folder is `levels/` next to the server executable (`build/levels/`,
 copied there by the build, or `/levels` in the Docker image). Another folder
 can be given with `--levels DIR`:
