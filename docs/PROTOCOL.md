@@ -1,4 +1,4 @@
-# R-Type network protocol (version 2)
+# R-Type network protocol (version 3)
 
 This document specifies the binary protocol spoken between the R-Type server
 and its clients. It is precise enough to write a compatible client or server
@@ -73,7 +73,7 @@ Every packet starts with this 12-byte header:
 | Offset | Size | Field | Value |
 |-------:|-----:|-------|-------|
 | 0 | 2 | magic | `52 54` (ASCII `"RT"`). Recognizes our packets: a random datagram almost never starts with these bytes |
-| 2 | 1 | version | `2`. See [Versioning](#12-versioning) |
+| 2 | 1 | version | `3`. See [Versioning](#12-versioning) |
 | 3 | 1 | type | Which payload follows. See [Packet types](#5-packet-types) |
 | 4 | 1 | flags | Bit 0: **Reliable**. Bits 1 to 7 are reserved and **MUST** be 0 |
 | 5 | 1 | reserved | **MUST** be 0 |
@@ -94,7 +94,7 @@ The names are the `DecodeError` values of the reference implementation.
 | 1 | At most 1200 bytes | `TooLarge` |
 | 2 | At least 12 bytes | `TooShort` |
 | 3 | Magic is `"RT"` | `BadMagic` |
-| 4 | Version is 2 | `BadVersion` |
+| 4 | Version is 3 | `BadVersion` |
 | 5 | Type is listed in section 5 | `UnknownType` |
 | 6 | No reserved flag bit, and Reliable set exactly on reliable types | `BadFlags` |
 | 7 | Reserved byte is 0 | `BadReserved` |
@@ -189,14 +189,15 @@ not fit in one datagram is split into several **parts**
 | 5 | 1 | partCount | Number of parts for this tick, at least `1` |
 | 6 | 2 | entityCount | `u16`, number of entity records in this part |
 
-**Players block (part 0 only): 1 + 9 bytes per player**
+**Players block (part 0 only): 1 + 13 bytes per player**
 
 | Size | Field | Values |
 |-----:|-------|--------|
 | 1 | playerCount | `0` to `4` |
-| 1 | slot | `1` to `4`, repeated `playerCount` times with the next two fields |
+| 1 | slot | `1` to `4`, repeated `playerCount` times with the next three fields |
 | 4 | score | `u32` |
 | 4 | lastInput | `u32`. `sequence` of the last `Input` of this player that the server applied at this tick, `0` if none. The client replays its newer inputs on top of this state (client-side prediction) |
+| 4 | shipId | `u32`, network id of the player's ship, `0` if it has none (destroyed). Lets every client tell which ship belongs to which player (color and label) |
 
 **Entity record (16 bytes), repeated `entityCount` times**
 
@@ -205,7 +206,7 @@ not fit in one datagram is split into several **parts**
 | 0 | 4 | networkId | `u32`, identifies the entity. Never reused by the server |
 | 4 | 1 | type | Entity type, see below. The client chooses the sprite from it |
 | 5 | 1 | flags | Bit 0 (`0x01`) Invincible (blinking), bit 1 (`0x02`) Charging. Bits 2 to 4 (`0x1C`) Owner: the slot (`1` to `4`) of the player who fired a `PlayerMissile`, `0` for every other entity. Bits 5 to 7 **MUST** be 0 |
-| 6 | 2 | health | `u16`, for health bars |
+| 6 | 2 | health | `u16`, the health points |
 | 8 | 4 | x | `f32`, center, in playfield units |
 | 12 | 4 | y | `f32`, center, in playfield units |
 
@@ -240,7 +241,7 @@ A one-off fact. The body depends on the kind:
 | 1 | PlayerJoined | slot (`u8`, 1 to 4) | Another player joined |
 | 2 | PlayerLeft | slot (`u8`, 1 to 4) | A player left, timed out or was kicked |
 | 3 | PlayerHit | slot (`u8`, 1 to 4) | A player was hit (sound, screen flash) |
-| 4 | GameOver | none | The game is over |
+| 4 | GameOver | none | The ship of every connected player is destroyed: the game is over. Snapshots keep carrying the final scores |
 
 ## 7. Reliability
 
@@ -395,7 +396,7 @@ entities. Only part 0 carries the players block.
 
 | Part | Room for entities |
 |------|-------------------|
-| Part 0, with 4 players | (1188 − 8 − 37) / 16 = **71** entities |
+| Part 0, with 4 players | (1188 − 8 − 53) / 16 = **70** entities |
 | Other parts | (1188 − 8) / 16 = **73** entities |
 
 `partCount` is at most 255.
@@ -448,7 +449,7 @@ All bytes in hexadecimal.
 Unreliable sequence 298, acknowledging reliable packet 17, input number 1000:
 
 ```text
-52 54 02 10 00 00 2A 01 11 00 05 00   header: "RT", v2, Input, no flags,
+52 54 03 10 00 00 2A 01 11 00 05 00   header: "RT", v3, Input, no flags,
                                               sequence 298, ack 17, size 5
 E8 03 00 00                           sequence 1000
 11                                    actions 0x11 = Up | Fire
@@ -459,7 +460,7 @@ E8 03 00 00                           sequence 1000
 Reliable sequence 2, slot 2, ship 58, tick 1200:
 
 ```text
-52 54 02 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
+52 54 03 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
                                               sequence 2, ack 0, size 9
 02                                    slot 2
 3A 00 00 00                           shipId 58
@@ -469,12 +470,13 @@ B0 04 00 00                           tick 1200
 ### `Snapshot` with one player and one entity
 
 ```text
-52 54 02 20 00 00 2B 01 11 00 22 00   header: Snapshot, size 34
+52 54 03 20 00 00 2B 01 11 00 26 00   header: Snapshot, size 38
 2C 01 00 00                           tick 300
 00 01                                 part 0 of 1
 01 00                                 1 entity
 01                                    1 player
-01 DC 05 00 00 E8 03 00 00              slot 1, score 1500, last input 1000
+01 DC 05 00 00 E8 03 00 00              slot 1, score 1500, last input 1000,
+07 00 00 00                               ship 7
 07 00 00 00                           networkId 7
 00                                      type PlayerShip
 00                                      flags none
@@ -497,3 +499,4 @@ B0 04 00 00                           tick 1200
 |--------:|---------|
 | 1 | Part 1 prototype. |
 | 2 | Snapshot players block: `lastInput` added (9 bytes per player). Entity flags: Owner bits 2 to 4. Entity types `EnemySmall`, `EnemyMedium` and `EnemyLarge`. |
+| 3 | Snapshot players block: `shipId` added (13 bytes per player). |

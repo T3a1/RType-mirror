@@ -90,6 +90,7 @@ RaylibGraphics::RaylibGraphics(const WindowConfig &config)
     if (!IsWindowReady()) {
         throw std::runtime_error("cannot open the window");
     }
+    SetExitKey(KEY_ESCAPE);
 }
 
 RaylibGraphics::~RaylibGraphics()
@@ -184,6 +185,17 @@ void RaylibGraphics::drawText(const std::string &text, engine::Vec2f position,
 bool RaylibGraphics::isKeyDown(Key key) const
 {
     return IsKeyDown(toRaylib(key));
+}
+
+engine::Vec2f RaylibGraphics::mousePosition() const
+{
+    const Vector2 position = GetMousePosition();
+    return {.x = position.x, .y = position.y};
+}
+
+bool RaylibGraphics::isMousePressed() const
+{
+    return IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
 }
 
 } // namespace client::gfx

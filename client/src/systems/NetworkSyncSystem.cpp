@@ -14,6 +14,7 @@
 #include "common/components/SnapshotHistory.hpp"
 #include "common/components/Transform.hpp"
 #include "common/systems/PredictionSystem.hpp"
+#include "components/ShipOwner.hpp"
 #include "engine/Logger.hpp"
 
 #include <algorithm>
@@ -26,6 +27,44 @@ namespace {
 using namespace rtype::protocol;
 
 constexpr std::uint32_t DestroyedMemory = 300;
+
+/**
+ * @brief Returns the slot of the player owning a ship.
+ * @param state The sync state, for the players block and the local ship.
+ * @param networkId The NetworkId of the ship.
+ * @return The owner's slot, 0 if no known player owns it.
+ **/
+std::uint8_t ownerOfShip(const SyncState &state, std::uint32_t networkId)
+{
+    if (networkId == state.localShip) {
+        return state.localSlot;
+    }
+    for (const PlayerInfo &player : state.players) {
+        if (player.shipId == networkId) {
+            return player.slot;
+        }
+    }
+    return 0;
+}
+
+/**
+ * @brief Gives a ship the sprite and ShipOwner of its player, unless it
+ * already has them.
+ * @param registry The client's registry.
+ * @param ship The ship entity.
+ * @param slot The owner's slot, 0 if unknown (nothing is changed).
+ * @param sheets The sprite sheets the ship is drawn with.
+ **/
+void setShipOwner(engine::Registry &registry, engine::Entity ship,
+                  std::uint8_t slot, const SpriteSheets &sheets)
+{
+    const auto *owner = registry.tryGet<ShipOwner>(ship);
+    if (slot == 0 || (owner != nullptr && owner->slot == slot)) {
+        return;
+    }
+    attachSprite(registry, ship, sheets, rtype::EntityType::PlayerShip, slot);
+    registry.emplace<ShipOwner>(ship, ShipOwner{.slot = slot});
+}
 
 /**
  * @brief Creates or updates the local copy of one snapshot entity, unless
@@ -78,8 +117,11 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
                                                  .max = rtype::PlayerMaxHealth,
                                              });
     const bool local = entity.networkId == state.localShip;
-    attachSprite(registry, created, sheets, entity.type,
-                 local ? state.localSlot : 0);
+    attachSprite(registry, created, sheets, entity.type, 0);
+    if (entity.type == rtype::EntityType::PlayerShip) {
+        setShipOwner(registry, created, ownerOfShip(state, entity.networkId),
+                     sheets);
+    }
     if (local) {
         state.shipTick = tick;
         state.shipPosition = sample.position;
@@ -99,7 +141,8 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
 
 /**
  * @brief Applies one snapshot part if it is not older than the last one,
- * and forgets destroyed ids older than DestroyedMemory ticks.
+ * gives the known ships the color of their player, and forgets destroyed
+ * ids older than DestroyedMemory ticks.
  * @param registry The client's registry.
  * @param snapshot The snapshot part.
  * @param state The sync state.
@@ -118,6 +161,10 @@ void applySnapshot(engine::Registry &registry, const SnapshotPart &snapshot,
             if (player.slot == state.localSlot) {
                 state.ackTick = snapshot.tick;
                 state.ackInput = player.lastInput;
+            }
+            const auto ship = state.entities.find(player.shipId);
+            if (ship != state.entities.end()) {
+                setShipOwner(registry, ship->second, player.slot, sheets);
             }
         }
     }
@@ -165,14 +212,17 @@ void applyEvent(engine::Registry &registry, const GameEvent &event,
         BB_INFO("Player " << static_cast<int>(event.slot) << " left");
         break;
     case GameEventKind::PlayerHit:
+        break;
     case GameEventKind::GameOver:
+        BB_INFO("Game over");
+        state.gameOver = true;
         break;
     }
 }
 
 /**
- * @brief Records the local player's ship and slot, and gives the ship
- * and stops interpolating it if it already exists.
+ * @brief Records the local player's ship and slot, and gives the ship its
+ * player's color and stops interpolating it if it already exists.
  * @param registry The client's registry.
  * @param welcome The Welcome payload.
  * @param state The sync state.
@@ -186,8 +236,7 @@ void applyWelcome(engine::Registry &registry, const Welcome &welcome,
     state.localSlot = welcome.slot;
     const auto it = state.entities.find(welcome.shipId);
     if (it != state.entities.end()) {
-        attachSprite(registry, it->second, sheets,
-                     rtype::EntityType::PlayerShip, welcome.slot);
+        setShipOwner(registry, it->second, welcome.slot, sheets);
         registry.remove<rtype::SnapshotHistory>(it->second);
     }
 }

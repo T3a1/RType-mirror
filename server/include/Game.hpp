@@ -11,6 +11,7 @@
 #include "EntityFactory.hpp"
 #include "common/components/Spawner.hpp"
 #include "common/systems/MovementSystem.hpp"
+#include "common/systems/PatternSystem.hpp"
 #include "common/systems/PlayerControlSystem.hpp"
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"
@@ -20,6 +21,7 @@
 #include "systems/DamageSystem.hpp"
 #include "systems/DeathSystem.hpp"
 #include "systems/EnemyAISystem.hpp"
+#include "systems/GameOverSystem.hpp"
 #include "systems/LifetimeSystem.hpp"
 #include "systems/NetworkInputSystem.hpp"
 #include "systems/SessionSystem.hpp"
@@ -80,6 +82,7 @@ class Game {
     EntityFactory m_factory;
     std::atomic<bool> m_running = true;
     Players m_players;
+    bool m_gameOver = false;
     std::uint32_t m_tick = 1;
     static_assert(std::atomic<bool>::is_always_lock_free);
 };

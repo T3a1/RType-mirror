@@ -15,8 +15,8 @@
 namespace rtype {
 
 /**
- * A component that spawns a random enemy after a random delay between minDelay
- *and maxDelay.
+ * A component that starts a random enemy formation after a random delay between
+ * minDelay and maxDelay.
  * @param minDelay The minimum delay between spawns.
  * @param maxDelay The maximum delay between spawns.
  * @param timeUntilNextSpawn The time left until the next spawn.
