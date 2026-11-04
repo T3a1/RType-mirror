@@ -6,7 +6,7 @@
 */
 
 #include "systems/SpawnSystem.hpp"
-#include "common/Playfield.hpp"
+#include "components/LevelProgress.hpp"
 
 namespace server {
 
@@ -36,11 +36,8 @@ std::vector<PendingSpawn> randomFormation(rtype::Spawner &spawner)
 {
     std::uniform_int_distribution<std::size_t> index(0, FORMATIONS.size() - 1);
     const Formation &formation = FORMATIONS.at(index(spawner.randomGenerator));
-    const float extent = formationExtent(formation);
-    std::uniform_real_distribution<float> center(
-        extent, rtype::PlayfieldHeight - extent);
 
-    return formationSpawns(formation, center(spawner.randomGenerator));
+    return formationSpawns(formation, randomCenterY(formation, spawner));
 }
 
 } // namespace
@@ -51,14 +48,17 @@ void spawnSystem(engine::Registry &registry, EntityFactory &factory,
     std::vector<SpawnEnemy> spawnRequests;
 
     registry.each<rtype::Spawner, SpawnQueue>(
-        [&](engine::Entity, rtype::Spawner &spawner, SpawnQueue &queue) {
-            spawner.timeUntilNextSpawn -= dt;
-            while (spawner.timeUntilNextSpawn.count() <= 0.0F) {
-                const std::vector<PendingSpawn> spawns =
-                    randomFormation(spawner);
-                queue.pending.insert(queue.pending.end(), spawns.begin(),
-                                     spawns.end());
-                spawner.timeUntilNextSpawn += randomDelay(spawner);
+        [&](engine::Entity entity, rtype::Spawner &spawner, SpawnQueue &queue) {
+            // While levels are played, levelSystem() fills the queue.
+            if (!registry.has<LevelProgress>(entity)) {
+                spawner.timeUntilNextSpawn -= dt;
+                while (spawner.timeUntilNextSpawn.count() <= 0.0F) {
+                    const std::vector<PendingSpawn> spawns =
+                        randomFormation(spawner);
+                    queue.pending.insert(queue.pending.end(), spawns.begin(),
+                                         spawns.end());
+                    spawner.timeUntilNextSpawn += randomDelay(spawner);
+                }
             }
             for (PendingSpawn &spawn : queue.pending) {
                 spawn.delay -= dt;

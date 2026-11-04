@@ -48,7 +48,7 @@ Supported platforms:
 - **Windows 10/11**: supported by `rtype.py`. Crossplay with Linux is still
   under discussion.
 
-All third-party libraries (Raylib, SFML or ncurses, Asio, GoogleTest) come from the Conan
+All third-party libraries (Raylib, SFML or ncurses, Asio, nlohmann-json, GoogleTest) come from the Conan
 package manager. Nothing is copied into the repository, and no library has to
 be installed system-wide.
 

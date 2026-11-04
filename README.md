@@ -66,6 +66,7 @@ all the options.
 | [Installation guide](docs/INSTALLATION.md) | Requirements, building, running the server and the clients, troubleshooting. |
 | [Architecture](docs/ARCHITECTURE.md) | How the code is organized: game engine, subsystems, game loop, threads. |
 | [Network protocol](docs/PROTOCOL.md) | The messages exchanged between the server and the clients. |
+| [Levels](docs/LEVELS.md) | Writing a level: the JSON file of its enemy waves, and how the server plays the levels. |
 | [Network testing](docs/NETWORK_TESTING.md) | Playing with added latency and packet loss on one machine, to test the networking. |
 | [Network performance comparison](docs/NETWORK_COMPARISON.md) | Measured effect of interpolation and prediction under latency and packet loss, compared with the Part 1 prototype. |
 | [Contributing](docs/CONTRIBUTORS.md) | How to work on the project: workflow, conventions, tools. |

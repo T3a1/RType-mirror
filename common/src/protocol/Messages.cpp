@@ -135,7 +135,11 @@ void encode(const GameEvent &message, ByteWriter &out)
     case GameEventKind::PlayerHit:
         out.u8(message.slot);
         break;
+    case GameEventKind::LevelStarted:
+        out.u8(message.level);
+        break;
     case GameEventKind::GameOver:
+    case GameEventKind::GameStarted:
         break;
     }
 }
@@ -264,7 +268,7 @@ bool decode(ByteReader &in, SnapshotPart &message)
 
 bool decode(ByteReader &in, GameEvent &message)
 {
-    if (!readEnum(in, GameEventKind::GameStarted, message.kind)) {
+    if (!readEnum(in, GameEventKind::LevelStarted, message.kind)) {
         return false;
     }
     switch (message.kind) {
@@ -276,6 +280,9 @@ bool decode(ByteReader &in, GameEvent &message)
     case GameEventKind::PlayerHit:
         message.slot = in.u8();
         return isValidSlot(message.slot);
+    case GameEventKind::LevelStarted:
+        message.level = in.u8();
+        return true;
     case GameEventKind::GameOver:
     case GameEventKind::GameStarted:
         return true;

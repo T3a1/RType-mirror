@@ -47,10 +47,24 @@ target_link_libraries(r-type_server_network
     PUBLIC r-type_common
 )
 
-# Spawning is a library so the tests can run it without the game loop.
+# Level files: Conan's nlohmann_json, or the Alpine package nlohmann-json in
+# the Dockerfile (header-only).
+find_package(nlohmann_json 3.11 CONFIG QUIET)
+if(NOT nlohmann_json_FOUND)
+    find_path(NLOHMANN_JSON_INCLUDE_DIR nlohmann/json.hpp REQUIRED)
+    add_library(nlohmann_json::nlohmann_json INTERFACE IMPORTED)
+    target_include_directories(nlohmann_json::nlohmann_json
+        INTERFACE ${NLOHMANN_JSON_INCLUDE_DIR}
+    )
+endif()
+
+# Spawning and levels are a library so the tests can run them without the
+# game loop.
 add_library(r-type_server_spawn STATIC
     src/EntityFactory.cpp
     src/Formations.cpp
+    src/Level.cpp
+    src/systems/LevelSystem.cpp
     src/systems/SpawnSystem.cpp
 )
 
@@ -60,6 +74,7 @@ target_include_directories(r-type_server_spawn
 
 target_link_libraries(r-type_server_spawn
     PUBLIC r-type_common
+    PRIVATE nlohmann_json::nlohmann_json
 )
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
@@ -74,4 +89,12 @@ target_link_libraries(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE r-type_server_game_over
+)
+
+# The levels are read next to the executable.
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/levels
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/levels
+    COMMENT "Copying the server levels"
 )

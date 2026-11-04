@@ -221,6 +221,11 @@ void applyEvent(engine::Registry &registry, const GameEvent &event,
         BB_INFO("Game started");
         state.started = true;
         break;
+    case GameEventKind::LevelStarted:
+        state.level = event.level;
+        state.levelAnnounced = true;
+        state.levelBanner = LevelBannerTime;
+        break;
     }
 }
 

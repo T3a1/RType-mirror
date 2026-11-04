@@ -10,6 +10,7 @@
 
 #include "common/components/Enemy.hpp"
 #include "common/components/MovementPattern.hpp"
+#include "common/components/Spawner.hpp"
 #include "components/SpawnQueue.hpp"
 #include "engine/Clock.hpp"
 
@@ -84,6 +85,16 @@ inline constexpr std::array<Formation, 7> FORMATIONS = {
  * @return The distance, in playfield units.
  **/
 [[nodiscard]] float formationExtent(const Formation &formation);
+
+/**
+ * @brief Draws a height for the center of a formation that keeps it inside
+ * the playfield.
+ * @param formation The formation.
+ * @param spawner The spawner whose random generator is used.
+ * @return The height, in playfield units.
+ **/
+[[nodiscard]] float randomCenterY(const Formation &formation,
+                                  rtype::Spawner &spawner);
 
 /**
  * @brief Builds the enemies of a formation, just past the right edge of the

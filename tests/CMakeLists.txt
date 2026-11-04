@@ -8,10 +8,12 @@ set(SOURCE_FILES
     src/sanity_test.cpp
     src/sparse_set_test.cpp
     src/registry_test.cpp
+    src/scheduler_test.cpp
     src/vec2_test.cpp
     src/movement_system_test.cpp
     src/pattern_system_test.cpp
     src/formations_test.cpp
+    src/level_test.cpp
     src/player_control_system_test.cpp
     src/interpolation_system_test.cpp
     src/prediction_system_test.cpp
@@ -51,3 +53,8 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 gtest_discover_tests(${PROJECT_NAME})
+
+# The level files shipped with the server, checked by level_test.cpp.
+target_compile_definitions(${PROJECT_NAME}
+    PRIVATE RTYPE_LEVELS_DIR="${CMAKE_SOURCE_DIR}/server/levels"
+)

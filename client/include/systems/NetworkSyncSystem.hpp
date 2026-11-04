@@ -23,6 +23,10 @@
 
 namespace client {
 
+/** @brief How long the banner of a new level is shown, in seconds: the
+ * server's pause between two levels. */
+inline constexpr float LevelBannerTime = 3.0F;
+
 /**
  * @struct SyncState
  * @brief What the client knows about the server's world.
@@ -52,6 +56,12 @@ namespace client {
  * @param shipPosition That position.
  * @param acknowledgedTick The tick last handed to the prediction, when
  * ackTick and shipTick matched.
+ * @param level The level announced last by GameEvent{LevelStarted}: from
+ * 1, 0 for the endless mode or before any announce.
+ * @param levelAnnounced Whether a level was announced since the game
+ * started.
+ * @param levelBanner How long the banner of that level is still shown, in
+ * seconds.
  **/
 struct SyncState {
     std::unordered_map<std::uint32_t, engine::Entity> entities;
@@ -72,6 +82,9 @@ struct SyncState {
     std::uint32_t acknowledgedTick = 0;
     bool gameOver = false;
     bool started = false;
+    std::uint8_t level = 0;
+    bool levelAnnounced = false;
+    float levelBanner = 0.0F;
 };
 
 /**

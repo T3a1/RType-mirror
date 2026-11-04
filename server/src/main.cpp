@@ -6,6 +6,7 @@
 */
 
 #include "Game.hpp"
+#include "Level.hpp"
 #include "common/network/UdpSocket.hpp"
 #include "common/protocol/Connection.hpp"
 #include "engine/Logger.hpp"
@@ -16,6 +17,7 @@
 #include <chrono>
 #include <cstdint>
 #include <exception>
+#include <filesystem>
 #include <future>
 #include <iostream>
 #include <memory>
@@ -24,6 +26,8 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <utility>
+#include <vector>
 
 #include <csignal>
 
@@ -39,8 +43,8 @@ inline constexpr std::chrono::milliseconds StopPollInterval{50};
 inline constexpr std::chrono::seconds CommandTimeout{2};
 inline constexpr std::size_t MaxPortDigits = 5;
 inline constexpr std::string_view Usage =
-    "Usage: r-type_server [port] [--banlist FILE] [--whitelist FILE]\n"
-    "                     [--no-console] [--invincible]\n";
+    "Usage: r-type_server [port] [--levels DIR] [--banlist FILE]\n"
+    "                     [--whitelist FILE] [--no-console] [--invincible]\n";
 inline constexpr std::string_view Prompt = "rtype> ";
 // Back to the start of the line, then erase it: removes the prompt or the ^C.
 inline constexpr std::string_view ClearLine = "\r\033[K";
@@ -60,6 +64,7 @@ void onSignal(int signal)
  * @param port The UDP port to listen on.
  * @param invincible Whether the players' ships take no damage.
  * @param console Whether to read commands from the standard input.
+ * @param levelsDirectory The directory of the level files, if given.
  * @param banFile The file of the banned addresses, if any.
  * @param whitelistFile The file of the allowed addresses, if any; it turns
  * the white list on.
@@ -68,6 +73,7 @@ struct Options {
     std::uint16_t port = rtype::protocol::DefaultPort;
     bool invincible = false;
     bool console = true;
+    std::string levelsDirectory;
     std::string banFile;
     std::string whitelistFile;
 };
@@ -108,12 +114,17 @@ Options parseOptions(std::span<char *> args)
             options.invincible = true;
         } else if (arg == "--no-console") {
             options.console = false;
-        } else if (arg == "--banlist" || arg == "--whitelist") {
+        } else if (arg == "--banlist" || arg == "--whitelist" ||
+                   arg == "--levels") {
             if (i + 1 >= args.size()) {
-                throw std::invalid_argument(std::string{arg} + " needs a file");
+                throw std::invalid_argument(std::string{arg} +
+                                            " needs a value");
             }
-            (arg == "--banlist" ? options.banFile : options.whitelistFile) =
-                args[++i];
+            std::string &value = arg == "--banlist" ? options.banFile
+                                 : arg == "--whitelist"
+                                     ? options.whitelistFile
+                                     : options.levelsDirectory;
+            value = args[++i];
         } else if (arg.starts_with("--")) {
             throw std::invalid_argument("unknown option " + std::string{arg});
         } else if (hasPort) {
@@ -187,6 +198,46 @@ void startConsole(const std::shared_ptr<server::AdminQueue> &queue)
     std::thread(runConsole, queue, prompt).detach();
 }
 
+/**
+ * @brief Finds the directory of the level files: the value of --levels, or
+ * the levels directory next to the executable.
+ * @param option The value of --levels, if any.
+ * @param args The command line, program name included.
+ * @return The directory.
+ **/
+std::filesystem::path levelsDirectory(const std::string &option,
+                                      std::span<char *> args)
+{
+    if (!option.empty()) {
+        return option;
+    }
+    const std::filesystem::path program =
+        args.empty() ? std::filesystem::path{} : std::filesystem::path{args[0]};
+    return program.parent_path() / "levels";
+}
+
+/**
+ * @brief Loads the levels and logs the files that could not be read.
+ * @param directory The directory of the level files.
+ * @return The levels, shared by every room; empty for endless mode only.
+ **/
+std::shared_ptr<const std::vector<server::Level>>
+loadLevels(const std::filesystem::path &directory)
+{
+    server::LevelSet set = server::loadLevels(directory);
+    for (const std::string &error : set.errors) {
+        BB_WARN("Level skipped: " << error);
+    }
+    if (set.levels.empty()) {
+        BB_WARN("No level in " << directory.string() << ": endless mode only");
+    } else {
+        BB_INFO(set.levels.size()
+                << " level(s) loaded from " << directory.string());
+    }
+    return std::make_shared<const std::vector<server::Level>>(
+        std::move(set.levels));
+}
+
 } // namespace
 
 int main(int argc, char *argv[])
@@ -203,11 +254,13 @@ int main(int argc, char *argv[])
     }
     const bool invincible = options.invincible;
     engine::Logger::instance().start(engine::LogLevel::Info);
+    const auto levels =
+        loadLevels(levelsDirectory(options.levelsDirectory, args));
 
     server::Rooms rooms(
-        [invincible](server::Rooms::Link &link) {
+        [invincible, levels](server::Rooms::Link &link) {
             return std::make_unique<server::Game>(link.inbound, link.outbound,
-                                                  invincible);
+                                                  invincible, levels);
         },
         {
             .maxInstances = rtype::protocol::MaxRooms,

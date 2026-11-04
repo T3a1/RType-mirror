@@ -9,6 +9,7 @@
 #define SERVER_GAME_HPP
 
 #include "EntityFactory.hpp"
+#include "Level.hpp"
 #include "common/components/Spawner.hpp"
 #include "common/systems/MovementSystem.hpp"
 #include "common/systems/PatternSystem.hpp"
@@ -16,6 +17,7 @@
 #include "engine/Clock.hpp"
 #include "engine/IInstance.hpp"
 #include "engine/Registry.hpp"
+#include "engine/Scheduler.hpp"
 #include "network/NetworkMessages.hpp"
 #include "systems/BoundarySystem.hpp"
 #include "systems/CollisionSystem.hpp"
@@ -23,6 +25,7 @@
 #include "systems/DeathSystem.hpp"
 #include "systems/EnemyAISystem.hpp"
 #include "systems/GameOverSystem.hpp"
+#include "systems/LevelSystem.hpp"
 #include "systems/LifetimeSystem.hpp"
 #include "systems/NetworkInputSystem.hpp"
 #include "systems/RoomPhaseSystem.hpp"
@@ -36,7 +39,9 @@
 #include <chrono>
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <thread>
+#include <vector>
 
 namespace server {
 
@@ -47,7 +52,8 @@ namespace server {
  *
  * The game owns the registry, the entity factory and the connected players.
  * It talks to the network thread only through the inbound and outbound
- * queues, and runs every system once per fixed 60 Hz tick.
+ * queues, and registers its systems in a scheduler that runs them once per
+ * fixed 60 Hz tick.
  **/
 class Game final : public engine::IInstance {
   public:
@@ -89,16 +95,20 @@ class Game final : public engine::IInstance {
      * @param outbound The messages to send to the clients.
      * @param invinciblePlayers Whether the players' ships take no damage,
      * for the network benchmark.
+     * @param levels The levels played one after the other before the
+     * random waves of the endless mode; none for endless mode only.
      **/
-    Game(Inbound &inbound, Outbound &outbound, bool invinciblePlayers = false);
+    Game(Inbound &inbound, Outbound &outbound, bool invinciblePlayers = false,
+         std::shared_ptr<const std::vector<Level>> levels = {});
 
   private:
-    void simulate(engine::Duration dt);
+    void registerSystems();
 
     Inbound &m_inbound;
     Outbound &m_outbound;
     bool m_invinciblePlayers;
     engine::Registry m_registry;
+    engine::Scheduler m_scheduler;
     EntityFactory m_factory;
     rtype::protocol::RoomStatus m_status = rtype::protocol::RoomStatus::Waiting;
     std::atomic<std::uint8_t> m_publicStatus{
@@ -106,6 +116,8 @@ class Game final : public engine::IInstance {
     Players m_players;
     bool m_gameOver = false;
     std::uint32_t m_tick = 1;
+    std::vector<InboundMessage> m_messages;
+    std::vector<Collision> m_collisions;
     static_assert(std::atomic<bool>::is_always_lock_free);
 };
 
