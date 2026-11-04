@@ -58,12 +58,10 @@ class NetworkClient {
      * socket. The first Connect is sent by the first update().
      * @param host The server's host name or IP address.
      * @param port The server's UDP port.
-     * @param room The room to join, or AnyRoom.
      * @throws engine::net::NetworkError If the host cannot be resolved or
      * the socket cannot be opened.
      **/
-    NetworkClient(const std::string &host, std::uint16_t port,
-                  std::uint32_t room = rtype::protocol::AnyRoom);
+    NetworkClient(const std::string &host, std::uint16_t port);
 
     /**
      * @brief Uses an already opened socket (a fake one in tests). The first
@@ -71,11 +69,9 @@ class NetworkClient {
      * @param socket The socket, polled without blocking.
      * @param server The server's endpoint; datagrams from elsewhere are
      * dropped.
-     * @param room The room to join, or AnyRoom.
      **/
     NetworkClient(std::unique_ptr<engine::net::IUdpSocket> socket,
-                  const engine::net::Endpoint &server,
-                  std::uint32_t room = rtype::protocol::AnyRoom);
+                  const engine::net::Endpoint &server);
 
     /**
      * @brief Sends Disconnect{Left} if connected, so the server frees the
@@ -115,10 +111,24 @@ class NetworkClient {
     [[nodiscard]] State state() const { return m_state; }
 
     /**
-     * @brief Returns the room to join, then the room joined once connected.
-     * @return The room, AnyRoom if none was chosen and not connected yet.
+     * @brief Asks to enter a room, answered by RoomJoined or RoomRefused.
+     * Does nothing until connected.
+     * @param room The room, or AnyRoom or NewRoom.
+     * @param now The current time.
      **/
-    [[nodiscard]] std::uint32_t room() const { return m_room; }
+    void joinRoom(std::uint32_t room, TimePoint now);
+
+    /**
+     * @brief Leaves the current room and goes back to the lobby.
+     * @param now The current time.
+     **/
+    void leaveRoom(TimePoint now);
+
+    /**
+     * @brief Asks to start the game of the current room.
+     * @param now The current time.
+     **/
+    void startGame(TimePoint now);
 
     /**
      * @brief Returns the bytes of every datagram received from the server
@@ -143,6 +153,7 @@ class NetworkClient {
     void handlePacket(const rtype::protocol::Packet &packet,
                       std::vector<rtype::protocol::Payload> &received);
     void send(const rtype::protocol::Payload &payload, TimePoint now);
+    void sendPacket(const rtype::protocol::Packet &packet, TimePoint now);
 
     std::unique_ptr<engine::net::IUdpSocket> m_socket;
     engine::net::Endpoint m_server;
@@ -153,7 +164,6 @@ class NetworkClient {
     TimePoint m_lastSent;
     TimePoint m_nextConnect;
     std::uint32_t m_inputSequence = 0;
-    std::uint32_t m_room = rtype::protocol::AnyRoom;
     std::uint64_t m_bytesReceived = 0;
     std::uint64_t m_bytesSent = 0;
 };

@@ -25,6 +25,7 @@
 #include "systems/GameOverSystem.hpp"
 #include "systems/LifetimeSystem.hpp"
 #include "systems/NetworkInputSystem.hpp"
+#include "systems/RoomPhaseSystem.hpp"
 #include "systems/SessionSystem.hpp"
 #include "systems/ShootSystem.hpp"
 #include "systems/SnapshotSystem.hpp"
@@ -67,7 +68,20 @@ class Game final : public engine::IInstance {
      * @brief Returns whether new players may join.
      * @return False once the game is over; safe from another thread.
      **/
-    [[nodiscard]] bool joinable() const override { return m_joinable; }
+    [[nodiscard]] bool joinable() const override
+    {
+        return status() !=
+               static_cast<std::uint8_t>(rtype::protocol::RoomStatus::Over);
+    }
+
+    /**
+     * @brief Returns where the game stands.
+     * @return A rtype::protocol::RoomStatus; safe from another thread.
+     **/
+    [[nodiscard]] std::uint8_t status() const override
+    {
+        return m_publicStatus;
+    }
 
     /**
      * @brief Creates a game connected to the network queues.
@@ -79,12 +93,16 @@ class Game final : public engine::IInstance {
     Game(Inbound &inbound, Outbound &outbound, bool invinciblePlayers = false);
 
   private:
+    void simulate(engine::Duration dt);
+
     Inbound &m_inbound;
     Outbound &m_outbound;
     bool m_invinciblePlayers;
     engine::Registry m_registry;
     EntityFactory m_factory;
-    std::atomic<bool> m_joinable = true;
+    rtype::protocol::RoomStatus m_status = rtype::protocol::RoomStatus::Waiting;
+    std::atomic<std::uint8_t> m_publicStatus{
+        static_cast<std::uint8_t>(rtype::protocol::RoomStatus::Waiting)};
     Players m_players;
     bool m_gameOver = false;
     std::uint32_t m_tick = 1;

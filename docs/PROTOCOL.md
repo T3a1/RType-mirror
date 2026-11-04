@@ -1,4 +1,4 @@
-# R-Type network protocol (version 4)
+# R-Type network protocol (version 5)
 
 This document specifies the binary protocol spoken between the R-Type server
 and its clients. It is precise enough to write a compatible client or server
@@ -73,7 +73,7 @@ Every packet starts with this 12-byte header:
 | Offset | Size | Field | Value |
 |-------:|-----:|-------|-------|
 | 0 | 2 | magic | `52 54` (ASCII `"RT"`). Recognizes our packets: a random datagram almost never starts with these bytes |
-| 2 | 1 | version | `4`. See [Versioning](#12-versioning) |
+| 2 | 1 | version | `5`. See [Versioning](#12-versioning) |
 | 3 | 1 | type | Which payload follows. See [Packet types](#5-packet-types) |
 | 4 | 1 | flags | Bit 0: **Reliable**. Bits 1 to 7 are reserved and **MUST** be 0 |
 | 5 | 1 | reserved | **MUST** be 0 |
@@ -94,7 +94,7 @@ The names are the `DecodeError` values of the reference implementation.
 | 1 | At most 1200 bytes | `TooLarge` |
 | 2 | At least 12 bytes | `TooShort` |
 | 3 | Magic is `"RT"` | `BadMagic` |
-| 4 | Version is 4 | `BadVersion` |
+| 4 | Version is 5 | `BadVersion` |
 | 5 | Type is listed in section 5 | `UnknownType` |
 | 6 | No reserved flag bit, and Reliable set exactly on reliable types | `BadFlags` |
 | 7 | Reserved byte is 0 | `BadReserved` |
@@ -108,8 +108,8 @@ Check 8 catches truncated and padded datagrams before any payload decoding.
 
 | Value | Name | Sent by | Delivery | Payload size (bytes) |
 |------:|------|---------|----------|---------------------:|
-| `0x01` | `Connect` | Client | Unreliable, retried | 4 |
-| `0x02` | `Accept` | Server | Reliable | 4 |
+| `0x01` | `Connect` | Client | Unreliable, retried | 0 |
+| `0x02` | `Accept` | Server | Reliable | 0 |
 | `0x03` | `Reject` | Server | Unreliable | 1 |
 | `0x04` | `Disconnect` | Both | Unreliable (best effort) | 1 |
 | `0x05` | `Ack` | Both | Unreliable | 0 |
@@ -117,9 +117,16 @@ Check 8 catches truncated and padded datagrams before any payload decoding.
 | `0x20` | `Snapshot` | Server | Unreliable | 8 + players block + 16 per entity |
 | `0x21` | `Welcome` | Server | Reliable | 9 |
 | `0x22` | `GameEvent` | Server | Reliable | 1 to 5 |
+| `0x30` | `RoomList` | Server | Unreliable, repeated | 1 + 6 per room |
+| `0x31` | `JoinRoom` | Client | Reliable | 4 |
+| `0x32` | `LeaveRoom` | Client | Reliable | 0 |
+| `0x33` | `StartGame` | Client | Reliable | 0 |
+| `0x34` | `RoomJoined` | Server | Reliable | 4 |
+| `0x35` | `RoomRefused` | Server | Reliable | 0 |
 
 Values are grouped by range: `0x0_` for the connection (both directions),
-`0x1_` from client to server, `0x2_` from server to client. A packet sent by
+`0x1_` from client to server, `0x2_` from server to client, `0x3_` for the
+rooms (both directions). A packet sent by
 the wrong side (for example a `Snapshot` sent by a client) **MUST** be dropped.
 
 ## 6. Payloads
@@ -127,29 +134,45 @@ the wrong side (for example a `Snapshot` sent by a client) **MUST** be dropped.
 Offsets in this section are relative to the start of the payload, that is
 byte 12 of the datagram.
 
-### `Connect` (0x01), `Accept` (0x02)
+### `Connect` (0x01), `Accept` (0x02), `Ack` (0x05)
 
-`Connect` asks to join a room (the protocol version is in the header), and
-`Accept` answers it. A server runs several independent games, one per room, and
-everything a client then exchanges only concerns its room.
+No payload. `Connect` asks to enter the lobby (the protocol version is in the
+header). `Accept` answers it. `Ack` carries only the header's `ack` field, for
+a peer that has nothing else to send.
+
+### `RoomList` (0x30)
+
+The rooms of the server, sent to the clients in the lobby every 500 ms. Each
+list replaces the previous one, so a lost one does not matter.
+
+| Size | Field | Values |
+|-----:|-------|--------|
+| 1 | roomCount | `0` to `16` |
+| 4 | room | `u32`, at least `1`, repeated `roomCount` times with the next two fields |
+| 1 | players | `0` to `4` |
+| 1 | status | `0` Waiting, `1` Playing, `2` Over (nobody can join) |
+
+### `JoinRoom` (0x31), `RoomJoined` (0x34)
+
+`JoinRoom` asks to enter a room (client, reliable), and `RoomJoined` answers it
+(server, reliable). A client already in a room is ignored.
 
 | Offset | Size | Field | Values |
 |-------:|-----:|-------|--------|
-| 0 | 4 | room | `u32`. In `Connect`: the room to join, created if it does not exist, or `0` for the first room with a free slot (a new one if none). In `Accept`: the room joined |
+| 0 | 4 | room | `u32`. In `JoinRoom`: the room, created if it does not exist, `0` for the first room with a free slot (a new one if none), or `0xFFFFFFFF` for a new room. In `RoomJoined`: the room entered, at least `1` |
 
-A room is destroyed when its last player leaves, and its number can then be
-used again. A server runs at most 16 rooms.
+### `LeaveRoom` (0x32), `StartGame` (0x33), `RoomRefused` (0x35)
 
-### `Ack` (0x05)
-
-No payload. It carries only the header's `ack` field, for a peer that has
-nothing else to send.
+No payload, all reliable. `LeaveRoom` (client) goes back to the lobby.
+`StartGame` (client) starts the game of the room, and is ignored if it already
+started. `RoomRefused` (server) answers a `JoinRoom` for a full room or a room
+whose game is over, or when 16 rooms already run.
 
 ### `Reject` (0x03)
 
 | Offset | Size | Field | Values |
 |-------:|-----:|-------|--------|
-| 0 | 1 | reason | `0` ServerFull (the room has 4 players or its game is over, or the server runs 16 rooms), `1` VersionMismatch |
+| 0 | 1 | reason | `0` ServerFull (the server has 64 clients, what its 16 rooms can hold), `1` VersionMismatch |
 
 ### `Disconnect` (0x04)
 
@@ -254,6 +277,7 @@ A one-off fact. The body depends on the kind:
 | 2 | PlayerLeft | slot (`u8`, 1 to 4) | A player left, timed out or was kicked |
 | 3 | PlayerHit | slot (`u8`, 1 to 4) | A player was hit (sound, screen flash) |
 | 4 | GameOver | none | The ship of every connected player is destroyed: the game is over. Snapshots keep carrying the final scores |
+| 5 | GameStarted | none | The game of the room started |
 
 ## 7. Reliability
 
@@ -334,14 +358,23 @@ sequenceDiagram
     participant S as Server
 
     C->>S: Connect (every 500 ms until answered)
-    alt 4 players already
+    alt 64 clients already
         S-->>C: Reject{ServerFull}
     else
-        S-->>C: Accept (reliable 1)
-        S-->>C: Welcome{slot, shipId, tick} (reliable 2)
-        S-->>C: GameEvent{PlayerJoined} to the other clients
-        C->>S: Input... (ack = 2)
-        S-->>C: Snapshot... (20 per second)
+        S-->>C: Accept (reliable)
+        S-->>C: RoomList (every 500 ms while in the lobby)
+        C->>S: JoinRoom{room} (reliable)
+        alt room full, game over or 16 rooms already
+            S-->>C: RoomRefused (reliable)
+        else
+            S-->>C: RoomJoined{room} (reliable)
+            S-->>C: Welcome{slot, shipId, tick} (reliable)
+            S-->>C: GameEvent{PlayerJoined} to the others of the room
+            S-->>C: Snapshot... (20 per second)
+            C->>S: StartGame (reliable), from any player of the room
+            S-->>C: GameEvent{GameStarted} to the whole room
+            C->>S: Input...
+        end
     end
 ```
 
@@ -349,15 +382,28 @@ In words:
 
 1. The client sends `Connect` and repeats it every **500 ms** until it
    receives `Accept` or `Reject`.
-2. The server accepts at most **4** clients. A fifth one receives
+2. The server keeps at most **64** clients. One more receives
    `Reject{ServerFull}` and no session is created for it.
 3. Otherwise the server creates a session for the client's address and port
    and answers `Accept`. A `Connect` from an address that already has a
    session is ignored: the reliability layer resends the pending `Accept`.
-4. The server creates the player's ship and sends `Welcome` to the new player
-   and `GameEvent{PlayerJoined}` to the others.
-5. From then on, the client sends `Input` continuously and receives
-   snapshots and events.
+4. The client is now in the **lobby**: it receives `RoomList` every 500 ms and
+   after leaving a room. Its `Input` packets only keep the connection alive.
+5. The client sends `JoinRoom`. The server answers `RoomJoined`, or
+   `RoomRefused` and the client stays in the lobby. It then creates the
+   player's ship and sends `Welcome` to the new player and
+   `GameEvent{PlayerJoined}` to the others of the room.
+6. A new game **waits**: nothing moves, and only the players and their ships
+   are sent. Any player starts it with `StartGame`, and the whole room receives
+   `GameEvent{GameStarted}`. A player who enters a running game receives it
+   alone. The client then sends its held actions in `Input`.
+7. `LeaveRoom` brings the client back to the lobby at any time, without a new
+   handshake. A client that has left **MUST** ignore the snapshots still on
+   their way.
+
+Everything a client exchanges in a room only concerns that room. A room is
+created by its first player and destroyed when its last player leaves, and its
+number can then be used again. A server runs at most **16** rooms.
 
 The server **MUST** drop every packet other than `Connect` from an address
 that has no session. A client **MUST** drop datagrams that do not come from
@@ -513,3 +559,4 @@ B0 04 00 00                           tick 1200
 | 2 | Snapshot players block: `lastInput` added (9 bytes per player). Entity flags: Owner bits 2 to 4. Entity types `EnemySmall`, `EnemyMedium` and `EnemyLarge`. |
 | 3 | Snapshot players block: `shipId` added (13 bytes per player). |
 | 4 | `Connect` and `Accept` carry a room number (4 bytes). |
+| 5 | Lobby: `Connect` and `Accept` are empty again; new `RoomList`, `JoinRoom`, `LeaveRoom`, `StartGame`, `RoomJoined` and `RoomRefused`; new event `GameStarted`. |

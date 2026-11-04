@@ -32,8 +32,8 @@ using TimePoint = rtype::protocol::ReliableChannel::TimePoint;
  * @struct Session
  * @brief The network thread's state for one connected client.
  * @param id The ClientId shared with the game thread.
- * @param room The room of the client.
- * @param link The queues of that room.
+ * @param room The room of the client, AnyInstance in the lobby.
+ * @param link The queues of that room, null in the lobby.
  * @param channel The reliability state of the connection.
  * @param lastHeard When the last valid packet was received, for the timeout.
  * @param kicked Set when the client must be disconnected at the next
@@ -41,7 +41,7 @@ using TimePoint = rtype::protocol::ReliableChannel::TimePoint;
  **/
 struct Session {
     std::uint32_t id{};
-    engine::InstanceId room{};
+    engine::InstanceId room = engine::AnyInstance;
     std::shared_ptr<Rooms::Link> link;
     rtype::protocol::ReliableChannel channel;
     TimePoint lastHeard;
@@ -53,9 +53,9 @@ using SessionIterator = std::map<engine::net::Endpoint, Session>::iterator;
 /**
  * @class NetworkServer
  * @brief The server's network thread: the UDP socket, the sessions, the
- * reliability and the timeouts. It also manages the rooms: each session
- * belongs to one room, created by its first client and destroyed after the
- * last one.
+ * reliability and the timeouts. It also manages the lobby and the rooms: a
+ * new session is in the lobby, and receives the list of the rooms until it
+ * enters one, created by its first client and destroyed after the last one.
  *
  * It talks to each game thread only through the queues of its room. Everything
  * else, Rooms included, is touched by the network thread alone once it runs,
@@ -104,11 +104,16 @@ class NetworkServer {
     std::array<std::uint8_t, rtype::protocol::MaxPacketSize> m_buffer{};
     std::map<engine::net::Endpoint, Session> m_sessions;
     std::uint32_t m_newCliendId = 1;
+    TimePoint m_nextRoomList;
 
     void run();
     void handleDatagram(const engine::net::Datagram &datagram);
-    void handleNewPeer(const engine::net::Endpoint &endpoint,
-                       engine::InstanceId room, TimePoint now);
+    void handleNewPeer(const engine::net::Endpoint &endpoint, TimePoint now);
+    void joinRoom(SessionIterator it, engine::InstanceId room, TimePoint now);
+    void leaveRoom(SessionIterator it,
+                   rtype::protocol::DisconnectReason reason);
+    void sendRoomList(SessionIterator it, TimePoint now);
+    void sendRoomLists(TimePoint now);
     void handleSessionPacket(SessionIterator it,
                              const rtype::protocol::Packet &packet,
                              TimePoint now);

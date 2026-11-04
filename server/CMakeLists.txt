@@ -19,7 +19,10 @@ set(SOURCE_FILES
 )
 
 # The end of the game is a library so the tests can run it without the game loop.
-add_library(r-type_server_game_over STATIC src/systems/GameOverSystem.cpp)
+add_library(r-type_server_game_over STATIC
+    src/systems/GameOverSystem.cpp
+    src/systems/RoomPhaseSystem.cpp
+)
 
 target_include_directories(r-type_server_game_over
     PUBLIC include

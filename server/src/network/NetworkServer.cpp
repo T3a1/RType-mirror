@@ -13,6 +13,7 @@ namespace server {
 namespace {
 
 constexpr std::chrono::milliseconds UpdateInterval{10};
+constexpr std::chrono::milliseconds RoomListInterval{500};
 
 } // namespace
 
@@ -80,6 +81,32 @@ void NetworkServer::update(TimePoint now)
     for (const engine::InstanceId room : m_rooms.reap()) {
         closeFailedRoom(room);
     }
+    if (now >= m_nextRoomList) {
+        sendRoomLists(now);
+        m_nextRoomList = now + RoomListInterval;
+    }
+}
+
+void NetworkServer::sendRoomList(SessionIterator it, TimePoint now)
+{
+    rtype::protocol::RoomList list;
+    for (const engine::InstanceInfo &info : m_rooms.list()) {
+        list.rooms.push_back({
+            .room = info.id,
+            .players = static_cast<std::uint8_t>(info.members),
+            .status = static_cast<rtype::protocol::RoomStatus>(info.status),
+        });
+    }
+    send(it, list, now);
+}
+
+void NetworkServer::sendRoomLists(TimePoint now)
+{
+    for (auto it = m_sessions.begin(); it != m_sessions.end(); ++it) {
+        if (it->second.link == nullptr) {
+            sendRoomList(it, now);
+        }
+    }
 }
 
 void NetworkServer::closeFailedRoom(engine::InstanceId room)
@@ -119,9 +146,8 @@ void NetworkServer::handleDatagram(const engine::net::Datagram &datagram)
     }
     auto const it = m_sessions.find(datagram.sender);
     if (it == m_sessions.end()) {
-        if (const auto *connect =
-                std::get_if<rtype::protocol::Connect>(&packet->payload)) {
-            handleNewPeer(datagram.sender, connect->room, now);
+        if (std::holds_alternative<rtype::protocol::Connect>(packet->payload)) {
+            handleNewPeer(datagram.sender, now);
         }
         return;
     }
@@ -132,12 +158,7 @@ void NetworkServer::removeSession(SessionIterator it,
                                   rtype::protocol::DisconnectReason reason)
 {
     BB_INFO("Client " << it->second.id << " disconnected");
-    pushInbound(it->second, {
-                                .clientId = it->second.id,
-                                .kind = InboundKind::Disconnected,
-                                .reason = reason,
-                            });
-    m_rooms.leave(it->second.room);
+    leaveRoom(it, reason);
     m_sessions.erase(it);
 }
 
@@ -179,19 +200,59 @@ void NetworkServer::sendPacket(const engine::net::Endpoint &endpoint,
     }
 }
 
+void NetworkServer::leaveRoom(SessionIterator it,
+                              rtype::protocol::DisconnectReason reason)
+{
+    if (it->second.link == nullptr) {
+        return;
+    }
+    pushInbound(it->second, {
+                                .clientId = it->second.id,
+                                .kind = InboundKind::Disconnected,
+                                .reason = reason,
+                            });
+    m_rooms.leave(it->second.room);
+    it->second.room = engine::AnyInstance;
+    it->second.link = nullptr;
+}
+
+void NetworkServer::joinRoom(SessionIterator it, engine::InstanceId room,
+                             TimePoint now)
+{
+    if (it->second.link != nullptr) {
+        return;
+    }
+    const auto membership = room == rtype::protocol::NewRoom
+                                ? m_rooms.joinNew()
+                                : m_rooms.join(room);
+    if (!membership) {
+        BB_DEBUG("No room for client " << it->second.id);
+        send(it, rtype::protocol::RoomRefused{}, now);
+        return;
+    }
+    it->second.room = membership->id;
+    it->second.link = membership->link;
+    BB_INFO("Client " << it->second.id << " joined room " << membership->id);
+    send(it, rtype::protocol::RoomJoined{.room = membership->id}, now);
+    pushInbound(it->second,
+                {.clientId = it->second.id, .kind = InboundKind::Connected});
+}
+
 void NetworkServer::pushInbound(const Session &session, InboundMessage message)
 {
+    if (session.link == nullptr) {
+        return;
+    }
     if (!session.link->inbound.push(message)) {
         BB_ERROR("Could not push event to inbound queue");
     }
 }
 
 void NetworkServer::handleNewPeer(const engine::net::Endpoint &endpoint,
-                                  engine::InstanceId room, TimePoint now)
+                                  TimePoint now)
 {
-    const auto membership = m_rooms.join(room);
-    if (!membership) {
-        BB_DEBUG("No room for a new client");
+    if (m_sessions.size() >= MaxSessions) {
+        BB_DEBUG("Too many clients");
         sendPacket(
             endpoint,
             rtype::protocol::Packet{
@@ -202,18 +263,11 @@ void NetworkServer::handleNewPeer(const engine::net::Endpoint &endpoint,
             });
         return;
     }
-    const auto [it, inserted] =
-        m_sessions.try_emplace(endpoint, Session{
-                                             .id = m_newCliendId++,
-                                             .room = membership->id,
-                                             .link = membership->link,
-                                             .lastHeard = now,
-                                         });
-    BB_INFO("Registered new client " << it->second.id << " in room "
-                                     << membership->id);
-    send(it, rtype::protocol::Accept{.room = membership->id}, now);
-    pushInbound(it->second,
-                {.clientId = it->second.id, .kind = InboundKind::Connected});
+    const auto [it, inserted] = m_sessions.try_emplace(
+        endpoint, Session{.id = m_newCliendId++, .lastHeard = now});
+    BB_INFO("Registered new client " << it->second.id);
+    send(it, rtype::protocol::Accept{}, now);
+    sendRoomList(it, now);
 }
 
 void NetworkServer::handleSessionPacket(SessionIterator it,
@@ -232,6 +286,17 @@ void NetworkServer::handleSessionPacket(SessionIterator it,
                                     .sequence = input->sequence,
                                     .actions = input->actions,
                                 });
+    } else if (const auto *join =
+                   std::get_if<rtype::protocol::JoinRoom>(&packet.payload)) {
+        joinRoom(it, join->room, now);
+    } else if (std::holds_alternative<rtype::protocol::LeaveRoom>(
+                   packet.payload)) {
+        leaveRoom(it, rtype::protocol::DisconnectReason::Left);
+        sendRoomList(it, now);
+    } else if (std::holds_alternative<rtype::protocol::StartGame>(
+                   packet.payload)) {
+        pushInbound(it->second,
+                    {.clientId = it->second.id, .kind = InboundKind::Start});
     } else if (std::holds_alternative<rtype::protocol::Disconnect>(
                    packet.payload)) {
         removeSession(it, rtype::protocol::DisconnectReason::Left);

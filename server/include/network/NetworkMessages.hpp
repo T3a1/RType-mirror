@@ -16,9 +16,10 @@
 namespace server {
 
 /**
- * How many games a server runs at the same time.
+ * How many clients a server keeps, in the lobby or in a room.
  **/
-inline constexpr std::size_t MaxRooms = 16;
+inline constexpr std::size_t MaxSessions =
+    std::size_t{rtype::protocol::MaxRooms} * rtype::protocol::MaxPlayers;
 
 /**
  * @enum Recipient
@@ -32,11 +33,13 @@ enum class Recipient : std::uint8_t { All, AllExcept, One };
 /**
  * @enum InboundKind
  * @brief What an inbound message tells the game thread.
- * @param Connected A client finished the handshake.
- * @param Disconnected A client left, timed out or was kicked.
+ * @param Connected A client entered the room.
+ * @param Disconnected A client left the room or the server, timed out or was
+ * kicked.
  * @param Input A newer input from a client.
+ * @param Start A client asks to start the game.
  **/
-enum class InboundKind : std::uint8_t { Connected, Disconnected, Input };
+enum class InboundKind : std::uint8_t { Connected, Disconnected, Input, Start };
 
 /**
  * @struct InboundMessage

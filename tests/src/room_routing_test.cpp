@@ -30,6 +30,8 @@ const Endpoint ServerEndpoint{.address = 0x0A000001, .port = 4242};
 // A game that sends a PlayerHit event to its whole room for each input, so
 // that a test sees who receives what. It fails on the action `FailAction`.
 constexpr std::uint8_t FailAction = 0x10;
+// The slot of the event it sends when asked to start.
+constexpr std::uint8_t StartedSlot = 4;
 
 class EchoGame final : public engine::IInstance {
   public:
@@ -38,24 +40,32 @@ class EchoGame final : public engine::IInstance {
     void tick(engine::Duration /*dt*/) override
     {
         for (const auto &message : m_link.inbound.drain()) {
+            if (message.kind == server::InboundKind::Start) {
+                send(StartedSlot);
+            }
             if (message.kind != server::InboundKind::Input) {
                 continue;
             }
             if (message.actions == FailAction) {
                 throw std::runtime_error("test failure");
             }
-            m_link.outbound.push(server::OutboundMessage{
-                .to = server::Recipient::All,
-                .payload =
-                    GameEvent{
-                        .kind = GameEventKind::PlayerHit,
-                        .slot = message.actions,
-                    },
-            });
+            send(message.actions);
         }
     }
 
   private:
+    void send(std::uint8_t slot)
+    {
+        m_link.outbound.push(server::OutboundMessage{
+            .to = server::Recipient::All,
+            .payload =
+                GameEvent{
+                    .kind = GameEventKind::PlayerHit,
+                    .slot = slot,
+                },
+        });
+    }
+
     server::Rooms::Link &m_link;
 };
 
@@ -81,13 +91,21 @@ class RoomRoutingTest : public ::testing::Test {
                 Side::Server};
     }
 
-    // Connects a peer to a room and returns the room it got.
+    // Connects a peer and puts it in a room; returns the room it got.
     static std::uint32_t join(FakePeer &client, std::uint32_t room)
     {
-        client.send(Connect{.room = room});
-        const auto accept = client.waitFor<Accept>();
-        EXPECT_TRUE(accept.has_value());
-        return accept.value_or(Accept{}).room;
+        client.send(Connect{});
+        EXPECT_TRUE(client.waitFor<Accept>().has_value());
+        return enter(client, room);
+    }
+
+    // Puts a peer of the lobby in a room; returns the room it got.
+    static std::uint32_t enter(FakePeer &client, std::uint32_t room)
+    {
+        client.send(JoinRoom{.room = room});
+        const auto joined = client.waitFor<RoomJoined>();
+        EXPECT_TRUE(joined.has_value());
+        return joined.value_or(RoomJoined{.room = AnyRoom}).room;
     }
 
     // The slot of the next event a peer receives, which must come.
@@ -98,26 +116,50 @@ class RoomRoutingTest : public ::testing::Test {
         return event.value_or(GameEvent{}).slot;
     }
 
-    // The reason of the next Reject a peer receives, which must come.
-    static RejectReason nextRejectReason(FakePeer &client)
-    {
-        const auto reject = client.waitFor<Reject>();
-        EXPECT_TRUE(reject.has_value());
-        return reject.value_or(Reject{.reason = RejectReason::VersionMismatch})
-            .reason;
-    }
-
   protected:
     void SetUp() override { m_server.start(); }
 };
 
 } // namespace
 
-TEST_F(RoomRoutingTest, AcceptNamesTheRequestedRoom)
+TEST_F(RoomRoutingTest, ANewClientIsInTheLobby)
+{
+    FakePeer client = peer(1000);
+    client.send(Connect{});
+
+    EXPECT_TRUE(client.waitFor<Accept>().has_value());
+    EXPECT_EQ(client.waitFor<RoomList>(), RoomList{});
+    EXPECT_EQ(m_created, 0);
+}
+
+TEST_F(RoomRoutingTest, TheLobbyListsTheRooms)
+{
+    FakePeer player = peer(1000);
+    FakePeer watcher = peer(1001);
+    join(player, 5);
+    watcher.send(Connect{});
+
+    const RoomList expected{.rooms = {{.room = 5, .players = 1}}};
+    EXPECT_TRUE(tests::eventually(
+        [&] { return watcher.waitFor<RoomList>() == expected; }));
+}
+
+TEST_F(RoomRoutingTest, RoomJoinedNamesTheRequestedRoom)
 {
     FakePeer client = peer(1000);
 
     EXPECT_EQ(join(client, 5), 5U);
+}
+
+TEST_F(RoomRoutingTest, NewRoomAlwaysOpensAnother)
+{
+    FakePeer first = peer(1000);
+    FakePeer second = peer(1001);
+
+    const std::uint32_t room = join(first, NewRoom);
+
+    EXPECT_NE(room, AnyRoom);
+    EXPECT_NE(join(second, NewRoom), room);
 }
 
 TEST_F(RoomRoutingTest, AnyRoomFillsARoomThenOpensAnother)
@@ -150,7 +192,7 @@ TEST_F(RoomRoutingTest, ARoomOnlyTalksToItsPlayers)
                      .has_value());
 }
 
-TEST_F(RoomRoutingTest, RejectsAFullRoomAndTooManyRooms)
+TEST_F(RoomRoutingTest, RefusesAFullRoomAndTooManyRooms)
 {
     FakePeer first = peer(1000);
     FakePeer second = peer(1001);
@@ -159,26 +201,47 @@ TEST_F(RoomRoutingTest, RejectsAFullRoomAndTooManyRooms)
     join(first, 1);
     join(second, 1);
     join(third, 2);
+    fourth.send(Connect{});
+    EXPECT_TRUE(fourth.waitFor<Accept>().has_value());
 
-    fourth.send(Connect{.room = 1});
-    EXPECT_EQ(nextRejectReason(fourth), RejectReason::ServerFull);
-    fourth.send(Connect{.room = 3});
-    EXPECT_EQ(nextRejectReason(fourth), RejectReason::ServerFull);
+    fourth.send(JoinRoom{.room = 1});
+    EXPECT_TRUE(fourth.waitFor<RoomRefused>().has_value());
+    fourth.send(JoinRoom{.room = 3});
+    EXPECT_TRUE(fourth.waitFor<RoomRefused>().has_value());
 }
 
-TEST_F(RoomRoutingTest, ARoomIsDestroyedAfterItsLastPlayer)
+TEST_F(RoomRoutingTest, LeavingGoesBackToTheLobbyAndDestroysAnEmptyRoom)
 {
     FakePeer client = peer(1000);
     join(client, 1);
 
-    client.send(Disconnect{.reason = DisconnectReason::Left});
-    FakePeer next = peer(1001);
-    EXPECT_TRUE(tests::eventually([&] {
-        next.send(Connect{.room = 1});
-        return next.waitFor<Accept>(std::chrono::milliseconds(10)).has_value();
-    }));
+    client.send(LeaveRoom{});
 
+    EXPECT_EQ(client.waitFor<RoomList>(), RoomList{});
+    EXPECT_EQ(enter(client, 1), 1U);
     EXPECT_EQ(m_created, 2);
+}
+
+TEST_F(RoomRoutingTest, InputsAreIgnoredInTheLobby)
+{
+    FakePeer client = peer(1000);
+    client.send(Connect{});
+    EXPECT_TRUE(client.waitFor<Accept>().has_value());
+
+    client.send(Input{.sequence = 1, .actions = 3});
+
+    EXPECT_FALSE(
+        client.waitFor<GameEvent>(std::chrono::milliseconds(100)).has_value());
+}
+
+TEST_F(RoomRoutingTest, StartReachesTheGameOfTheRoom)
+{
+    FakePeer client = peer(1000);
+    join(client, 1);
+
+    client.send(StartGame{});
+
+    EXPECT_EQ(nextEventSlot(client), StartedSlot);
 }
 
 TEST_F(RoomRoutingTest, AFailingRoomOnlyDisconnectsItsPlayers)

@@ -27,6 +27,10 @@ namespace {
 constexpr const char *backgroundPath = "assets/bg.jpg";
 constexpr float backgroundSpeed = 120.0F;
 
+// Space also fires: it only leaves the game over screen after this delay, so
+// that a player still firing does not leave it by accident.
+constexpr float GameOverKeyDelay = 1.5F;
+
 constexpr float statusX = 20.0F;
 constexpr float statusBottomMargin = 50.0F;
 constexpr int statusFontSize = 30;
@@ -35,12 +39,15 @@ constexpr int statusFontSize = 30;
 
 Game::Game(const std::string &host, std::uint16_t port,
            const GameOptions &options)
-    : m_network(host, port, options.room), m_graphics(gfx::createGraphics({
-                                               .width = windowWidth,
-                                               .height = windowHeight,
-                                               .title = "R-Type",
-                                           })),
-      m_sheets(*m_graphics)
+    : m_network(host, port), m_graphics(gfx::createGraphics({
+                                 .width = windowWidth,
+                                 .height = windowHeight,
+                                 .title = "R-Type",
+                             })),
+      m_sheets(*m_graphics),
+      m_autoJoin(options.bench && !options.room
+                     ? std::optional<std::uint32_t>{rtype::protocol::AnyRoom}
+                     : options.room)
 {
     m_sync.interpolate = options.interpolate;
     m_sync.predict = options.predict;
@@ -75,14 +82,30 @@ void Game::update(engine::Duration dt)
 {
     backgroundScrollSystem(m_registry, dt);
     const auto now = std::chrono::steady_clock::now();
-    networkSyncSystem(m_registry, m_network.update(now), m_sync, m_sheets);
-    smoothingSystem(m_registry, m_sync, dt, m_sheets);
-    const std::uint8_t actions =
-        m_bench ? m_bench->input(now) : inputSystem(*m_graphics);
+    const auto payloads = m_network.update(now);
+    handleLobbyMessages(payloads);
+    if (m_autoJoin && m_network.state() == NetworkClient::State::Connected) {
+        applyLobbyChoice(m_autoJoin);
+        m_autoJoin.reset();
+    }
+    const bool inRoom = m_lobby.screen == LobbyState::Screen::InRoom;
+    if (inRoom) {
+        networkSyncSystem(m_registry, payloads, m_sync, m_sheets);
+        smoothingSystem(m_registry, m_sync, dt, m_sheets);
+    }
+    std::uint8_t actions = 0;
+    if (inRoom && m_sync.started) {
+        actions = m_bench ? m_bench->input(now) : inputSystem(*m_graphics);
+    }
     const std::uint32_t sequence = m_network.sendInput(actions, now);
-    predictionSystem(m_registry, m_sync, sequence, actions, dt);
-    if (m_bench) {
+    if (inRoom) {
+        predictionSystem(m_registry, m_sync, sequence, actions, dt);
+    }
+    if (m_bench && inRoom && m_sync.started) {
         m_bench->record(m_registry, m_sync, m_network, dt, now);
+    }
+    if (m_sync.gameOver) {
+        m_gameOverTime += dt.count();
     }
     shipTiltSystem(m_registry, dt);
     animationSystem(m_registry, dt);
@@ -90,24 +113,94 @@ void Game::update(engine::Duration dt)
     m_registry.flush();
 }
 
-void Game::render()
+void Game::handleLobbyMessages(const std::vector<rtype::protocol::Payload> &all)
+{
+    for (const auto &payload : all) {
+        if (const auto *list =
+                std::get_if<rtype::protocol::RoomList>(&payload)) {
+            m_lobby.rooms = list->rooms;
+        } else if (const auto *joined =
+                       std::get_if<rtype::protocol::RoomJoined>(&payload)) {
+            m_lobby.screen = LobbyState::Screen::InRoom;
+            m_lobby.room = joined->room;
+            if (m_bench) {
+                m_network.startGame(std::chrono::steady_clock::now());
+            }
+        } else if (std::holds_alternative<rtype::protocol::RoomRefused>(
+                       payload)) {
+            m_lobby.screen = LobbyState::Screen::Lobby;
+            m_lobby.refused = true;
+        }
+    }
+}
+
+void Game::applyLobbyChoice(std::optional<std::uint32_t> room)
+{
+    if (room) {
+        m_lobby.screen = LobbyState::Screen::Joining;
+        m_lobby.refused = false;
+        m_network.joinRoom(*room, std::chrono::steady_clock::now());
+    }
+}
+
+void Game::leaveRoom()
+{
+    m_network.leaveRoom(std::chrono::steady_clock::now());
+    const bool interpolate = m_sync.interpolate;
+    const bool predict = m_sync.predict;
+    m_sync = SyncState{};
+    m_sync.interpolate = interpolate;
+    m_sync.predict = predict;
+    m_registry = engine::Registry{};
+    createBackground();
+    m_lobby.screen = LobbyState::Screen::Lobby;
+    m_lobby.selected = 0;
+    m_gameOverTime = 0.0F;
+}
+
+void Game::renderWorld()
 {
     // The world is in playfield units: scale it to fit the window.
     const engine::Vec2f screen = m_graphics->screenSize();
     const float zoom = std::min(screen.x / rtype::PlayfieldWidth,
                                 screen.y / rtype::PlayfieldHeight);
-
-    m_graphics->beginFrame(gfx::colors::Black);
-    backgroundRenderSystem(m_registry, *m_graphics);
     m_graphics->beginWorld(zoom);
     renderSystem(m_registry, *m_graphics);
     playerLabelSystem(m_registry, m_sync, *m_graphics);
     m_graphics->endWorld();
-    hudSystem(m_sync, *m_graphics);
-    drawStatus();
-    if (m_sync.gameOver && gameOverScreen(m_sync, *m_graphics)) {
-        m_quitRequested = true;
+}
+
+void Game::render()
+{
+    const MenuKeys keys = m_menuInput.update(*m_graphics);
+
+    m_graphics->beginFrame(gfx::colors::Black);
+    backgroundRenderSystem(m_registry, *m_graphics);
+    if (m_lobby.screen != LobbyState::Screen::InRoom) {
+        if (m_network.state() == NetworkClient::State::Connected) {
+            applyLobbyChoice(lobbyScreen(m_lobby, *m_graphics, keys));
+        }
+    } else {
+        renderWorld();
+        if (!m_sync.started) {
+            const WaitingChoice choice =
+                waitingRoomScreen(m_lobby, m_sync, *m_graphics, keys);
+            if (choice == WaitingChoice::Start) {
+                m_network.startGame(std::chrono::steady_clock::now());
+            } else if (choice == WaitingChoice::Leave) {
+                leaveRoom();
+            }
+        } else {
+            hudSystem(m_sync, *m_graphics);
+            const bool keyboard =
+                keys.confirm && m_gameOverTime >= GameOverKeyDelay;
+            if (m_sync.gameOver &&
+                gameOverScreen(m_sync, *m_graphics, keyboard)) {
+                leaveRoom();
+            }
+        }
     }
+    drawStatus();
     m_graphics->endFrame();
 }
 
@@ -115,7 +208,11 @@ void Game::spawnBackground()
 {
     m_backgroundTexture =
         m_graphics->loadTexture(backgroundPath, gfx::TextureFilter::Smooth);
+    createBackground();
+}
 
+void Game::createBackground()
+{
     const engine::Entity background = m_registry.create();
     m_registry.emplace<Background>(
         background,

@@ -670,16 +670,20 @@ The client uses the same pattern with roles reversed:
 
 ### 6.10 Parallel games
 
-One server process runs up to 16 independent games, one per **room**. The
-mechanism is in the engine and knows nothing about R-Type:
+One server process runs up to 16 independent games, one per **room**. A client
+first arrives in a **lobby**, without any room: `NetworkServer` sends it the
+list of the rooms, and it enters one with `JoinRoom`. A new game waits until a
+player starts it (`RoomPhaseSystem`), and a client can go back to the lobby at
+any time without a new handshake. The mechanism is in the engine and knows
+nothing about R-Type:
 
 | Part | Where | Job |
 |------|-------|-----|
-| `engine::IInstance` | Engine, implemented by the game | One run of a game: `tick()`, `onStop()`, `joinable()` |
+| `engine::IInstance` | Engine, implemented by the game | One run of a game: `tick()`, `onStop()`, `joinable()`, `status()` |
 | `engine::InstanceRunner` | Engine | The thread of one instance: fixed time step, catches its exceptions |
-| `engine::InstanceManager<In, Out>` | Engine | Creates an instance for its first member and stops it after the last one, gives each one its own queues, finds an instance with room |
+| `engine::InstanceManager<In, Out>` | Engine | Creates an instance for its first member and stops it after the last one, gives each one its own queues, finds an instance with room, lists them |
 | `server::Game`, `server::Rooms` | Server | The R-Type game as an instance, with the R-Type messages and limits |
-| `NetworkServer`, `Connect::room` | Server, protocol | Names the room of each session and routes the messages |
+| `NetworkServer`, room messages | Server, protocol | The lobby, the room of each session and the routing of the messages |
 
 Another game reuses it by implementing `IInstance` and choosing its message
 types and limits:
@@ -764,7 +768,5 @@ const auto membership = instances.join(engine::AnyInstance);
   tuned once the prototype runs. The same goes for the network values of
   section 6: 5 s timeout, 100 ms resend interval, 100 ms interpolation delay,
   1200-byte datagrams, queue capacities.
-- **Lobby and game start**: a game starts as soon as a player joins its room.
-  A menu to browse the rooms or a "ready" step are not designed yet.
 - **Windows support** (issue #6): the design above has no Linux-only parts
   except the sockets, which are hidden behind `engine::net::IUdpSocket`.

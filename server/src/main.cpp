@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
                                                   invincible);
         },
         {
-            .maxInstances = server::MaxRooms,
+            .maxInstances = rtype::protocol::MaxRooms,
             .maxMembers = rtype::protocol::MaxPlayers,
         },
         server::Game::TickStep);

@@ -14,12 +14,14 @@
 #include "engine/Registry.hpp"
 #include "graphics/IGraphics.hpp"
 #include "network/NetworkClient.hpp"
+#include "systems/LobbySystem.hpp"
 #include "systems/NetworkSyncSystem.hpp"
 
 #include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace client {
 
@@ -28,14 +30,16 @@ namespace client {
  * @brief The command-line options of the client.
  * @param interpolate Whether the other entities are interpolated.
  * @param predict Whether the local ship is predicted.
- * @param room The room to join, AnyRoom for the first one with a free slot.
+ * @param room The room to enter directly, instead of showing the lobby. A
+ * benchmark without a room enters the first one with a free slot and starts
+ * its game at once.
  * @param bench The network benchmark to run instead of the keyboard, if
  * any.
  **/
 struct GameOptions {
     bool interpolate = true;
     bool predict = true;
-    std::uint32_t room = rtype::protocol::AnyRoom;
+    std::optional<std::uint32_t> room;
     std::optional<BenchConfig> bench;
 };
 
@@ -61,6 +65,11 @@ class Game {
   private:
     void update(engine::Duration dt);
     void render();
+    void renderWorld();
+    void handleLobbyMessages(const std::vector<rtype::protocol::Payload> &all);
+    void applyLobbyChoice(std::optional<std::uint32_t> room);
+    void leaveRoom();
+    void createBackground();
     /**
      * @brief Loads the background texture and creates the entity scrolling it.
      *
@@ -77,6 +86,10 @@ class Game {
     gfx::Texture m_backgroundTexture;
     SyncState m_sync;
     bool m_quitRequested = false;
+    LobbyState m_lobby;
+    MenuInput m_menuInput;
+    std::optional<std::uint32_t> m_autoJoin;
+    float m_gameOverTime = 0.0F;
     std::optional<Bench> m_bench;
 };
 

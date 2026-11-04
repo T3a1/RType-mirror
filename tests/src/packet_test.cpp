@@ -136,7 +136,7 @@ TEST(Packet, MatchesTheDocumentedLayout)
     }));
     const std::vector<std::uint8_t> expected{
         0x52, 0x54,             // magic "RT"
-        0x04,                   // version
+        0x05,                   // version
         0x10,                   // type Input
         0x00,                   // flags
         0x00,                   // reserved
@@ -170,6 +170,16 @@ TEST(Packet, RoundTripsEveryPayload)
         GameEvent{.kind = GameEventKind::EntityDestroyed, .networkId = 42},
         GameEvent{.kind = GameEventKind::PlayerLeft, .slot = 3},
         GameEvent{.kind = GameEventKind::GameOver},
+        GameEvent{.kind = GameEventKind::GameStarted},
+        RoomList{},
+        RoomList{.rooms = {{.room = 3,
+                            .players = 2,
+                            .status = RoomStatus::Playing}}},
+        JoinRoom{.room = NewRoom},
+        LeaveRoom{},
+        StartGame{},
+        RoomJoined{.room = 7},
+        RoomRefused{},
     };
     for (const Payload &payload : payloads) {
         SCOPED_TRACE(payload.index());
@@ -241,7 +251,7 @@ TEST(Packet, MarksReliableTypesReliable)
     const auto bytes =
         encodeBytes(packetOf(Welcome{.slot = 2, .shipId = 58, .tick = 1200}));
     const std::vector<std::uint8_t> expected{
-        0x52, 0x54, 0x04, 0x21, // magic, version, type Welcome
+        0x52, 0x54, 0x05, 0x21, // magic, version, type Welcome
         0x01, 0x00,             // flags Reliable, reserved
         0x2A, 0x01, 0x11, 0x00, // sequence 298, ack 17
         0x09, 0x00,             // payload size 9
@@ -364,6 +374,20 @@ TEST(Packet, RejectsInvalidSnapshots)
     snapshot = sampleSnapshot();
     snapshot.players[0].slot = 0;
     expectBadPayload(snapshot);
+}
+
+TEST(Packet, RejectsInvalidRoomMessages)
+{
+    RoomList tooMany;
+    tooMany.rooms.resize(std::size_t{MaxRooms} + 1, {.room = 1});
+    expectBadPayload(tooMany);
+
+    expectBadPayload(RoomList{.rooms = {{.room = 0}}});
+    expectBadPayload(
+        RoomList{.rooms = {{.room = 1, .players = MaxPlayers + 1}}});
+    expectBadPayload(RoomJoined{.room = 0});
+    // Count (1) + room (4) + players (1): the status comes next.
+    expectBadByte(RoomList{.rooms = {{.room = 1}}}, HeaderSize + 6, 9);
 }
 
 TEST(Packet, RefusesToEncodeMoreThanMaxPacketSize)

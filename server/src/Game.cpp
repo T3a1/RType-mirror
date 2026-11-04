@@ -28,6 +28,20 @@ void Game::tick(engine::Duration dt)
     server::sessionSystem(m_registry, messages, m_players, m_factory,
                           m_outbound, m_tick);
     server::networkInputSystem(m_registry, messages, m_players);
+    server::roomPhaseSystem(messages, m_status, m_outbound);
+    if (m_status != rtype::protocol::RoomStatus::Waiting) {
+        simulate(dt);
+    }
+    m_registry.flush();
+    if (m_tick % 3 == 0) {
+        server::snapshotSystem(m_registry, m_players, m_outbound, m_tick);
+    }
+    m_publicStatus = static_cast<std::uint8_t>(m_status);
+    ++m_tick;
+}
+
+void Game::simulate(engine::Duration dt)
+{
     rtype::playerFireSystem(m_registry);
     server::enemyAISystem(m_registry);
     server::spawnSystem(m_registry, m_factory, dt);
@@ -43,12 +57,9 @@ void Game::tick(engine::Duration dt)
     server::lifetimeSystem(m_registry, dt, m_outbound);
     server::boundarySystem(m_registry, m_outbound);
     server::gameOverSystem(m_registry, m_players, m_outbound, m_gameOver);
-    m_joinable = !m_gameOver;
-    m_registry.flush();
-    if (m_tick % 3 == 0) {
-        server::snapshotSystem(m_registry, m_players, m_outbound, m_tick);
+    if (m_gameOver) {
+        m_status = rtype::protocol::RoomStatus::Over;
     }
-    ++m_tick;
 }
 
 } // namespace server
