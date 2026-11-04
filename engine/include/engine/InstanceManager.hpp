@@ -49,6 +49,19 @@ struct InstanceLimits {
 };
 
 /**
+ * @struct InstanceInfo
+ * @brief What is known about a running instance.
+ * @param id The instance.
+ * @param members How many members it has.
+ * @param status IInstance::status().
+ **/
+struct InstanceInfo {
+    InstanceId id = AnyInstance;
+    std::size_t members = 0;
+    std::uint8_t status = 0;
+};
+
+/**
  * @class InstanceManager
  * @brief Runs several independent instances of a game in one process: creates
  * an instance when a first member joins it, stops it when the last member
@@ -114,6 +127,13 @@ template <typename In, typename Out> class InstanceManager {
     [[nodiscard]] std::optional<Membership> join(InstanceId requested);
 
     /**
+     * @brief Adds a member to a new instance.
+     * @return The membership, or nothing if the maximum of instances is
+     * reached or if the factory failed.
+     **/
+    [[nodiscard]] std::optional<Membership> joinNew() { return join(freeId()); }
+
+    /**
      * @brief Removes a member. After the last one, the instance stops in the
      * background and its id is free again.
      * @param id The instance; ignored if unknown.
@@ -137,6 +157,24 @@ template <typename In, typename Out> class InstanceManager {
         for (auto &[id, entry] : m_instances) {
             function(id, *entry.link);
         }
+    }
+
+    /**
+     * @brief Lists the running instances.
+     * @return One entry per instance, by increasing id.
+     **/
+    [[nodiscard]] std::vector<InstanceInfo> list() const
+    {
+        std::vector<InstanceInfo> infos;
+        infos.reserve(m_instances.size());
+        for (const auto &[id, entry] : m_instances) {
+            infos.push_back({
+                .id = id,
+                .members = entry.members,
+                .status = entry.runner->status(),
+            });
+        }
+        return infos;
     }
 
     /**

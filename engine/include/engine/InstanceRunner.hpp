@@ -12,6 +12,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <memory>
 #include <thread>
 
@@ -63,6 +64,12 @@ class InstanceRunner {
      * @return False once the thread is over.
      **/
     [[nodiscard]] bool joinable() const;
+
+    /**
+     * @brief Returns the status of the instance.
+     * @return IInstance::status().
+     **/
+    [[nodiscard]] std::uint8_t status() const { return m_instance->status(); }
 
   private:
     void run();

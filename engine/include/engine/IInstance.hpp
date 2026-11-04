@@ -10,6 +10,8 @@
 
 #include "engine/Clock.hpp"
 
+#include <cstdint>
+
 namespace engine {
 
 /**
@@ -45,6 +47,14 @@ class IInstance {
      * @return True by default.
      **/
     [[nodiscard]] virtual bool joinable() const { return true; }
+
+    /**
+     * @brief Returns where the game stands, in a form only the game
+     * interprets, for a list of the running instances. Thread-safe, like
+     * joinable().
+     * @return 0 by default.
+     **/
+    [[nodiscard]] virtual std::uint8_t status() const { return 0; }
 };
 
 } // namespace engine

@@ -124,6 +124,33 @@ TEST(InstanceManager, AnyInstanceFillsTheFirstWithRoomThenCreatesAnother)
     EXPECT_EQ(joined(manager, engine::AnyInstance).id, 2U);
 }
 
+TEST(InstanceManager, JoinNewAlwaysCreatesAnInstance)
+{
+    Counters counters;
+    Manager manager = makeManager(counters);
+
+    const auto first = manager.joinNew();
+    const auto second = manager.joinNew();
+
+    EXPECT_NE(first.value_or(Manager::Membership{}).id,
+              second.value_or(Manager::Membership{}).id);
+    EXPECT_FALSE(manager.joinNew().has_value());
+}
+
+TEST(InstanceManager, ListsTheInstancesAndTheirMembers)
+{
+    Counters counters;
+    Manager manager = makeManager(counters);
+    ASSERT_TRUE(manager.join(4).has_value());
+    ASSERT_TRUE(manager.join(4).has_value());
+
+    const auto list = manager.list();
+
+    ASSERT_EQ(list.size(), 1U);
+    EXPECT_EQ(list.front().id, 4U);
+    EXPECT_EQ(list.front().members, 2U);
+}
+
 TEST(InstanceManager, RefusesAFullInstanceAndTooManyInstances)
 {
     Counters counters;
