@@ -181,6 +181,9 @@ TEST(Packet, RoundTripsEveryPayload)
         StartGame{},
         RoomJoined{.room = 7},
         RoomRefused{},
+        RoomClosed{},
+        Reject{.reason = RejectReason::Banned},
+        Reject{.reason = RejectReason::NotWhitelisted},
     };
     for (const Payload &payload : payloads) {
         SCOPED_TRACE(payload.index());

@@ -7,10 +7,12 @@
 
 #ifndef SERVER_NETWORKSERVER_HPP
 #define SERVER_NETWORKSERVER_HPP
+#include "AccessList.hpp"
 #include "common/protocol/ByteWriter.hpp"
 #include "common/protocol/Connection.hpp"
 #include "common/protocol/Packet.hpp"
 #include "common/protocol/ReliableChannel.hpp"
+#include "engine/CommandConsole.hpp"
 #include "engine/MessageQueue.hpp"
 #include "engine/network/Endpoint.hpp"
 #include "engine/network/IUdpSocket.hpp"
@@ -19,8 +21,10 @@
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <future>
 #include <map>
 #include <memory>
+#include <string>
 #include <thread>
 #include <utility>
 
@@ -51,6 +55,23 @@ struct Session {
 using SessionIterator = std::map<engine::net::Endpoint, Session>::iterator;
 
 /**
+ * @struct AdminRequest
+ * @brief A line of the administration console for the network thread.
+ * @param line The command.
+ * @param answer Receives its answer.
+ **/
+struct AdminRequest {
+    std::string line;
+    std::promise<std::string> answer;
+};
+
+/**
+ * @brief Queue from the administration console to the network thread. The
+ * console holds it by shared_ptr, so that it can outlive the server.
+ **/
+using AdminQueue = engine::MessageQueue<AdminRequest>;
+
+/**
  * @class NetworkServer
  * @brief The server's network thread: the UDP socket, the sessions, the
  * reliability and the timeouts. It also manages the lobby and the rooms: a
@@ -70,11 +91,10 @@ class NetworkServer {
      * @param socket The socket, from rtype::network::openUdpSocket() (or a
      * fake one in tests).
      * @param rooms The rooms; stop them after stop().
+     * @param access Who may connect.
      **/
-    NetworkServer(std::unique_ptr<engine::net::IUdpSocket> socket, Rooms &rooms)
-        : m_socket(std::move(socket)), m_rooms(rooms)
-    {
-    }
+    NetworkServer(std::unique_ptr<engine::net::IUdpSocket> socket, Rooms &rooms,
+                  AccessList access = {});
     NetworkServer(const NetworkServer &) = delete;
     NetworkServer &operator=(const NetworkServer &) = delete;
     NetworkServer(NetworkServer &&) = delete;
@@ -91,6 +111,22 @@ class NetworkServer {
     void start();
 
     /**
+     * @brief Returns the commands of the administration console, to add some
+     * before start().
+     * @return The console, which the network thread runs.
+     **/
+    [[nodiscard]] engine::CommandConsole &commands() { return m_commands; }
+
+    /**
+     * @brief Returns the queue that gives commands to the network thread.
+     * @return The queue; see submitCommand().
+     **/
+    [[nodiscard]] std::shared_ptr<AdminQueue> adminQueue() const
+    {
+        return m_adminQueue;
+    }
+
+    /**
      * @brief Sends Disconnect{ServerClosing} to every client from the
      * network thread, stops it and waits for it. Safe to call twice.
      **/
@@ -104,6 +140,10 @@ class NetworkServer {
     std::array<std::uint8_t, rtype::protocol::MaxPacketSize> m_buffer{};
     std::map<engine::net::Endpoint, Session> m_sessions;
     std::uint32_t m_newCliendId = 1;
+    AccessList m_access;
+    engine::CommandConsole m_commands;
+    std::shared_ptr<AdminQueue> m_adminQueue = std::make_shared<AdminQueue>();
+    TimePoint m_startTime;
     TimePoint m_nextRoomList;
 
     void run();
@@ -123,6 +163,24 @@ class NetworkServer {
                     const rtype::protocol::Packet &packet);
     static void pushInbound(const Session &session, InboundMessage message);
     void closeFailedRoom(engine::InstanceId room);
+    void kick(SessionIterator it);
+    void registerCommands();
+    void runAdminRequests();
+    [[nodiscard]] std::string statusCommand() const;
+    [[nodiscard]] std::string roomsCommand() const;
+    [[nodiscard]] std::string
+    playersCommand(const engine::CommandConsole::Args &args) const;
+    [[nodiscard]] std::string
+    kickCommand(const engine::CommandConsole::Args &args);
+    [[nodiscard]] std::string
+    banCommand(const engine::CommandConsole::Args &args);
+    [[nodiscard]] std::string
+    unbanCommand(const engine::CommandConsole::Args &args);
+    [[nodiscard]] std::string banlistCommand() const;
+    [[nodiscard]] std::string
+    stopRoomCommand(const engine::CommandConsole::Args &args);
+    [[nodiscard]] std::string
+    whitelistCommand(const engine::CommandConsole::Args &args);
     void removeSession(SessionIterator it,
                        rtype::protocol::DisconnectReason reason);
     void update(TimePoint now);
@@ -130,6 +188,15 @@ class NetworkServer {
     static bool isRecipient(const OutboundMessage &message,
                             std::uint32_t clientId);
 };
+/**
+ * @brief Asks the network thread to run a console command. Thread-safe.
+ * @param queue The queue of the server.
+ * @param line The command.
+ * @return The future answer; it never comes if the server has stopped.
+ **/
+[[nodiscard]] std::future<std::string> submitCommand(AdminQueue &queue,
+                                                     std::string line);
+
 } // namespace server
 
 #endif // SERVER_NETWORKSERVER_HPP

@@ -128,6 +128,8 @@ lobbyScreen(LobbyState &state, gfx::IGraphics &graphics, const MenuKeys &keys)
         hint = "Joining...";
     } else if (state.refused) {
         hint = "This room is not available anymore.";
+    } else if (state.closed) {
+        hint = "An administrator closed your room.";
     }
     drawCentered(graphics, hint, screen.x / 2.0F, y, TextFontSize,
                  gfx::colors::OffWhite);

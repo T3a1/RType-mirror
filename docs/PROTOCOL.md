@@ -123,6 +123,7 @@ Check 8 catches truncated and padded datagrams before any payload decoding.
 | `0x33` | `StartGame` | Client | Reliable | 0 |
 | `0x34` | `RoomJoined` | Server | Reliable | 4 |
 | `0x35` | `RoomRefused` | Server | Reliable | 0 |
+| `0x36` | `RoomClosed` | Server | Reliable | 0 |
 
 Values are grouped by range: `0x0_` for the connection (both directions),
 `0x1_` from client to server, `0x2_` from server to client, `0x3_` for the
@@ -161,24 +162,25 @@ list replaces the previous one, so a lost one does not matter.
 |-------:|-----:|-------|--------|
 | 0 | 4 | room | `u32`. In `JoinRoom`: the room, created if it does not exist, `0` for the first room with a free slot (a new one if none), or `0xFFFFFFFF` for a new room. In `RoomJoined`: the room entered, at least `1` |
 
-### `LeaveRoom` (0x32), `StartGame` (0x33), `RoomRefused` (0x35)
+### `LeaveRoom` (0x32), `StartGame` (0x33), `RoomRefused` (0x35), `RoomClosed` (0x36)
 
 No payload, all reliable. `LeaveRoom` (client) goes back to the lobby.
 `StartGame` (client) starts the game of the room, and is ignored if it already
 started. `RoomRefused` (server) answers a `JoinRoom` for a full room or a room
-whose game is over, or when 16 rooms already run.
+whose game is over, or when 16 rooms already run. `RoomClosed` (server) tells a
+client that an administrator closed its room: it is back in the lobby.
 
 ### `Reject` (0x03)
 
 | Offset | Size | Field | Values |
 |-------:|-----:|-------|--------|
-| 0 | 1 | reason | `0` ServerFull (the server has 64 clients, what its 16 rooms can hold), `1` VersionMismatch |
+| 0 | 1 | reason | `0` ServerFull (the server has 64 clients, what its 16 rooms can hold), `1` VersionMismatch, `2` Banned (an administrator banned this address), `3` NotWhitelisted (the server only accepts listed addresses) |
 
 ### `Disconnect` (0x04)
 
 | Offset | Size | Field | Values |
 |-------:|-----:|-------|--------|
-| 0 | 1 | reason | `0` Left (the player quit), `1` Timeout, `2` Kicked (protocol broken), `3` ServerClosing |
+| 0 | 1 | reason | `0` Left (the player quit), `1` Timeout, `2` Kicked (protocol broken, or removed by an administrator), `3` ServerClosing |
 
 ### `Input` (0x10)
 

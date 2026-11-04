@@ -115,6 +115,7 @@ void NetworkClient::receivePending(TimePoint now,
         if (const auto *decodeError = std::get_if<DecodeError>(&result)) {
             if (*decodeError == DecodeError::BadVersion) {
                 BB_ERROR("The server runs another protocol version");
+                m_rejectReason = RejectReason::VersionMismatch;
                 m_state = State::Rejected;
                 return;
             }
@@ -139,14 +140,13 @@ void NetworkClient::handlePacket(const Packet &packet,
         BB_INFO("Connected to the server");
         m_state = State::Connected;
     } else if (const auto *reject = std::get_if<Reject>(&packet.payload)) {
-        BB_ERROR("Rejected by the server ("
-                 << (reject->reason == RejectReason::ServerFull
-                         ? "server full"
-                         : "version mismatch")
-                 << ")");
+        BB_ERROR("Rejected by the server, reason "
+                 << static_cast<int>(reject->reason));
+        m_rejectReason = reject->reason;
         m_state = State::Rejected;
-    } else if (std::holds_alternative<Disconnect>(packet.payload)) {
+    } else if (const auto *closed = std::get_if<Disconnect>(&packet.payload)) {
         BB_INFO("Disconnected by the server");
+        m_disconnectReason = closed->reason;
         m_state = State::Closed;
     } else if (!std::holds_alternative<Ack>(packet.payload)) {
         received.push_back(packet.payload);

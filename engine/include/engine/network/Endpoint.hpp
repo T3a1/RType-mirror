@@ -10,9 +10,68 @@
 
 #include <compare>
 #include <cstdint>
+#include <optional>
 #include <string>
+#include <string_view>
 
 namespace engine::net {
+
+/**
+ * @brief Formats an IPv4 address.
+ * @param address The address in host byte order.
+ * @return The address as "a.b.c.d".
+ **/
+[[nodiscard]] inline std::string addressToString(std::uint32_t address)
+{
+    std::string text;
+    for (unsigned part = 4; part > 0; --part) {
+        text += std::to_string((address >> ((part - 1) * 8U)) & 0xFFU);
+        if (part != 1) {
+            text += '.';
+        }
+    }
+    return text;
+}
+
+/**
+ * @brief Reads an IPv4 address.
+ * @param text The address as "a.b.c.d".
+ * @return The address in host byte order, or nothing if it is not valid.
+ **/
+[[nodiscard]] inline std::optional<std::uint32_t>
+parseAddress(std::string_view text)
+{
+    constexpr int Parts = 4;
+    constexpr std::size_t MaxDigits = 3;
+    constexpr unsigned MaxPart = 255;
+    constexpr unsigned PartBits = 8;
+    std::uint32_t address = 0;
+    std::string_view rest = text;
+    for (int part = 0; part < Parts; ++part) {
+        const std::size_t dot = rest.find('.');
+        const bool last = part + 1 == Parts;
+        if (last == (dot != std::string_view::npos)) {
+            return std::nullopt;
+        }
+        const std::string_view digits = rest.substr(0, dot);
+        if (digits.empty() || digits.size() > MaxDigits) {
+            return std::nullopt;
+        }
+        unsigned value = 0;
+        for (const char digit : digits) {
+            if (digit < '0' || digit > '9') {
+                return std::nullopt;
+            }
+            value = (value * 10U) + static_cast<unsigned>(digit - '0');
+        }
+        if (value > MaxPart) {
+            return std::nullopt;
+        }
+        address = (address << PartBits) | value;
+        rest = last ? std::string_view{} : rest.substr(dot + 1);
+    }
+    return address;
+}
 
 /**
  * @struct Endpoint
@@ -36,12 +95,7 @@ struct Endpoint {
      **/
     [[nodiscard]] std::string toString() const
     {
-        std::string text;
-        for (int shift = 24; shift >= 0; shift -= 8) {
-            text += std::to_string((address >> shift) & 0xFFU);
-            text += shift == 0 ? ':' : '.';
-        }
-        return text + std::to_string(port);
+        return addressToString(address) + ':' + std::to_string(port);
     }
 };
 
