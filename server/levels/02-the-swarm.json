@@ -1,5 +1,6 @@
 {
     "name": "The swarm",
+    "boss": "warship",
     "waves": [
         { "time": 2, "enemy": "small", "count": 8, "spacing": 0.18, "y": 540 },
         { "time": 6, "enemy": "wave", "count": 5, "spacing": 0.3 },

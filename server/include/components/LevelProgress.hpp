@@ -27,6 +27,7 @@ namespace server {
  * @param nextWave The index of the next wave of the current level.
  * @param elapsed The time since the current level started.
  * @param pause The time left before the current level starts.
+ * @param bossSpawned Whether the boss of the current level came.
  **/
 struct LevelProgress {
     std::shared_ptr<const std::vector<Level>> levels;
@@ -34,6 +35,7 @@ struct LevelProgress {
     std::size_t nextWave = 0;
     engine::Duration elapsed{0.0F};
     engine::Duration pause{0.0F};
+    bool bossSpawned = false;
 };
 
 } // namespace server

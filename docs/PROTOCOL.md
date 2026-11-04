@@ -1,4 +1,4 @@
-# R-Type network protocol (version 6)
+# R-Type network protocol (version 7)
 
 This document specifies the binary protocol spoken between the R-Type server
 and its clients. It is precise enough to write a compatible client or server
@@ -73,7 +73,7 @@ Every packet starts with this 12-byte header:
 | Offset | Size | Field | Value |
 |-------:|-----:|-------|-------|
 | 0 | 2 | magic | `52 54` (ASCII `"RT"`). Recognizes our packets: a random datagram almost never starts with these bytes |
-| 2 | 1 | version | `6`. See [Versioning](#12-versioning) |
+| 2 | 1 | version | `7`. See [Versioning](#12-versioning) |
 | 3 | 1 | type | Which payload follows. See [Packet types](#5-packet-types) |
 | 4 | 1 | flags | Bit 0: **Reliable**. Bits 1 to 7 are reserved and **MUST** be 0 |
 | 5 | 1 | reserved | **MUST** be 0 |
@@ -94,7 +94,7 @@ The names are the `DecodeError` values of the reference implementation.
 | 1 | At most 1200 bytes | `TooLarge` |
 | 2 | At least 12 bytes | `TooShort` |
 | 3 | Magic is `"RT"` | `BadMagic` |
-| 4 | Version is 6 | `BadVersion` |
+| 4 | Version is 7 | `BadVersion` |
 | 5 | Type is listed in section 5 | `UnknownType` |
 | 6 | No reserved flag bit, and Reliable set exactly on reliable types | `BadFlags` |
 | 7 | Reserved byte is 0 | `BadReserved` |
@@ -260,6 +260,7 @@ right edge) but **MUST** be finite: NaN and infinities are invalid.
 | 6 | EnemySmall |
 | 7 | EnemyMedium |
 | 8 | EnemyLarge |
+| 9 | Boss (end-level boss; its full health is `BossMaxHealth`, 2500, for the client's health bar) |
 
 ### `GameEvent` (0x22)
 
@@ -508,7 +509,7 @@ All bytes in hexadecimal.
 Unreliable sequence 298, acknowledging reliable packet 17, input number 1000:
 
 ```text
-52 54 06 10 00 00 2A 01 11 00 05 00   header: "RT", v6, Input, no flags,
+52 54 07 10 00 00 2A 01 11 00 05 00   header: "RT", v7, Input, no flags,
                                               sequence 298, ack 17, size 5
 E8 03 00 00                           sequence 1000
 11                                    actions 0x11 = Up | Fire
@@ -519,7 +520,7 @@ E8 03 00 00                           sequence 1000
 Reliable sequence 2, slot 2, ship 58, tick 1200:
 
 ```text
-52 54 06 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
+52 54 07 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
                                               sequence 2, ack 0, size 9
 02                                    slot 2
 3A 00 00 00                           shipId 58
@@ -529,7 +530,7 @@ B0 04 00 00                           tick 1200
 ### `Snapshot` with one player and one entity
 
 ```text
-52 54 06 20 00 00 2B 01 11 00 26 00   header: Snapshot, size 38
+52 54 07 20 00 00 2B 01 11 00 26 00   header: Snapshot, size 38
 2C 01 00 00                           tick 300
 00 01                                 part 0 of 1
 01 00                                 1 entity
@@ -562,3 +563,4 @@ B0 04 00 00                           tick 1200
 | 4 | `Connect` and `Accept` carry a room number (4 bytes). |
 | 5 | Lobby: `Connect` and `Accept` are empty again; new `RoomList`, `JoinRoom`, `LeaveRoom`, `StartGame`, `RoomJoined` and `RoomRefused`; new event `GameStarted`. |
 | 6 | New event `LevelStarted` (levels read from files, [LEVELS.md](LEVELS.md)). |
+| 7 | New entity type `Boss`. |

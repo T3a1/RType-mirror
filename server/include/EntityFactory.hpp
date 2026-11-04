@@ -23,6 +23,7 @@
 #include "common/components/Transform.hpp"
 #include "common/components/Velocity.hpp"
 #include "common/components/Weapon.hpp"
+#include "components/Boss.hpp"
 #include "components/DestroyOffScreen.hpp"
 #include "components/KeepInPlayfield.hpp"
 #include "engine/Entity.hpp"

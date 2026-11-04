@@ -22,7 +22,8 @@ inline constexpr engine::Duration LevelPause{3.0F};
 /**
  * @brief Plays the levels: queues each wave of the current level in the
  * SpawnQueue when its time comes. Once every wave of a level has spawned
- * and no enemy is left, the next level starts after LevelPause. After the
+ * and no enemy is left, its boss comes, if it has one; once the boss is
+ * destroyed too, the next level starts after LevelPause. After the
  * last level, the LevelProgress is removed and spawnSystem() goes on with
  * random waves (endless mode). Runs before spawnSystem().
  * @param registry The registry holding the spawner (Spawner, SpawnQueue

@@ -60,6 +60,7 @@ add_library(r-type_server_spawn STATIC
     src/EntityFactory.cpp
     src/Formations.cpp
     src/Level.cpp
+    src/systems/BossSystem.cpp
     src/systems/LevelSystem.cpp
     src/systems/SpawnSystem.cpp
 )
