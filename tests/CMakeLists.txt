@@ -21,6 +21,7 @@ set(SOURCE_FILES
     src/reliable_channel_test.cpp
     src/udp_socket_test.cpp
     src/network_server_test.cpp
+    src/game_over_system_test.cpp
 )
 
 # The client's network code only exists when the client is built.
@@ -34,6 +35,10 @@ add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 target_link_libraries(${PROJECT_NAME}
     PRIVATE r-type_server_network ${CLIENT_NETWORK_LIBRARY}
     GTest::gtest GTest::gtest_main GTest::gmock
+)
+
+target_link_libraries(${PROJECT_NAME}
+    PRIVATE r-type_server_game_over
 )
 
 gtest_discover_tests(${PROJECT_NAME})
