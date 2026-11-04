@@ -8,7 +8,7 @@
 #ifndef SERVER_SYSTEMS_POWERUPSYSTEM_HPP
 #define SERVER_SYSTEMS_POWERUPSYSTEM_HPP
 
-#include "EntityFactory.hpp"
+#include "SpawnRequests.hpp"
 #include "engine/Registry.hpp"
 #include "network/NetworkMessages.hpp"
 #include "systems/CollisionSystem.hpp"
@@ -23,9 +23,9 @@ namespace server {
  * dropsPowerUp) was destroyed this tick. Runs after damageSystem() and
  * before deathSystem(), while the dead enemies are still there.
  * @param registry The registry holding the enemies.
- * @param factory The factory that creates the power-ups.
+ * @param commands Where the power-ups are requested.
  **/
-void powerUpDropSystem(engine::Registry &registry, EntityFactory &factory);
+void powerUpDropSystem(engine::Registry &registry, SpawnCommands &commands);
 
 /**
  * @brief Gives the shot style of a power-up, or one more level of it up

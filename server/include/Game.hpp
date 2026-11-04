@@ -36,6 +36,7 @@
 #include "systems/ShootSystem.hpp"
 #include "systems/ShotStyleSystems.hpp"
 #include "systems/SnapshotSystem.hpp"
+#include "systems/SpawnCommandSystem.hpp"
 #include "systems/SpawnSystem.hpp"
 
 #include <algorithm>
@@ -125,6 +126,7 @@ class Game final : public engine::IInstance {
     std::uint32_t m_tick = 1;
     std::vector<InboundMessage> m_messages;
     std::vector<Collision> m_collisions;
+    SpawnCommands m_commands;
     static_assert(std::atomic<bool>::is_always_lock_free);
 };
 

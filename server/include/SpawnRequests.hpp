@@ -16,6 +16,8 @@
 
 #include <cstdint>
 #include <optional>
+#include <variant>
+#include <vector>
 
 namespace server {
 
@@ -69,6 +71,12 @@ struct SpawnPowerUp {
     engine::Vec2f position{};
     PowerUpKind kind = PowerUpKind::Spread;
 };
+
+/// A deferred entity creation.
+using SpawnCommand = std::variant<SpawnEnemy, SpawnProjectile, SpawnPowerUp>;
+
+/// The creations requested during a tick, applied in the Cleanup stage.
+using SpawnCommands = std::vector<SpawnCommand>;
 
 /** Distance between the center of a ship and the start of its shots. */
 inline constexpr float MuzzleOffset = 40.0F;

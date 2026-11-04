@@ -22,6 +22,7 @@
 #include "systems/PowerUpSystem.hpp"
 #include "systems/ShootSystem.hpp"
 #include "systems/ShotStyleSystems.hpp"
+#include "systems/SpawnCommandSystem.hpp"
 
 #include <gtest/gtest.h>
 
@@ -59,8 +60,9 @@ class WeaponTest : public testing::Test {
     {
         for (int i = 0; i < ticks; ++i) {
             m_registry.get<rtype::Weapon>(m_ship).triggered = fire;
-            server::shootSystem(m_registry, m_factory, Tick, m_stats);
-            server::spreadShotSystem(m_registry, m_factory, m_stats);
+            server::shootSystem(m_registry, m_commands, Tick, m_stats);
+            server::spreadShotSystem(m_registry, m_commands, m_stats);
+            server::spawnCommandSystem(m_registry, m_commands, m_factory);
             m_registry.flush();
         }
     }
@@ -72,6 +74,7 @@ class WeaponTest : public testing::Test {
   private:
     engine::Registry m_registry;
     server::EntityFactory m_factory;
+    server::SpawnCommands m_commands;
     server::WeaponStats m_stats;
     engine::Entity m_ship;
 };
@@ -169,7 +172,9 @@ TEST(PowerUps, DroppedByDestroyedMediumEnemies)
     registry.get<rtype::Health>(medium).current = 0;
     registry.get<rtype::Health>(basic).current = 0;
 
-    server::powerUpDropSystem(registry, factory);
+    server::SpawnCommands commands;
+    server::powerUpDropSystem(registry, commands);
+    server::spawnCommandSystem(registry, commands, factory);
 
     EXPECT_EQ(countType(registry, rtype::EntityType::PowerUp), 1U);
 }

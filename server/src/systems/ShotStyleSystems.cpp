@@ -17,10 +17,9 @@
 
 namespace server {
 
-void spreadShotSystem(engine::Registry &registry, EntityFactory &factory,
+void spreadShotSystem(engine::Registry &registry, SpawnCommands &commands,
                       const WeaponStats &stats)
 {
-    std::vector<SpawnProjectile> shots;
     registry.each<rtype::Weapon, SpreadShot, rtype::Transform>(
         [&](engine::Entity entity, const rtype::Weapon &weapon,
             const SpreadShot &spread, const rtype::Transform &transform) {
@@ -30,7 +29,7 @@ void spreadShotSystem(engine::Registry &registry, EntityFactory &factory,
             const int side = static_cast<int>(spread.level) - 1;
             for (int i = -side; i <= side; ++i) {
                 const float angle = static_cast<float>(i) * stats.spreadAngle;
-                shots.push_back({
+                commands.emplace_back(SpawnProjectile{
                     .owner = entity,
                     .position = {.x = transform.position.x + MuzzleOffset,
                                  .y = transform.position.y},
@@ -40,9 +39,6 @@ void spreadShotSystem(engine::Registry &registry, EntityFactory &factory,
                 });
             }
         });
-    for (const SpawnProjectile &shot : shots) {
-        factory.create(registry, shot);
-    }
 }
 
 } // namespace server

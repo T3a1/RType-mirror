@@ -8,7 +8,6 @@
 #ifndef SERVER_SYSTEMS_SHOOTSYSTEM_HPP
 #define SERVER_SYSTEMS_SHOOTSYSTEM_HPP
 
-#include "EntityFactory.hpp"
 #include "SpawnRequests.hpp"
 #include "Weapons.hpp"
 #include "common/components/Player.hpp"
@@ -32,11 +31,11 @@ namespace server {
  * is held, it only charges; releasing it after stats.chargeTime fires a
  * charged shot that goes through enemies.
  * @param registry The registry holding the weapons.
- * @param factory The factory that creates the shots.
+ * @param commands Where the shots are requested.
  * @param dt The time since the last tick.
  * @param stats The weapon stats, from weapons.json.
  **/
-void shootSystem(engine::Registry &registry, EntityFactory &factory,
+void shootSystem(engine::Registry &registry, SpawnCommands &commands,
                  engine::Duration dt, const WeaponStats &stats);
 
 } // namespace server

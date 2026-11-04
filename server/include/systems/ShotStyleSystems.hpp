@@ -8,7 +8,7 @@
 #ifndef SERVER_SYSTEMS_SHOTSTYLESYSTEMS_HPP
 #define SERVER_SYSTEMS_SHOTSTYLESYSTEMS_HPP
 
-#include "EntityFactory.hpp"
+#include "SpawnRequests.hpp"
 #include "Weapons.hpp"
 #include "engine/Registry.hpp"
 
@@ -22,10 +22,10 @@ namespace server {
  * @brief Fires the shots of the players with a SpreadShot: 2 * level - 1
  * shots, stats.spreadAngle apart.
  * @param registry The registry holding the players.
- * @param factory The factory that creates the shots.
+ * @param commands Where the shots are requested.
  * @param stats The weapon stats.
  **/
-void spreadShotSystem(engine::Registry &registry, EntityFactory &factory,
+void spreadShotSystem(engine::Registry &registry, SpawnCommands &commands,
                       const WeaponStats &stats);
 
 } // namespace server

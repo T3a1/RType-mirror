@@ -14,6 +14,7 @@
 #include "engine/Entity.hpp"
 #include "engine/Registry.hpp"
 #include "systems/LevelSystem.hpp"
+#include "systems/SpawnCommandSystem.hpp"
 #include "systems/SpawnSystem.hpp"
 
 #include <gtest/gtest.h>
@@ -192,7 +193,8 @@ class LevelSystemTest : public testing::Test {
             if (const auto level = server::levelSystem(m_registry, Tick)) {
                 m_announced.push_back(*level);
             }
-            server::spawnSystem(m_registry, m_factory, Tick);
+            server::spawnSystem(m_registry, m_commands, Tick);
+            server::spawnCommandSystem(m_registry, m_commands, m_factory);
             m_registry.flush();
         }
     }
@@ -207,6 +209,7 @@ class LevelSystemTest : public testing::Test {
   private:
     engine::Registry m_registry;
     server::EntityFactory m_factory;
+    server::SpawnCommands m_commands;
     engine::Entity m_world = m_registry.create();
     std::vector<std::uint8_t> m_announced;
 };
@@ -272,6 +275,7 @@ TEST(LevelSystem, TheBossComesAfterTheWavesAndEndsTheLevel)
 {
     engine::Registry registry;
     server::EntityFactory factory;
+    server::SpawnCommands commands;
     server::Level level = oneEnemyAt(0.0F);
     level.boss = rtype::EnemyType::Boss;
     const engine::Entity world = registry.create();
@@ -284,7 +288,8 @@ TEST(LevelSystem, TheBossComesAfterTheWavesAndEndsTheLevel)
     const auto run = [&](int ticks) {
         for (int i = 0; i < ticks; ++i) {
             static_cast<void>(server::levelSystem(registry, Tick));
-            server::spawnSystem(registry, factory, Tick);
+            server::spawnSystem(registry, commands, Tick);
+            server::spawnCommandSystem(registry, commands, factory);
             registry.flush();
         }
     };

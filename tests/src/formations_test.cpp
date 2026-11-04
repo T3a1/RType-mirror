@@ -18,6 +18,7 @@
 #include "components/SpawnQueue.hpp"
 #include "engine/Entity.hpp"
 #include "engine/Registry.hpp"
+#include "systems/SpawnCommandSystem.hpp"
 #include "systems/SpawnSystem.hpp"
 
 #include <gtest/gtest.h>
@@ -151,6 +152,7 @@ TEST(SpawnSystem, SpawnsQueuedEnemiesWhenTheyAreDue)
 {
     engine::Registry registry;
     server::EntityFactory factory;
+    server::SpawnCommands commands;
     const engine::Entity world = registry.create();
     registry.emplace<rtype::Spawner>(
         world, rtype::Spawner{.timeUntilNextSpawn = engine::Duration{1000.0F}});
@@ -160,12 +162,14 @@ TEST(SpawnSystem, SpawnsQueuedEnemiesWhenTheyAreDue)
                                       {.delay = engine::Duration{0.5F}},
                                   }});
 
-    server::spawnSystem(registry, factory, Tick);
+    server::spawnSystem(registry, commands, Tick);
+    server::spawnCommandSystem(registry, commands, factory);
     EXPECT_EQ(countEnemies(registry), 1U);
     EXPECT_EQ(registry.get<server::SpawnQueue>(world).pending.size(), 1U);
 
     for (int i = 0; i < 31; ++i) {
-        server::spawnSystem(registry, factory, Tick);
+        server::spawnSystem(registry, commands, Tick);
+        server::spawnCommandSystem(registry, commands, factory);
     }
     EXPECT_EQ(countEnemies(registry), 2U);
     EXPECT_TRUE(registry.get<server::SpawnQueue>(world).pending.empty());
@@ -175,12 +179,14 @@ TEST(SpawnSystem, FormationsKeepComingAndStayInThePlayfield)
 {
     engine::Registry registry;
     server::EntityFactory factory;
+    server::SpawnCommands commands;
     const engine::Entity world = registry.create();
     registry.emplace<rtype::Spawner>(world);
     registry.emplace<server::SpawnQueue>(world);
 
     for (int i = 0; i < 60 * 60; ++i) {
-        server::spawnSystem(registry, factory, Tick);
+        server::spawnSystem(registry, commands, Tick);
+        server::spawnCommandSystem(registry, commands, factory);
         rtype::patternSystem(registry, Tick);
         rtype::movementSystem(registry, Tick);
         registry.each<rtype::Enemy, rtype::Transform>(
@@ -192,4 +198,18 @@ TEST(SpawnSystem, FormationsKeepComingAndStayInThePlayfield)
     }
 
     EXPECT_GT(countEnemies(registry), 10U);
+}
+
+TEST(SpawnCommandSystem, CreatesTheRequestedEntitiesAndEmptiesTheList)
+{
+    engine::Registry registry;
+    server::EntityFactory factory;
+    server::SpawnCommands commands;
+    commands.emplace_back(server::SpawnEnemy{});
+    commands.emplace_back(server::SpawnEnemy{});
+
+    server::spawnCommandSystem(registry, commands, factory);
+
+    EXPECT_EQ(countEnemies(registry), 2U);
+    EXPECT_TRUE(commands.empty());
 }

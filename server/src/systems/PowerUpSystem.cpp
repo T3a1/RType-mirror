@@ -50,20 +50,17 @@ void applyPowerUp(engine::Registry &registry, engine::Entity player,
 
 } // namespace
 
-void powerUpDropSystem(engine::Registry &registry, EntityFactory &factory)
+void powerUpDropSystem(engine::Registry &registry, SpawnCommands &commands)
 {
-    std::vector<SpawnPowerUp> drops;
     registry.each<rtype::Enemy, rtype::Health, rtype::Transform>(
-        [&drops](engine::Entity, const rtype::Enemy &enemy,
-                 const rtype::Health &health,
-                 const rtype::Transform &transform) {
+        [&commands](engine::Entity, const rtype::Enemy &enemy,
+                    const rtype::Health &health,
+                    const rtype::Transform &transform) {
             if (health.current <= 0 && enemyDef(enemy.type).dropsPowerUp) {
-                drops.push_back({.position = transform.position});
+                commands.emplace_back(
+                    SpawnPowerUp{.position = transform.position});
             }
         });
-    for (const SpawnPowerUp &drop : drops) {
-        factory.create(registry, drop);
-    }
 }
 
 void pickupSystem(engine::Registry &registry,

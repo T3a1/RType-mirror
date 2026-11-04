@@ -276,7 +276,8 @@ int main(int argc, char *argv[])
     }
     const bool invincible = options.invincible;
     engine::Logger::instance().start(engine::LogLevel::Info);
-    const auto levels = loadLevels(levelsDirectory(args));
+    const auto levels =
+        loadLevels(levelsDirectory(options.levelsDirectory, args));
     const server::WeaponStats weapons = loadWeapons(args);
 
     server::Rooms rooms(

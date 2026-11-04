@@ -54,11 +54,9 @@ SpawnProjectile chargedShot(engine::Entity shooter,
 
 } // namespace
 
-void shootSystem(engine::Registry &registry, EntityFactory &factory,
+void shootSystem(engine::Registry &registry, SpawnCommands &commands,
                  engine::Duration dt, const WeaponStats &stats)
 {
-    std::vector<SpawnProjectile> shotRequests;
-
     registry.each<rtype::Weapon, rtype::Transform>(
         [&](engine::Entity entity, rtype::Weapon &weapon,
             const rtype::Transform &transform) {
@@ -66,7 +64,7 @@ void shootSystem(engine::Registry &registry, EntityFactory &factory,
                 std::max(weapon.cooldown - dt, engine::Duration{0.0F});
             if (!registry.has<rtype::Player>(entity)) {
                 if (weapon.triggered && weapon.cooldown.count() <= 0.0F) {
-                    shotRequests.push_back(enemyShot(entity, transform, stats));
+                    commands.emplace_back(enemyShot(entity, transform, stats));
                     weapon.cooldown += weapon.fireInterval;
                 }
                 return;
@@ -75,7 +73,7 @@ void shootSystem(engine::Registry &registry, EntityFactory &factory,
             if (!weapon.triggered) {
                 // Released: a charged shot if the key was held long enough.
                 if (weapon.charge >= stats.chargeTime) {
-                    shotRequests.push_back(
+                    commands.emplace_back(
                         chargedShot(entity, transform, stats));
                 }
                 weapon.charge = engine::Duration{0.0F};
@@ -90,9 +88,6 @@ void shootSystem(engine::Registry &registry, EntityFactory &factory,
                 weapon.cooldown = stats.fireInterval;
             }
         });
-    for (const SpawnProjectile &request : shotRequests) {
-        factory.create(registry, request);
-    }
 }
 
 } // namespace server

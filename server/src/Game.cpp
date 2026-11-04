@@ -87,19 +87,19 @@ void Game::registerSystems()
     m_scheduler.add(
         Stage::Simulation, "spawn",
         [this](Registry &r, Duration dt) {
-            server::spawnSystem(r, m_factory, dt);
+            server::spawnSystem(r, m_commands, dt);
         },
         playing);
     m_scheduler.add(
         Stage::Simulation, "shoot",
         [this](Registry &r, Duration dt) {
-            server::shootSystem(r, m_factory, dt, m_weapons);
+            server::shootSystem(r, m_commands, dt, m_weapons);
         },
         playing);
     m_scheduler.add(
         Stage::Simulation, "spreadShot",
         [this](Registry &r, Duration) {
-            server::spreadShotSystem(r, m_factory, m_weapons);
+            server::spreadShotSystem(r, m_commands, m_weapons);
         },
         playing);
     m_scheduler.add(
@@ -110,7 +110,7 @@ void Game::registerSystems()
     m_scheduler.add(
         Stage::Simulation, "boss",
         [this](Registry &r, Duration dt) {
-            server::bossSystem(r, m_factory, dt);
+            server::bossSystem(r, m_commands, dt);
         },
         playing);
     m_scheduler.add(Stage::Simulation, "movement", rtype::movementSystem,
@@ -138,7 +138,7 @@ void Game::registerSystems()
     m_scheduler.add(
         Stage::Simulation, "powerUpDrop",
         [this](Registry &r, Duration) {
-            server::powerUpDropSystem(r, m_factory);
+            server::powerUpDropSystem(r, m_commands);
         },
         playing);
     m_scheduler.add(
@@ -166,6 +166,11 @@ void Game::registerSystems()
             }
         },
         playing);
+
+    m_scheduler.add(Stage::Cleanup, "spawnCommands",
+                    [this](Registry &r, Duration) {
+                        server::spawnCommandSystem(r, m_commands, m_factory);
+                    });
 
     m_scheduler.add(Stage::Output, "snapshot",
                     [this](Registry &r, Duration) {
