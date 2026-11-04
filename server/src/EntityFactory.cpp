@@ -129,7 +129,9 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
                         });
     }
 
-    registry.emplace<rtype::Lifetime>(projectile);
+    // Long enough to cross the whole playfield, even at the slowest speed.
+    registry.emplace<rtype::Lifetime>(
+        projectile, rtype::Lifetime{.remaining = engine::Duration{5.0F}});
     registry.emplace<DestroyOffScreen>(projectile);
 
     BB_DEBUG("Projectile spawned with id " << networkId
