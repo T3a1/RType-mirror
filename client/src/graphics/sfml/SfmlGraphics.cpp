@@ -14,6 +14,7 @@
 #include <SFML/System/Err.hpp>
 #include <SFML/Window/Event.hpp>
 #include <SFML/Window/Keyboard.hpp>
+#include <SFML/Window/Mouse.hpp>
 #include <SFML/Window/VideoMode.hpp>
 
 #ifdef _WIN32
@@ -105,11 +106,16 @@ SfmlGraphics::SfmlGraphics(const WindowConfig &config)
 
 bool SfmlGraphics::shouldClose()
 {
+    m_mousePressed = false;
     while (const std::optional event = m_window.pollEvent()) {
         const auto *key = event->getIf<sf::Event::KeyPressed>();
         if (event->is<sf::Event::Closed>() ||
             (key != nullptr && key->code == sf::Keyboard::Key::Escape)) {
             m_closeRequested = true;
+        }
+        const auto *mouse = event->getIf<sf::Event::MouseButtonPressed>();
+        if (mouse != nullptr && mouse->button == sf::Mouse::Button::Left) {
+            m_mousePressed = true;
         }
     }
     return m_closeRequested;
@@ -218,5 +224,14 @@ bool SfmlGraphics::isKeyDown(Key key) const
     // SFML reads the global keyboard state: ignore it when unfocused.
     return m_window.hasFocus() && sf::Keyboard::isKeyPressed(toSfml(key));
 }
+
+engine::Vec2f SfmlGraphics::mousePosition() const
+{
+    const sf::Vector2i position = sf::Mouse::getPosition(m_window);
+    return {.x = static_cast<float>(position.x),
+            .y = static_cast<float>(position.y)};
+}
+
+bool SfmlGraphics::isMousePressed() const { return m_mousePressed; }
 
 } // namespace client::gfx

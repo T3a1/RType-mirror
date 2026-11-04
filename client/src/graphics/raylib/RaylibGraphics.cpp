@@ -161,4 +161,15 @@ bool RaylibGraphics::isKeyDown(Key key) const
     return IsKeyDown(toRaylib(key));
 }
 
+engine::Vec2f RaylibGraphics::mousePosition() const
+{
+    const Vector2 position = GetMousePosition();
+    return {.x = position.x, .y = position.y};
+}
+
+bool RaylibGraphics::isMousePressed() const
+{
+    return IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+}
+
 } // namespace client::gfx
