@@ -61,6 +61,7 @@ add_library(r-type_server_spawn STATIC
     src/Formations.cpp
     src/Level.cpp
     src/systems/LevelSystem.cpp
+    src/systems/SpawnCommandSystem.cpp
     src/systems/SpawnSystem.cpp
 )
 

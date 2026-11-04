@@ -8,7 +8,6 @@
 #ifndef SERVER_SYSTEMS_SHOOTSYSTEM_HPP
 #define SERVER_SYSTEMS_SHOOTSYSTEM_HPP
 
-#include "EntityFactory.hpp"
 #include "SpawnRequests.hpp"
 #include "common/components/Player.hpp"
 #include "common/components/Transform.hpp"
@@ -23,7 +22,7 @@
 
 namespace server {
 
-void shootSystem(engine::Registry &registry, EntityFactory &factory,
+void shootSystem(engine::Registry &registry, SpawnCommands &commands,
                  engine::Duration dt);
 
 } // namespace server

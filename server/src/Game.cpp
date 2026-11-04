@@ -86,13 +86,13 @@ void Game::registerSystems()
     m_scheduler.add(
         Stage::Simulation, "spawn",
         [this](Registry &r, Duration dt) {
-            server::spawnSystem(r, m_factory, dt);
+            server::spawnSystem(r, m_commands, dt);
         },
         playing);
     m_scheduler.add(
         Stage::Simulation, "shoot",
         [this](Registry &r, Duration dt) {
-            server::shootSystem(r, m_factory, dt);
+            server::shootSystem(r, m_commands, dt);
         },
         playing);
     m_scheduler.add(
@@ -140,6 +140,11 @@ void Game::registerSystems()
             }
         },
         playing);
+
+    m_scheduler.add(Stage::Cleanup, "spawnCommands",
+                    [this](Registry &r, Duration) {
+                        server::spawnCommandSystem(r, m_commands, m_factory);
+                    });
 
     m_scheduler.add(Stage::Output, "snapshot",
                     [this](Registry &r, Duration) {

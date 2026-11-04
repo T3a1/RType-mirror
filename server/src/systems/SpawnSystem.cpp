@@ -42,11 +42,9 @@ std::vector<PendingSpawn> randomFormation(rtype::Spawner &spawner)
 
 } // namespace
 
-void spawnSystem(engine::Registry &registry, EntityFactory &factory,
+void spawnSystem(engine::Registry &registry, SpawnCommands &commands,
                  engine::Duration dt)
 {
-    std::vector<SpawnEnemy> spawnRequests;
-
     registry.each<rtype::Spawner, SpawnQueue>(
         [&](engine::Entity entity, rtype::Spawner &spawner, SpawnQueue &queue) {
             // While levels are played, levelSystem() fills the queue.
@@ -63,16 +61,13 @@ void spawnSystem(engine::Registry &registry, EntityFactory &factory,
             for (PendingSpawn &spawn : queue.pending) {
                 spawn.delay -= dt;
                 if (spawn.delay.count() <= 0.0F) {
-                    spawnRequests.push_back(spawn.request);
+                    commands.emplace_back(spawn.request);
                 }
             }
             std::erase_if(queue.pending, [](const PendingSpawn &spawn) {
                 return spawn.delay.count() <= 0.0F;
             });
         });
-    for (const SpawnEnemy &request : spawnRequests) {
-        factory.create(registry, request);
-    }
 }
 
 } // namespace server

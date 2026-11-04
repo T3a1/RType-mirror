@@ -15,6 +15,8 @@
 
 #include <cstdint>
 #include <optional>
+#include <variant>
+#include <vector>
 
 namespace server {
 
@@ -53,6 +55,12 @@ struct SpawnProjectile {
     engine::Vec2f velocity{};
     bool fromPlayer = true;
 };
+
+/// A deferred entity creation.
+using SpawnCommand = std::variant<SpawnEnemy, SpawnProjectile>;
+
+/// The creations requested during a tick, applied in the Cleanup stage.
+using SpawnCommands = std::vector<SpawnCommand>;
 
 } // namespace server
 

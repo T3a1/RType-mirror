@@ -40,14 +40,12 @@ SpawnProjectile shotRequest(engine::Entity shooter,
 /**
  * Processes the shooting of entities.
  * @param registry The entity registry.
- * @param factory The entity factory.
+ * @param commands Where the projectiles are requested.
  * @param dt The time since the last update.
  **/
-void shootSystem(engine::Registry &registry, EntityFactory &factory,
+void shootSystem(engine::Registry &registry, SpawnCommands &commands,
                  engine::Duration dt)
 {
-    std::vector<SpawnProjectile> shotRequests;
-
     registry.each<rtype::Weapon, rtype::Transform>(
         [&](engine::Entity entity, rtype::Weapon &weapon,
             const rtype::Transform &transform) {
@@ -56,13 +54,10 @@ void shootSystem(engine::Registry &registry, EntityFactory &factory,
             if (!weapon.triggered || weapon.cooldown.count() > 0.0F) {
                 return;
             }
-            shotRequests.push_back(shotRequest(
+            commands.emplace_back(shotRequest(
                 entity, transform, registry.has<rtype::Player>(entity)));
             weapon.cooldown += weapon.fireInterval;
         });
-    for (const SpawnProjectile &request : shotRequests) {
-        factory.create(registry, request);
-    }
 }
 
 } // namespace server

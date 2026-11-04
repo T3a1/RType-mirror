@@ -14,6 +14,7 @@
 #include "engine/Entity.hpp"
 #include "engine/Registry.hpp"
 #include "systems/LevelSystem.hpp"
+#include "systems/SpawnCommandSystem.hpp"
 #include "systems/SpawnSystem.hpp"
 
 #include <gtest/gtest.h>
@@ -191,7 +192,8 @@ class LevelSystemTest : public testing::Test {
             if (const auto level = server::levelSystem(m_registry, Tick)) {
                 m_announced.push_back(*level);
             }
-            server::spawnSystem(m_registry, m_factory, Tick);
+            server::spawnSystem(m_registry, m_commands, Tick);
+            server::spawnCommandSystem(m_registry, m_commands, m_factory);
             m_registry.flush();
         }
     }
@@ -206,6 +208,7 @@ class LevelSystemTest : public testing::Test {
   private:
     engine::Registry m_registry;
     server::EntityFactory m_factory;
+    server::SpawnCommands m_commands;
     engine::Entity m_world = m_registry.create();
     std::vector<std::uint8_t> m_announced;
 };

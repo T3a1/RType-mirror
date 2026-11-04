@@ -270,7 +270,7 @@ and the systems of a stage in the order they were added:
 |-------|--------|--------|
 | 1. Input | Drain the inbound network queue, sessions, players' `InputState`, room phase, fire and AI decisions | Receive from the server, lobby messages, apply the latest snapshot, read and send the inputs |
 | 2. Simulation | Spawning, shooting, player control, patterns, movement, collisions, damage, death, lifetime, boundaries, game over | Background scroll, smoothing, prediction, ship tilt, animation |
-| 3. Cleanup | Deferred changes; the scheduler then calls `registry.flush()` | The scheduler calls `registry.flush()` |
+| 3. Cleanup | Create the requested entities (`spawnCommandSystem`); the scheduler then calls `registry.flush()` | The scheduler calls `registry.flush()` |
 | 4. Output | Build snapshots and push them to the outbound queue | Nothing yet |
 
 Cleanup comes before Output so that a snapshot never contains an entity that
