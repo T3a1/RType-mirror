@@ -27,12 +27,14 @@ void playerLabelSystem(engine::Registry &registry, const SyncState &state,
 
 /**
  * @brief Draws the score of every player in the top-left corner, each in
- * the player's color, the local player marked "(you)". It is drawn in
- * screen pixels: call it after endWorld().
+ * the player's color, the local player marked "(you)", and "Auto-fire ON"
+ * below them while auto-fire is on. It is drawn in screen pixels: call it
+ * after endWorld().
  * @param state The sync state, for the players and the local slot.
+ * @param autoFire Whether auto-fire is on.
  * @param graphics The graphics backend to draw with.
  **/
-void hudSystem(const SyncState &state, gfx::IGraphics &graphics);
+void hudSystem(const SyncState &state, bool autoFire, gfx::IGraphics &graphics);
 
 /**
  * @brief Draws the end of the game in the middle of the window: "GAME OVER",

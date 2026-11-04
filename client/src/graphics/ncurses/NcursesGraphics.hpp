@@ -33,7 +33,8 @@ namespace client::gfx {
  *
  * A terminal only sends key presses and their auto-repeat, never releases:
  * a key counts as held for a short time after each press, and only one key
- * can be held at once. Escape, q or Ctrl+C closes the client. The mouse is
+ * can be held at once, and Shift, Ctrl and Alt alone are never seen.
+ * Escape, q or Ctrl+C closes the client, so Q cannot be bound. The mouse is
  * only known where it clicks, and only in terminals that report it.
  *
  * While it runs, stderr (the logs) is redirected to r-type_client.log in the
@@ -77,7 +78,6 @@ class NcursesGraphics final : public IGraphics {
 
   private:
     using Clock = std::chrono::steady_clock;
-    static constexpr std::size_t KeyCount = 5;
 
     /** @brief Records a press of key, the start of a hold or a repeat. */
     void press(Key key, Clock::time_point now);

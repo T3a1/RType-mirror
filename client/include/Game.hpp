@@ -9,11 +9,13 @@
 #define CLIENT_GAME_HPP
 
 #include "Bench.hpp"
+#include "Controls.hpp"
 #include "SpriteSheets.hpp"
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"
 #include "graphics/IGraphics.hpp"
 #include "network/NetworkClient.hpp"
+#include "systems/InputSystem.hpp"
 #include "systems/NetworkSyncSystem.hpp"
 
 #include <cstdint>
@@ -30,11 +32,13 @@ namespace client {
  * @param predict Whether the local ship is predicted.
  * @param bench The network benchmark to run instead of the keyboard, if
  * any.
+ * @param controls The keys bound to each control.
  **/
 struct GameOptions {
     bool interpolate = true;
     bool predict = true;
     std::optional<BenchConfig> bench;
+    Controls controls = defaultControls();
 };
 
 // The client game: its own registry (a mirror of the server's world plus
@@ -76,6 +80,8 @@ class Game {
     SyncState m_sync;
     bool m_quitRequested = false;
     std::optional<Bench> m_bench;
+    Controls m_controls;
+    AutoFire m_autoFire;
 };
 
 } // namespace client
