@@ -100,7 +100,6 @@ void Game::render()
     backgroundRenderSystem(m_registry, *m_graphics);
     m_graphics->beginWorld(zoom);
     renderSystem(m_registry, *m_graphics);
-    healthBarSystem(m_registry, *m_graphics);
     playerLabelSystem(m_registry, m_sync, *m_graphics);
     m_graphics->endWorld();
     hudSystem(m_sync, *m_graphics);

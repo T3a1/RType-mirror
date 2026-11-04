@@ -7,26 +7,18 @@
 
 #include "systems/HudSystem.hpp"
 #include "PlayerColors.hpp"
-#include "common/components/EntityType.hpp"
-#include "common/components/Health.hpp"
 #include "common/components/Transform.hpp"
 #include "components/ShipOwner.hpp"
 #include "engine/Entity.hpp"
 
-#include <algorithm>
 #include <string>
 
 namespace client {
 
 namespace {
 
-constexpr float BarWidth = 64.0F;
-constexpr float BarHeight = 8.0F;
-constexpr float BarOffsetY = 44.0F; // above the ship's center
-constexpr float LowHealth = 0.3F;
-
 constexpr int LabelFontSize = 28;
-constexpr float LabelGap = 6.0F; // between the label and the health bar
+constexpr float LabelOffsetY = 24.0F; // above the ship's center
 // Average glyph width of the default fonts, as a share of the font size.
 constexpr float GlyphWidth = 0.55F;
 
@@ -36,31 +28,6 @@ constexpr int HudFontSize = 28;
 constexpr float HudLineHeight = 34.0F;
 
 } // namespace
-
-void healthBarSystem(engine::Registry &registry, gfx::IGraphics &graphics)
-{
-    registry.each<rtype::EntityType, rtype::Transform, rtype::Health>(
-        [&graphics](engine::Entity, const rtype::EntityType &type,
-                    const rtype::Transform &transform,
-                    const rtype::Health &health) {
-            if (type != rtype::EntityType::PlayerShip || health.max <= 0) {
-                return;
-            }
-            const float ratio = std::clamp(static_cast<float>(health.current) /
-                                               static_cast<float>(health.max),
-                                           0.0F, 1.0F);
-            gfx::Rect bar{
-                .x = transform.position.x - (BarWidth / 2.0F),
-                .y = transform.position.y - BarOffsetY,
-                .width = BarWidth,
-                .height = BarHeight,
-            };
-            graphics.drawRectangle(bar, gfx::colors::DarkGray);
-            bar.width = BarWidth * ratio;
-            graphics.drawRectangle(bar, ratio > LowHealth ? gfx::colors::Green
-                                                          : gfx::colors::Red);
-        });
-}
 
 void playerLabelSystem(engine::Registry &registry, const SyncState &state,
                        gfx::IGraphics &graphics)
@@ -75,8 +42,7 @@ void playerLabelSystem(engine::Registry &registry, const SyncState &state,
                                 static_cast<float>(LabelFontSize) * GlyphWidth;
             graphics.drawText(text,
                               {.x = transform.position.x - (width / 2.0F),
-                               .y = transform.position.y - BarOffsetY -
-                                    LabelGap -
+                               .y = transform.position.y - LabelOffsetY -
                                     static_cast<float>(LabelFontSize)},
                               LabelFontSize, playerColor(owner.slot));
         });

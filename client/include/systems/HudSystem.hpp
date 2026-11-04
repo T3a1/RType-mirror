@@ -15,19 +15,9 @@
 namespace client {
 
 /**
- * @brief Draws a health bar above every player ship, from its Health and
- * Transform. It is drawn in playfield units: call it between beginWorld()
- * and endWorld().
- * @param registry The client's registry.
- * @param graphics The graphics backend to draw with.
- **/
-void healthBarSystem(engine::Registry &registry, gfx::IGraphics &graphics);
-
-/**
  * @brief Draws the label of every ship whose player is known ("P2", or
- * "P1 (you)" for the local ship) above its health bar, in the player's
- * color. It is drawn in playfield units: call it between beginWorld() and
- * endWorld().
+ * "P1 (you)" for the local ship) above it, in the player's color. It is drawn
+ *in playfield units: call it between beginWorld() and endWorld().
  * @param registry The client's registry.
  * @param state The sync state, for the local slot.
  * @param graphics The graphics backend to draw with.

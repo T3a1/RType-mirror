@@ -10,8 +10,8 @@ of enemies.
   players join it over the network from their own computers.
 - **Classic arcade action**: move your ship around the screen, shoot the
   enemies coming from the right, and avoid getting hit.
-- **Health and score**: a health bar follows each ship, and every player earns
-  points for each enemy shot down.
+- **One hit, one life**: a single enemy shot or collision destroys your ship,
+  and every player earns points for each enemy shot down.
 - **Fair play**: the server is the only judge of what happens in the game, so
   every player sees the same game.
 
