@@ -16,6 +16,7 @@
 #include "engine/Clock.hpp"
 #include "engine/IInstance.hpp"
 #include "engine/Registry.hpp"
+#include "engine/Scheduler.hpp"
 #include "network/NetworkMessages.hpp"
 #include "systems/BoundarySystem.hpp"
 #include "systems/CollisionSystem.hpp"
@@ -37,6 +38,7 @@
 #include <cstdint>
 #include <map>
 #include <thread>
+#include <vector>
 
 namespace server {
 
@@ -47,7 +49,8 @@ namespace server {
  *
  * The game owns the registry, the entity factory and the connected players.
  * It talks to the network thread only through the inbound and outbound
- * queues, and runs every system once per fixed 60 Hz tick.
+ * queues, and registers its systems in a scheduler that runs them once per
+ * fixed 60 Hz tick.
  **/
 class Game final : public engine::IInstance {
   public:
@@ -93,12 +96,13 @@ class Game final : public engine::IInstance {
     Game(Inbound &inbound, Outbound &outbound, bool invinciblePlayers = false);
 
   private:
-    void simulate(engine::Duration dt);
+    void registerSystems();
 
     Inbound &m_inbound;
     Outbound &m_outbound;
     bool m_invinciblePlayers;
     engine::Registry m_registry;
+    engine::Scheduler m_scheduler;
     EntityFactory m_factory;
     rtype::protocol::RoomStatus m_status = rtype::protocol::RoomStatus::Waiting;
     std::atomic<std::uint8_t> m_publicStatus{
@@ -106,6 +110,8 @@ class Game final : public engine::IInstance {
     Players m_players;
     bool m_gameOver = false;
     std::uint32_t m_tick = 1;
+    std::vector<InboundMessage> m_messages;
+    std::vector<Collision> m_collisions;
     static_assert(std::atomic<bool>::is_always_lock_free);
 };
 
