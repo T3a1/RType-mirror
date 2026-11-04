@@ -6,6 +6,7 @@
 */
 
 #include "SpriteSheets.hpp"
+#include "PlayerColors.hpp"
 #include "common/Playfield.hpp"
 #include "common/components/Transform.hpp"
 #include "components/Animation.hpp"
@@ -159,13 +160,14 @@ Look lookOf(rtype::EntityType type, std::uint8_t slot)
 {
     switch (type) {
     case rtype::EntityType::PlayerShip: {
-        // Slots 1 to 4 get the first four colors, unknown ships the last.
+        // Slots 1 to 4 get the first four colors (see playerColor()),
+        // unknown ships the last.
         const std::size_t color =
             slot >= 1 && slot < ShipColors ? slot - 1U : ShipColors - 1;
         return {.sheet = Sheet::Ships,
                 .frames = ShipFrames.at(color),
                 .scale = 2.5F,
-                .fallback = slot != 0 ? rgb(80, 160, 255) : rgb(120, 200, 120),
+                .fallback = slot != 0 ? playerColor(slot) : rgb(120, 200, 120),
                 .layer = 2};
     }
     case rtype::EntityType::PlayerMissile:

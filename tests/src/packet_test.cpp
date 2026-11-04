@@ -73,7 +73,7 @@ SnapshotPart sampleSnapshot()
     SnapshotPart snapshot;
     snapshot.tick = 300;
     snapshot.players = {
-        {.slot = 1, .score = 1500, .lastInput = 1000},
+        {.slot = 1, .score = 1500, .lastInput = 1000, .shipId = 7},
         {.slot = 2, .score = 0},
     };
     snapshot.entities = {
@@ -136,7 +136,7 @@ TEST(Packet, MatchesTheDocumentedLayout)
     }));
     const std::vector<std::uint8_t> expected{
         0x52, 0x54,             // magic "RT"
-        0x02,                   // version
+        0x03,                   // version
         0x10,                   // type Input
         0x00,                   // flags
         0x00,                   // reserved
@@ -241,7 +241,7 @@ TEST(Packet, MarksReliableTypesReliable)
     const auto bytes =
         encodeBytes(packetOf(Welcome{.slot = 2, .shipId = 58, .tick = 1200}));
     const std::vector<std::uint8_t> expected{
-        0x52, 0x54, 0x02, 0x21, // magic, version, type Welcome
+        0x52, 0x54, 0x03, 0x21, // magic, version, type Welcome
         0x01, 0x00,             // flags Reliable, reserved
         0x2A, 0x01, 0x11, 0x00, // sequence 298, ack 17
         0x09, 0x00,             // payload size 9
@@ -326,8 +326,8 @@ TEST(Packet, RejectsUnknownEnumValues)
     expectBadByte(reject, HeaderSize, 9);
     expectBadByte(disconnect, HeaderSize, 9);
     expectBadByte(event, HeaderSize, 9);
-    // Snapshot header (8) + 2 players (1 + 2 * 9) + networkId (4).
-    expectBadByte(sampleSnapshot(), HeaderSize + 31, 200);
+    // Snapshot header (8) + 2 players (1 + 2 * 13) + networkId (4).
+    expectBadByte(sampleSnapshot(), HeaderSize + 39, 200);
 }
 
 TEST(Packet, RejectsInvalidSnapshots)
@@ -399,9 +399,9 @@ TEST(SplitSnapshot, EveryPartFitsInADatagram)
     }
     const auto parts = splitSnapshot(300, players, entities);
     ASSERT_EQ(parts.size(), 3U);
-    EXPECT_EQ(parts[0].entities.size(), 71U);
+    EXPECT_EQ(parts[0].entities.size(), 70U);
     EXPECT_EQ(parts[1].entities.size(), 73U);
-    EXPECT_EQ(parts[2].entities.size(), 56U);
+    EXPECT_EQ(parts[2].entities.size(), 57U);
     std::vector<EntityState> received;
     for (const SnapshotPart &part : parts) {
         expectSendablePart(part, 3);
