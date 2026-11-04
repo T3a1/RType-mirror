@@ -37,6 +37,15 @@ void playerLabelSystem(engine::Registry &registry, const SyncState &state,
 void hudSystem(const SyncState &state, bool autoFire, gfx::IGraphics &graphics);
 
 /**
+ * @brief Draws the health bar of the boss at the bottom of the window,
+ * with its name, while a boss is on screen. It is drawn in screen pixels:
+ * call it after endWorld().
+ * @param registry The client's registry, for the boss and its Health.
+ * @param graphics The graphics backend to draw with.
+ **/
+void bossHealthBar(engine::Registry &registry, gfx::IGraphics &graphics);
+
+/**
  * @brief Draws the current level at the top of the window ("Level 2" or
  * "Endless mode"), and while a new level is announced, a large banner in
  * the middle ("LEVEL 2", after "Level cleared" from the second level on),
