@@ -39,7 +39,8 @@ class IGraphics {
     IGraphics(IGraphics &&) = delete;
     IGraphics &operator=(IGraphics &&) = delete;
 
-    /** @brief Processes the window events, true once the user closed it. */
+    /** @brief Processes the window events, true once the user closed the
+     * window or pressed Escape. */
     [[nodiscard]] virtual bool shouldClose() = 0;
     /** @brief The size of the window's drawable area, in pixels. */
     [[nodiscard]] virtual engine::Vec2f screenSize() const = 0;

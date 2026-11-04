@@ -108,6 +108,9 @@ bool SfmlGraphics::shouldClose()
     while (const std::optional event = m_window.pollEvent()) {
         if (event->is<sf::Event::Closed>()) {
             m_closeRequested = true;
+        } else if (const auto *key = event->getIf<sf::Event::KeyPressed>();
+                   key != nullptr && key->code == sf::Keyboard::Key::Escape) {
+            m_closeRequested = true;
         }
     }
     return m_closeRequested;
