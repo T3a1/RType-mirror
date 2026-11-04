@@ -94,32 +94,31 @@ void shootSystem(engine::Registry &registry, EntityFactory &factory,
     registry.each<rtype::Weapon, rtype::Transform>(
         [&](engine::Entity entity, rtype::Weapon &weapon,
             const rtype::Transform &transform) {
-            const bool player = registry.has<rtype::Player>(entity);
             weapon.cooldown =
                 std::max(weapon.cooldown - dt, engine::Duration{0.0F});
-            if (player) {
-                // Holding the key charges; releasing it after chargeTime
-                // fires a charged shot.
-                if (weapon.triggered) {
-                    weapon.charge += dt;
-                } else {
-                    if (weapon.charge >= stats.chargeTime) {
-                        shotRequests.push_back(
-                            chargedShot(entity, transform, stats));
-                    }
-                    weapon.charge = engine::Duration{0.0F};
+            if (!registry.has<rtype::Player>(entity)) {
+                if (weapon.triggered && weapon.cooldown.count() <= 0.0F) {
+                    shotRequests.push_back(enemyShot(entity, transform, stats));
+                    weapon.cooldown += weapon.fireInterval;
                 }
-            }
-            if (!weapon.triggered || weapon.cooldown.count() > 0.0F) {
                 return;
             }
-            if (player) {
+            if (!weapon.triggered) {
+                // Released: a charged shot if the key was held long enough.
+                if (weapon.charge >= stats.chargeTime) {
+                    shotRequests.push_back(
+                        chargedShot(entity, transform, stats));
+                }
+                weapon.charge = engine::Duration{0.0F};
+                return;
+            }
+            // Pressed: one shot. Held: only charges, no more shots.
+            const bool pressed = weapon.charge.count() == 0.0F;
+            weapon.charge += dt;
+            if (pressed && weapon.cooldown.count() <= 0.0F) {
                 playerShots(entity, transform, weapon.level, stats,
                             shotRequests);
-                weapon.cooldown += stats.fireInterval;
-            } else {
-                shotRequests.push_back(enemyShot(entity, transform, stats));
-                weapon.cooldown += weapon.fireInterval;
+                weapon.cooldown = stats.fireInterval;
             }
         });
     for (const SpawnProjectile &request : shotRequests) {

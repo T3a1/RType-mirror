@@ -2,12 +2,15 @@
 
 ## In the game
 
-- **Normal shot**: hold the fire key to shoot continuously.
-- **Charged shot**: hold the fire key for 1 second, then release it. While
-  it charges, a glow appears in front of the ship; on release, a large beam
-  flies across the screen, goes **through** every enemy on its way and deals
-  each one heavy damage (300, against 50 for a normal shot). With auto-fire
-  on, the key is never released: the ship keeps its rapid fire instead.
+- **Normal shot**: each press of the fire key fires once (at most 4 times
+  per second). Tap it to shoot fast.
+- **Charged shot**: hold the fire key. While it is held, the ship stops
+  shooting and charges: a glow appears in front of it. Released after 1
+  second, a large beam flies across the screen, goes **through** every enemy
+  on its way and deals each one heavy damage (300, against 50 for a normal
+  shot). Released earlier, nothing more is fired.
+- **Auto-fire** (F or Right Shift) presses the fire key for you 4 times per
+  second: rapid fire without tapping, and no charged shot.
 - **Power-ups**: medium and large enemies, and the boss, leave an orb when
   they are destroyed. It slowly floats to the left; the ship that touches it
   gets one more **weapon level**:
@@ -45,7 +48,7 @@ the server.
 
 | Key | Default | Range | Meaning |
 |-----|--------:|-------|---------|
-| `fireInterval` | 0.25 | 0.05 to 5 | Seconds between two shots of a player |
+| `fireInterval` | 0.25 | 0.05 to 5 | Shortest time between two shots of a player: faster presses are ignored |
 | `shotSpeed` | 900 | 100 to 5000 | Speed of a player's shot, in playfield units per second (the playfield is 1920 wide) |
 | `shotDamage` | 50 | 1 to 10000 | Damage of a player's shot (a basic enemy has 100 health points) |
 | `enemyShotSpeed` | 450 | 100 to 5000 | Speed of an enemy's shot |

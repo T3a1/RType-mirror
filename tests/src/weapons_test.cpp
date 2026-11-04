@@ -106,19 +106,36 @@ TEST(Weapons, ShippedFileIsValid)
     EXPECT_TRUE(error.empty()) << error;
 }
 
-TEST_F(WeaponTest, EachLevelAddsTwoShots)
+TEST_F(WeaponTest, EachPressFiresAndEachLevelAddsTwoShots)
 {
     hold(true, 1);
     EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 1U);
 
     registry().get<rtype::Weapon>(ship()).level = 3;
-    hold(true, static_cast<int>(stats().fireInterval / Tick) + 2);
+    hold(false, static_cast<int>(stats().fireInterval / Tick) + 2);
+    hold(true, 1);
     EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 6U);
+}
+
+TEST_F(WeaponTest, HoldingTheKeyChargesWithoutFiring)
+{
+    hold(true, static_cast<int>(stats().chargeTime / Tick) / 2);
+    EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 1U);
+}
+
+TEST_F(WeaponTest, PressesFasterThanTheFireRateAreIgnored)
+{
+    for (int i = 0; i < 4; ++i) {
+        hold(true, 1);
+        hold(false, 1);
+    }
+    EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 1U);
 }
 
 TEST_F(WeaponTest, ReleasingAfterTheChargeTimeFiresAChargedShot)
 {
     hold(true, static_cast<int>(stats().chargeTime / Tick) + 2);
+    EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 1U);
     EXPECT_EQ(countType(registry(), rtype::EntityType::ChargedShot), 0U);
     hold(false, 1);
     EXPECT_EQ(countType(registry(), rtype::EntityType::ChargedShot), 1U);

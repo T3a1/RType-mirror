@@ -25,10 +25,11 @@
 namespace server {
 
 /**
- * @brief Fires the weapons whose cooldown is over. An enemy fires one shot
- * to the left. A player fires 2 * level - 1 shots in a spread; holding the
- * key also charges, and releasing it after stats.chargeTime fires a
- * charged shot that goes through enemies.
+ * @brief Fires the weapons. An enemy fires one shot to the left whenever
+ * its cooldown is over. A player fires 2 * level - 1 shots in a spread when
+ * the fire key is pressed (at most once per stats.fireInterval); while the
+ * key is held, it only charges, and releasing it after stats.chargeTime
+ * fires a charged shot that goes through enemies.
  * @param registry The registry holding the weapons.
  * @param factory The factory that creates the shots.
  * @param dt The time since the last tick.

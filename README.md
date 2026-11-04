@@ -24,8 +24,8 @@ hand only.
 | Left hand | Right hand | Action |
 |-----------|------------|--------|
 | W A S D | Arrow keys | Move the ship |
-| Space | Right Ctrl | Shoot (hold the key). Held for 1 second, then released: a charged shot that goes through enemies |
-| F | Right Shift | Auto-fire on or off: the ship shoots on its own |
+| Space | Right Ctrl | Shoot: one shot per press. Held for 1 second, then released: a charged shot that goes through enemies |
+| F | Right Shift | Auto-fire on or off: the ship shoots on its own, 4 times per second |
 | Escape | Escape | Quit |
 
 **Choose your own keys**: write a `controls.cfg` file in the folder you start
