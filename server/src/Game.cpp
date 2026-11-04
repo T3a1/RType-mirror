@@ -6,10 +6,14 @@
 */
 
 #include "Game.hpp"
+#include "components/LevelProgress.hpp"
+
+#include <utility>
 
 namespace server {
 
-Game::Game(Inbound &inbound, Outbound &outbound, bool invinciblePlayers)
+Game::Game(Inbound &inbound, Outbound &outbound, bool invinciblePlayers,
+           std::shared_ptr<const std::vector<Level>> levels)
     : m_inbound(inbound), m_outbound(outbound),
       m_invinciblePlayers(invinciblePlayers)
 {
@@ -20,6 +24,10 @@ Game::Game(Inbound &inbound, Outbound &outbound, bool invinciblePlayers)
                                            .maxDelay = engine::Duration{4.5F},
                                        });
     m_registry.emplace<SpawnQueue>(world);
+    if (levels && !levels->empty()) {
+        m_registry.emplace<LevelProgress>(
+            world, LevelProgress{.levels = std::move(levels)});
+    }
 }
 
 void Game::tick(engine::Duration dt)
@@ -44,6 +52,7 @@ void Game::simulate(engine::Duration dt)
 {
     rtype::playerFireSystem(m_registry);
     server::enemyAISystem(m_registry);
+    server::levelSystem(m_registry, dt);
     server::spawnSystem(m_registry, m_factory, dt);
     server::shootSystem(m_registry, m_factory, dt);
     rtype::playerControlSystem(m_registry);

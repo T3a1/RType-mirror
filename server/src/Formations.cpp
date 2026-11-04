@@ -9,7 +9,9 @@
 #include "EnemyDefs.hpp"
 #include "common/Playfield.hpp"
 
+#include <algorithm>
 #include <cmath>
+#include <random>
 
 namespace server {
 
@@ -21,6 +23,16 @@ float formationExtent(const Formation &formation)
     const float rows = static_cast<float>(formation.count - 1) / 2.0F;
 
     return (rows * formation.stepY) + pattern.amplitude + (stat.size.y / 2.0F);
+}
+
+float randomCenterY(const Formation &formation, rtype::Spawner &spawner)
+{
+    const float extent =
+        std::min(formationExtent(formation), rtype::PlayfieldHeight / 2.0F);
+    std::uniform_real_distribution<float> center(
+        extent, rtype::PlayfieldHeight - extent);
+
+    return center(spawner.randomGenerator);
 }
 
 std::vector<PendingSpawn> formationSpawns(const Formation &formation,
