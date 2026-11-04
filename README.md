@@ -21,6 +21,7 @@ of enemies.
 |-----|--------|
 | Arrow keys | Move the ship |
 | Space | Shoot |
+| Escape | Quit |
 
 ## Getting started
 

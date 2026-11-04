@@ -33,7 +33,7 @@ namespace client::gfx {
  *
  * A terminal only sends key presses and their auto-repeat, never releases:
  * a key counts as held for a short time after each press, and only one key
- * can be held at once. q or Ctrl+C closes the client.
+ * can be held at once. Escape, q or Ctrl+C closes the client.
  *
  * While it runs, stderr (the logs) is redirected to r-type_client.log in the
  * current directory, so the logs do not draw over the game.

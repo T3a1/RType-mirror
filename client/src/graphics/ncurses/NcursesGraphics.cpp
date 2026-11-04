@@ -40,7 +40,10 @@ constexpr auto RepeatWindow = std::chrono::milliseconds{700};
 constexpr auto FrameTime = std::chrono::microseconds{16'667}; // 60 Hz
 
 constexpr int CtrlC = 3;
-constexpr int EscapeDelayMs = 25;
+constexpr int Escape = 27;
+// How long a lone Escape waits for the rest of an arrow key's sequence: too
+// short and a slow connection quits the game when an arrow is pressed.
+constexpr int EscapeDelayMs = 50;
 
 struct Rgb {
     int r;
@@ -230,7 +233,8 @@ bool NcursesGraphics::shouldClose()
 {
     const Clock::time_point now = Clock::now();
     for (int character = getch(); character != ERR; character = getch()) {
-        if (character == 'q' || character == 'Q' || character == CtrlC) {
+        if (character == 'q' || character == 'Q' || character == CtrlC ||
+            character == Escape) {
             m_closeRequested = true;
         } else if (const std::optional<Key> key = toKey(character)) {
             press(*key, now);

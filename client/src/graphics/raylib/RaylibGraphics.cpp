@@ -64,6 +64,7 @@ RaylibGraphics::RaylibGraphics(const WindowConfig &config)
     if (!IsWindowReady()) {
         throw std::runtime_error("cannot open the window");
     }
+    SetExitKey(KEY_ESCAPE);
 }
 
 RaylibGraphics::~RaylibGraphics()
