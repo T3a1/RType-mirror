@@ -87,7 +87,24 @@ class RoomRoutingTest : public ::testing::Test {
         client.send(Connect{.room = room});
         const auto accept = client.waitFor<Accept>();
         EXPECT_TRUE(accept.has_value());
-        return accept ? accept->room : AnyRoom;
+        return accept.value_or(Accept{}).room;
+    }
+
+    // The slot of the next event a peer receives, which must come.
+    static std::uint8_t nextEventSlot(FakePeer &client)
+    {
+        const auto event = client.waitFor<GameEvent>();
+        EXPECT_TRUE(event.has_value());
+        return event.value_or(GameEvent{}).slot;
+    }
+
+    // The reason of the next Reject a peer receives, which must come.
+    static RejectReason nextRejectReason(FakePeer &client)
+    {
+        const auto reject = client.waitFor<Reject>();
+        EXPECT_TRUE(reject.has_value());
+        return reject.value_or(Reject{.reason = RejectReason::VersionMismatch})
+            .reason;
     }
 
   protected:
@@ -127,11 +144,8 @@ TEST_F(RoomRoutingTest, ARoomOnlyTalksToItsPlayers)
 
     inFirst.send(Input{.sequence = 1, .actions = 3});
 
-    const auto received = inFirst.waitFor<GameEvent>();
-    const auto alsoReceived = alsoInFirst.waitFor<GameEvent>();
-    ASSERT_TRUE(received && alsoReceived);
-    EXPECT_EQ(received->slot, 3);
-    EXPECT_EQ(alsoReceived->slot, 3);
+    EXPECT_EQ(nextEventSlot(inFirst), 3);
+    EXPECT_EQ(nextEventSlot(alsoInFirst), 3);
     EXPECT_FALSE(inSecond.waitFor<GameEvent>(std::chrono::milliseconds(100))
                      .has_value());
 }
@@ -147,13 +161,9 @@ TEST_F(RoomRoutingTest, RejectsAFullRoomAndTooManyRooms)
     join(third, 2);
 
     fourth.send(Connect{.room = 1});
-    const auto full = fourth.waitFor<Reject>();
+    EXPECT_EQ(nextRejectReason(fourth), RejectReason::ServerFull);
     fourth.send(Connect{.room = 3});
-    const auto tooMany = fourth.waitFor<Reject>();
-
-    ASSERT_TRUE(full && tooMany);
-    EXPECT_EQ(full->reason, RejectReason::ServerFull);
-    EXPECT_EQ(tooMany->reason, RejectReason::ServerFull);
+    EXPECT_EQ(nextRejectReason(fourth), RejectReason::ServerFull);
 }
 
 TEST_F(RoomRoutingTest, ARoomIsDestroyedAfterItsLastPlayer)
@@ -181,10 +191,9 @@ TEST_F(RoomRoutingTest, AFailingRoomOnlyDisconnectsItsPlayers)
     failing.send(Input{.sequence = 1, .actions = FailAction});
 
     const auto closed = failing.waitFor<Disconnect>();
-    ASSERT_TRUE(closed.has_value());
-    EXPECT_EQ(closed->reason, DisconnectReason::ServerClosing);
+    EXPECT_TRUE(closed.has_value());
+    EXPECT_EQ(closed.value_or(Disconnect{}).reason,
+              DisconnectReason::ServerClosing);
     healthy.send(Input{.sequence = 1, .actions = 2});
-    const auto event = healthy.waitFor<GameEvent>();
-    ASSERT_TRUE(event.has_value());
-    EXPECT_EQ(event->slot, 2);
+    EXPECT_EQ(nextEventSlot(healthy), 2);
 }

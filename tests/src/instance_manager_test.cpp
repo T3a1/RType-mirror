@@ -15,6 +15,7 @@
 #include <chrono>
 #include <memory>
 #include <stdexcept>
+#include <vector>
 
 namespace {
 
@@ -63,6 +64,25 @@ Manager makeManager(Counters &counters, std::size_t maxInstances = 2,
     };
 }
 
+// The membership of a join that must succeed.
+Manager::Membership joined(Manager &manager, engine::InstanceId id)
+{
+    const auto membership = manager.join(id);
+    EXPECT_TRUE(membership.has_value());
+    return membership.value_or(Manager::Membership{});
+}
+
+// The instances that failed, once at least one did.
+std::vector<engine::InstanceId> waitForFailure(Manager &manager)
+{
+    std::vector<engine::InstanceId> failed;
+    EXPECT_TRUE(tests::eventually([&] {
+        failed = manager.reap();
+        return !failed.empty();
+    }));
+    return failed;
+}
+
 } // namespace
 
 TEST(InstanceManager, CreatesAnInstanceForItsFirstMember)
@@ -70,12 +90,11 @@ TEST(InstanceManager, CreatesAnInstanceForItsFirstMember)
     Counters counters;
     Manager manager = makeManager(counters);
 
-    const auto first = manager.join(7);
-    const auto second = manager.join(7);
+    const Manager::Membership first = joined(manager, 7);
+    const Manager::Membership second = joined(manager, 7);
 
-    ASSERT_TRUE(first && second);
-    EXPECT_EQ(first->id, 7U);
-    EXPECT_EQ(first->link, second->link);
+    EXPECT_EQ(first.id, 7U);
+    EXPECT_EQ(first.link, second.link);
     EXPECT_EQ(counters.created, 1);
     EXPECT_EQ(manager.size(), 1U);
 }
@@ -85,13 +104,14 @@ TEST(InstanceManager, InstancesHaveTheirOwnQueues)
     Counters counters;
     Manager manager = makeManager(counters);
 
-    const auto first = manager.join(1);
-    const auto second = manager.join(2);
+    const Manager::Membership first = joined(manager, 1);
+    const Manager::Membership second = joined(manager, 2);
 
-    ASSERT_TRUE(first && second);
-    EXPECT_NE(first->link, second->link);
-    first->link->inbound.push(42);
-    EXPECT_EQ(second->link->inbound.size(), 0U);
+    ASSERT_NE(first.link, second.link);
+    ASSERT_NE(first.link, nullptr);
+    ASSERT_NE(second.link, nullptr);
+    first.link->inbound.push(42);
+    EXPECT_EQ(second.link->inbound.size(), 0U);
 }
 
 TEST(InstanceManager, AnyInstanceFillsTheFirstWithRoomThenCreatesAnother)
@@ -99,14 +119,9 @@ TEST(InstanceManager, AnyInstanceFillsTheFirstWithRoomThenCreatesAnother)
     Counters counters;
     Manager manager = makeManager(counters);
 
-    const auto first = manager.join(engine::AnyInstance);
-    const auto second = manager.join(engine::AnyInstance);
-    const auto third = manager.join(engine::AnyInstance);
-
-    ASSERT_TRUE(first && second && third);
-    EXPECT_EQ(first->id, 1U);
-    EXPECT_EQ(second->id, 1U);
-    EXPECT_EQ(third->id, 2U);
+    EXPECT_EQ(joined(manager, engine::AnyInstance).id, 1U);
+    EXPECT_EQ(joined(manager, engine::AnyInstance).id, 1U);
+    EXPECT_EQ(joined(manager, engine::AnyInstance).id, 2U);
 }
 
 TEST(InstanceManager, RefusesAFullInstanceAndTooManyInstances)
@@ -188,13 +203,7 @@ TEST(InstanceManager, AFailingInstanceOnlyEndsItself)
 
     failing.fail = true;
 
-    std::vector<engine::InstanceId> ended;
-    EXPECT_TRUE(tests::eventually([&] {
-        ended = manager.reap();
-        return !ended.empty();
-    }));
-    ASSERT_EQ(ended.size(), 1U);
-    EXPECT_EQ(ended[0], 1U);
+    EXPECT_EQ(waitForFailure(manager), std::vector<engine::InstanceId>{1});
     EXPECT_EQ(manager.size(), 1U);
     const int ticks = healthy.ticks;
     EXPECT_TRUE(tests::eventually([&] { return healthy.ticks > ticks; }));
