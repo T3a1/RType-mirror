@@ -181,6 +181,9 @@ void Game::registerRenderSystems()
     });
     addRender(Layer::World, "sprites",
               [this](Registry &r, Duration) { renderSystem(r, *m_graphics); });
+    addRender(Layer::World, "chargeGlow", [this](Registry &r, Duration) {
+        chargeGlowSystem(r, m_sheets, *m_graphics);
+    });
     addRender(Layer::World, "playerLabels", [this](Registry &r, Duration) {
         playerLabelSystem(r, m_sync, *m_graphics);
     });
