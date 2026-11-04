@@ -32,6 +32,8 @@ using TimePoint = rtype::protocol::ReliableChannel::TimePoint;
  * @struct Session
  * @brief The network thread's state for one connected client.
  * @param id The ClientId shared with the game thread.
+ * @param room The room of the client.
+ * @param link The queues of that room.
  * @param channel The reliability state of the connection.
  * @param lastHeard When the last valid packet was received, for the timeout.
  * @param kicked Set when the client must be disconnected at the next
@@ -39,6 +41,8 @@ using TimePoint = rtype::protocol::ReliableChannel::TimePoint;
  **/
 struct Session {
     std::uint32_t id{};
+    engine::InstanceId room{};
+    std::shared_ptr<Rooms::Link> link;
     rtype::protocol::ReliableChannel channel;
     TimePoint lastHeard;
     bool kicked = false;
@@ -49,10 +53,13 @@ using SessionIterator = std::map<engine::net::Endpoint, Session>::iterator;
 /**
  * @class NetworkServer
  * @brief The server's network thread: the UDP socket, the sessions, the
- * reliability and the timeouts.
+ * reliability and the timeouts. It also manages the rooms: each session
+ * belongs to one room, created by its first client and destroyed after the
+ * last one.
  *
- * It talks to the game thread only through the two queues. Everything else
- * is touched by the network thread alone, so it needs no lock. Call start()
+ * It talks to each game thread only through the queues of its room. Everything
+ * else, Rooms included, is touched by the network thread alone once it runs,
+ * so it needs no lock. Call start()
  * once, and stop() (or let the destructor do it) at shutdown. The socket is
  * an engine::net::IUdpSocket, so no network library appears here.
  **/
@@ -62,13 +69,10 @@ class NetworkServer {
      * @brief Takes a bound UDP socket. Nothing runs before start().
      * @param socket The socket, from rtype::network::openUdpSocket() (or a
      * fake one in tests).
-     * @param inbound The queue to the game thread.
-     * @param outbound The queue from the game thread.
+     * @param rooms The rooms; stop them after stop().
      **/
-    NetworkServer(std::unique_ptr<engine::net::IUdpSocket> socket,
-                  engine::MessageQueue<InboundMessage> &inbound,
-                  engine::MessageQueue<OutboundMessage> &outbound)
-        : m_socket(std::move(socket)), m_inbound(inbound), m_outbound(outbound)
+    NetworkServer(std::unique_ptr<engine::net::IUdpSocket> socket, Rooms &rooms)
+        : m_socket(std::move(socket)), m_rooms(rooms)
     {
     }
     NetworkServer(const NetworkServer &) = delete;
@@ -94,8 +98,7 @@ class NetworkServer {
 
   private:
     std::unique_ptr<engine::net::IUdpSocket> m_socket;
-    engine::MessageQueue<InboundMessage> &m_inbound;
-    engine::MessageQueue<OutboundMessage> &m_outbound;
+    Rooms &m_rooms;
     std::thread m_serverThread;
     std::atomic<bool> m_running{false};
     std::array<std::uint8_t, rtype::protocol::MaxPacketSize> m_buffer{};
@@ -104,7 +107,8 @@ class NetworkServer {
 
     void run();
     void handleDatagram(const engine::net::Datagram &datagram);
-    void handleNewPeer(const engine::net::Endpoint &endpoint, TimePoint now);
+    void handleNewPeer(const engine::net::Endpoint &endpoint,
+                       engine::InstanceId room, TimePoint now);
     void handleSessionPacket(SessionIterator it,
                              const rtype::protocol::Packet &packet,
                              TimePoint now);
@@ -112,7 +116,8 @@ class NetworkServer {
               TimePoint now);
     void sendPacket(const engine::net::Endpoint &endpoint,
                     const rtype::protocol::Packet &packet);
-    void pushInbound(InboundMessage message);
+    static void pushInbound(const Session &session, InboundMessage message);
+    void closeFailedRoom(engine::InstanceId room);
     void removeSession(SessionIterator it,
                        rtype::protocol::DisconnectReason reason);
     void update(TimePoint now);

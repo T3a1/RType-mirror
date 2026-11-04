@@ -6,6 +6,7 @@
 */
 
 #include "FakeNetwork.hpp"
+#include "FakeRooms.hpp"
 #include "network/NetworkClient.hpp"
 #include "network/NetworkMessages.hpp"
 #include "network/NetworkServer.hpp"
@@ -106,10 +107,9 @@ TEST_F(NetworkClientTest, IgnoresMalformedAndForeignDatagrams)
 TEST(NetworkClientServer, ConnectAndPlayOverTheSocketInterface)
 {
     FakeNetwork network;
-    server::Inbound inbound;
-    server::Outbound outbound;
-    server::NetworkServer server(network.open(ServerEndpoint), inbound,
-                                 outbound);
+    tests::FakeRooms fakeRooms;
+    server::Inbound &inbound = fakeRooms.inbound;
+    server::NetworkServer server(network.open(ServerEndpoint), fakeRooms.rooms);
     server.start();
     NetworkClient client(network.open(ClientEndpoint), ServerEndpoint);
 

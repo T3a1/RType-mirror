@@ -8,16 +8,23 @@
 #ifndef SERVER_NETWORKMESSAGES_HPP
 #define SERVER_NETWORKMESSAGES_HPP
 #include "common/protocol/Packet.hpp"
+#include "engine/InstanceManager.hpp"
 #include "engine/MessageQueue.hpp"
+#include <cstddef>
 #include <cstdint>
 
 namespace server {
 
 /**
+ * How many games a server runs at the same time.
+ **/
+inline constexpr std::size_t MaxRooms = 16;
+
+/**
  * @enum Recipient
- * @brief Which clients an outbound message is sent to.
- * @param All Every connected client.
- * @param AllExcept Every connected client but OutboundMessage::cliendId.
+ * @brief Which clients of the game's room an outbound message is sent to.
+ * @param All Every client of the room.
+ * @param AllExcept Every client of the room but OutboundMessage::cliendId.
  * @param One Only OutboundMessage::cliendId.
  **/
 enum class Recipient : std::uint8_t { All, AllExcept, One };
@@ -73,6 +80,11 @@ using Inbound = engine::MessageQueue<InboundMessage>;
  * @brief Queue from the game thread to the network thread.
  **/
 using Outbound = engine::MessageQueue<OutboundMessage>;
+
+/**
+ * @brief The running games, one per room, with their queues.
+ **/
+using Rooms = engine::InstanceManager<InboundMessage, OutboundMessage>;
 
 } // namespace server
 

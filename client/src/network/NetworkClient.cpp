@@ -23,15 +23,17 @@ constexpr std::chrono::milliseconds AckDelay{50};
 
 } // namespace
 
-NetworkClient::NetworkClient(const std::string &host, std::uint16_t port)
+NetworkClient::NetworkClient(const std::string &host, std::uint16_t port,
+                             std::uint32_t room)
     : NetworkClient(rtype::network::openUdpSocket(),
-                    rtype::network::resolve(host, port))
+                    rtype::network::resolve(host, port), room)
 {
 }
 
 NetworkClient::NetworkClient(std::unique_ptr<engine::net::IUdpSocket> socket,
-                             const engine::net::Endpoint &server)
-    : m_socket(std::move(socket)), m_server(server)
+                             const engine::net::Endpoint &server,
+                             std::uint32_t room)
+    : m_socket(std::move(socket)), m_server(server), m_room(room)
 {
     BB_INFO("Connecting to " << m_server.toString());
 }
@@ -52,7 +54,7 @@ std::vector<Payload> NetworkClient::update(TimePoint now)
     }
     receivePending(now, received);
     if (m_state == State::Connecting && now >= m_nextConnect) {
-        send(Connect{}, now);
+        send(Connect{.room = m_room}, now);
         m_nextConnect = now + ConnectRetryInterval;
     }
     if (m_state == State::Connected) {
@@ -111,8 +113,9 @@ void NetworkClient::receivePending(TimePoint now,
 void NetworkClient::handlePacket(const Packet &packet,
                                  std::vector<Payload> &received)
 {
-    if (std::holds_alternative<Accept>(packet.payload)) {
-        BB_INFO("Connected to the server");
+    if (const auto *accept = std::get_if<Accept>(&packet.payload)) {
+        m_room = accept->room;
+        BB_INFO("Connected to the server, room " << m_room);
         m_state = State::Connected;
     } else if (const auto *reject = std::get_if<Reject>(&packet.payload)) {
         BB_ERROR("Rejected by the server ("

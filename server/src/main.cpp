@@ -14,10 +14,12 @@
 #include "network/NetworkMessages.hpp"
 #include "network/NetworkServer.hpp"
 #include <algorithm>
+#include <chrono>
 #include <cstdint>
 #include <memory>
 #include <span>
 #include <string_view>
+#include <thread>
 
 #include <csignal>
 
@@ -25,16 +27,15 @@ namespace {
 
 inline constexpr std::uint8_t ExitError = 84;
 inline constexpr std::uint8_t ExitStatus = 0;
+inline constexpr std::chrono::milliseconds StopPollInterval{50};
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-server::Game *g_game = nullptr;
+volatile std::sig_atomic_t g_stopRequested = 0;
 
 // Only async-signal-safe work here: no logging, no allocation.
 void onSignal(int signal)
 {
     static_cast<void>(std::signal(signal, SIG_DFL));
-    if (g_game != nullptr) {
-        g_game->stop();
-    }
+    g_stopRequested = 1;
 }
 
 } // namespace
@@ -47,19 +48,25 @@ int main(int argc, char *argv[])
     });
     engine::Logger::instance().start(engine::LogLevel::Info);
 
-    engine::MessageQueue<server::InboundMessage> inbound(1024);
-    engine::MessageQueue<server::OutboundMessage> outbound;
+    server::Rooms rooms(
+        [invincible](server::Rooms::Link &link) {
+            return std::make_unique<server::Game>(link.inbound, link.outbound,
+                                                  invincible);
+        },
+        {
+            .maxInstances = server::MaxRooms,
+            .maxMembers = rtype::protocol::MaxPlayers,
+        },
+        server::Game::TickStep);
     std::unique_ptr<server::NetworkServer> network;
     try {
         network = std::make_unique<server::NetworkServer>(
-            rtype::network::openUdpSocket(rtype::protocol::DefaultPort),
-            inbound, outbound);
+            rtype::network::openUdpSocket(rtype::protocol::DefaultPort), rooms);
     } catch (const engine::net::NetworkError &e) {
         BB_FATAL("Could not start server. " << e.what());
         return ExitError;
     }
 
-    server::Game game(inbound, outbound, invincible);
     if (invincible) {
         BB_INFO("Players are invincible (--invincible)");
     }
@@ -70,11 +77,12 @@ int main(int argc, char *argv[])
     }
 
     network->start();
-    g_game = &game;
     BB_INFO("Server running, press Ctrl+C to stop");
-    game.run();
-    g_game = nullptr;
+    while (g_stopRequested == 0) {
+        std::this_thread::sleep_for(StopPollInterval);
+    }
     network->stop();
+    rooms.stopAll();
     BB_INFO("Server stopped");
     engine::Logger::instance().stop();
     return ExitStatus;

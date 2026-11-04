@@ -1,4 +1,4 @@
-# R-Type network protocol (version 3)
+# R-Type network protocol (version 4)
 
 This document specifies the binary protocol spoken between the R-Type server
 and its clients. It is precise enough to write a compatible client or server
@@ -73,7 +73,7 @@ Every packet starts with this 12-byte header:
 | Offset | Size | Field | Value |
 |-------:|-----:|-------|-------|
 | 0 | 2 | magic | `52 54` (ASCII `"RT"`). Recognizes our packets: a random datagram almost never starts with these bytes |
-| 2 | 1 | version | `3`. See [Versioning](#12-versioning) |
+| 2 | 1 | version | `4`. See [Versioning](#12-versioning) |
 | 3 | 1 | type | Which payload follows. See [Packet types](#5-packet-types) |
 | 4 | 1 | flags | Bit 0: **Reliable**. Bits 1 to 7 are reserved and **MUST** be 0 |
 | 5 | 1 | reserved | **MUST** be 0 |
@@ -94,7 +94,7 @@ The names are the `DecodeError` values of the reference implementation.
 | 1 | At most 1200 bytes | `TooLarge` |
 | 2 | At least 12 bytes | `TooShort` |
 | 3 | Magic is `"RT"` | `BadMagic` |
-| 4 | Version is 3 | `BadVersion` |
+| 4 | Version is 4 | `BadVersion` |
 | 5 | Type is listed in section 5 | `UnknownType` |
 | 6 | No reserved flag bit, and Reliable set exactly on reliable types | `BadFlags` |
 | 7 | Reserved byte is 0 | `BadReserved` |
@@ -108,8 +108,8 @@ Check 8 catches truncated and padded datagrams before any payload decoding.
 
 | Value | Name | Sent by | Delivery | Payload size (bytes) |
 |------:|------|---------|----------|---------------------:|
-| `0x01` | `Connect` | Client | Unreliable, retried | 0 |
-| `0x02` | `Accept` | Server | Reliable | 0 |
+| `0x01` | `Connect` | Client | Unreliable, retried | 4 |
+| `0x02` | `Accept` | Server | Reliable | 4 |
 | `0x03` | `Reject` | Server | Unreliable | 1 |
 | `0x04` | `Disconnect` | Both | Unreliable (best effort) | 1 |
 | `0x05` | `Ack` | Both | Unreliable | 0 |
@@ -127,17 +127,29 @@ the wrong side (for example a `Snapshot` sent by a client) **MUST** be dropped.
 Offsets in this section are relative to the start of the payload, that is
 byte 12 of the datagram.
 
-### `Connect` (0x01), `Accept` (0x02), `Ack` (0x05)
+### `Connect` (0x01), `Accept` (0x02)
 
-No payload. `Connect` asks to join (the protocol version is in the header).
-`Accept` answers it. `Ack` carries only the header's `ack` field, for a peer
-that has nothing else to send.
+`Connect` asks to join a room (the protocol version is in the header), and
+`Accept` answers it. A server runs several independent games, one per room, and
+everything a client then exchanges only concerns its room.
+
+| Offset | Size | Field | Values |
+|-------:|-----:|-------|--------|
+| 0 | 4 | room | `u32`. In `Connect`: the room to join, created if it does not exist, or `0` for the first room with a free slot (a new one if none). In `Accept`: the room joined |
+
+A room is destroyed when its last player leaves, and its number can then be
+used again. A server runs at most 16 rooms.
+
+### `Ack` (0x05)
+
+No payload. It carries only the header's `ack` field, for a peer that has
+nothing else to send.
 
 ### `Reject` (0x03)
 
 | Offset | Size | Field | Values |
 |-------:|-----:|-------|--------|
-| 0 | 1 | reason | `0` ServerFull, `1` VersionMismatch |
+| 0 | 1 | reason | `0` ServerFull (the room has 4 players or its game is over, or the server runs 16 rooms), `1` VersionMismatch |
 
 ### `Disconnect` (0x04)
 
@@ -449,7 +461,7 @@ All bytes in hexadecimal.
 Unreliable sequence 298, acknowledging reliable packet 17, input number 1000:
 
 ```text
-52 54 03 10 00 00 2A 01 11 00 05 00   header: "RT", v3, Input, no flags,
+52 54 04 10 00 00 2A 01 11 00 05 00   header: "RT", v4, Input, no flags,
                                               sequence 298, ack 17, size 5
 E8 03 00 00                           sequence 1000
 11                                    actions 0x11 = Up | Fire
@@ -460,7 +472,7 @@ E8 03 00 00                           sequence 1000
 Reliable sequence 2, slot 2, ship 58, tick 1200:
 
 ```text
-52 54 03 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
+52 54 04 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
                                               sequence 2, ack 0, size 9
 02                                    slot 2
 3A 00 00 00                           shipId 58
@@ -470,7 +482,7 @@ B0 04 00 00                           tick 1200
 ### `Snapshot` with one player and one entity
 
 ```text
-52 54 03 20 00 00 2B 01 11 00 26 00   header: Snapshot, size 38
+52 54 04 20 00 00 2B 01 11 00 26 00   header: Snapshot, size 38
 2C 01 00 00                           tick 300
 00 01                                 part 0 of 1
 01 00                                 1 entity
@@ -500,3 +512,4 @@ B0 04 00 00                           tick 1200
 | 1 | Part 1 prototype. |
 | 2 | Snapshot players block: `lastInput` added (9 bytes per player). Entity flags: Owner bits 2 to 4. Entity types `EnemySmall`, `EnemyMedium` and `EnemyLarge`. |
 | 3 | Snapshot players block: `shipId` added (13 bytes per player). |
+| 4 | `Connect` and `Accept` carry a room number (4 bytes). |

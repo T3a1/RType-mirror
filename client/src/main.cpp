@@ -16,6 +16,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -24,7 +25,8 @@ constexpr int ExitError = 84;
 
 constexpr const char *Usage =
     "Usage: r-type_client [host] [port] [--no-interpolation]\n"
-    "                     [--no-prediction] [--bench SECONDS FILE.csv]\n";
+    "                     [--no-prediction] [--room N]\n"
+    "                     [--bench SECONDS FILE.csv]\n";
 
 /**
  * @struct Arguments
@@ -41,7 +43,7 @@ struct Arguments {
 
 /**
  * @brief Parses the command line: up to two positional arguments (host,
- * port) and the benchmark options.
+ * port), the room and the benchmark options.
  * @param args The arguments, without the program name.
  * @return The parsed arguments.
  * @throws std::invalid_argument On an unknown option, a missing value or
@@ -57,6 +59,16 @@ Arguments parseArguments(std::span<char *> args)
             parsed.options.interpolate = false;
         } else if (arg == "--no-prediction") {
             parsed.options.predict = false;
+        } else if (arg == "--room") {
+            if (i + 1 >= args.size()) {
+                throw std::invalid_argument("--room needs a number");
+            }
+            const long long room = std::stoll(args[i + 1]);
+            if (room < 1 || !std::in_range<std::uint32_t>(room)) {
+                throw std::invalid_argument("invalid --room number");
+            }
+            parsed.options.room = static_cast<std::uint32_t>(room);
+            ++i;
         } else if (arg == "--bench") {
             if (i + 2 >= args.size()) {
                 throw std::invalid_argument("--bench needs SECONDS FILE");

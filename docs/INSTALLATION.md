@@ -72,6 +72,7 @@ To play without Docker, or with friends on the same machine:
 ```bash
 ./rtype.py --native          # server built and run on your machine
 ./rtype.py --native -c 2     # same, with two clients
+./rtype.py --native --room 3 # same, in room 3 of the server
 ./rtype.py --graphics sfml   # client built with SFML instead of Raylib
 ./rtype.py --native -g ncurses   # client drawn in this terminal (not on Windows)
 ```
@@ -101,6 +102,7 @@ the options. Before building, it sets up everything that is missing:
 | *(none)* | Starts the server in Docker and one client. |
 | `-n`, `--native` | Runs the server natively instead of in Docker. |
 | `-c N`, `--clients N` | Starts `N` clients (default: 1). |
+| `-r N`, `--room N` | The clients join room `N`, created if needed (default: the first room with a free slot). One server runs up to 16 independent games. |
 | `-p PORT`, `--port PORT` | UDP port used by the clients (default: 4242). |
 | `-H HOST`, `--host HOST` | Address the clients connect to (default: 127.0.0.1). |
 | `-g LIB`, `--graphics LIB` | Graphics library of the client: `raylib` (default), `sfml` or `ncurses` (see [Terminal client](#terminal-client-ncurses)). Changing it reconfigures and rebuilds `build/`. |

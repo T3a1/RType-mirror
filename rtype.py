@@ -450,7 +450,9 @@ def play(args: argparse.Namespace) -> int:
 
         for i in range(1, args.clients + 1):
             log(f"Starting client {i}/{args.clients} -> {args.host}:{args.port}")
-            clients.append(subprocess.Popen([str(client_bin), args.host, str(args.port)]))
+            room_args = ["--room", str(args.room)] if args.room else []
+            clients.append(subprocess.Popen([str(client_bin), args.host, str(args.port),
+                                             *room_args]))
 
         if in_terminal:
             log("Running. Press q in the game to stop (its logs: r-type_client.log).")
@@ -685,6 +687,8 @@ def parse_args() -> argparse.Namespace:
                       help="UDP port of the server (default: 4242)")
     game.add_argument("-H", "--host", default="127.0.0.1",
                       help="address the clients connect to (default: 127.0.0.1)")
+    game.add_argument("-r", "--room", type=positive, metavar="N",
+                      help="room the clients join (default: the first with a free slot)")
     game.add_argument("-g", "--graphics", choices=GRAPHICS_CHOICES, default=GRAPHICS,
                       help=f"graphics library of the client (default: {GRAPHICS})")
     tools = parser.add_argument_group("developer tools (run one, then exit)")

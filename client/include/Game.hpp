@@ -28,12 +28,14 @@ namespace client {
  * @brief The command-line options of the client.
  * @param interpolate Whether the other entities are interpolated.
  * @param predict Whether the local ship is predicted.
+ * @param room The room to join, AnyRoom for the first one with a free slot.
  * @param bench The network benchmark to run instead of the keyboard, if
  * any.
  **/
 struct GameOptions {
     bool interpolate = true;
     bool predict = true;
+    std::uint32_t room = rtype::protocol::AnyRoom;
     std::optional<BenchConfig> bench;
 };
 

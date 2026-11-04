@@ -44,9 +44,9 @@ template <typename Enum> bool readEnum(ByteReader &in, Enum last, Enum &out)
 
 } // namespace
 
-void encode(const Connect & /*message*/, ByteWriter & /*out*/) {}
+void encode(const Connect &message, ByteWriter &out) { out.u32(message.room); }
 
-void encode(const Accept & /*message*/, ByteWriter & /*out*/) {}
+void encode(const Accept &message, ByteWriter &out) { out.u32(message.room); }
 
 void encode(const Reject &message, ByteWriter &out)
 {
@@ -115,9 +115,17 @@ void encode(const GameEvent &message, ByteWriter &out)
     }
 }
 
-bool decode(ByteReader & /*in*/, Connect & /*message*/) { return true; }
+bool decode(ByteReader &in, Connect &message)
+{
+    message.room = in.u32();
+    return true;
+}
 
-bool decode(ByteReader & /*in*/, Accept & /*message*/) { return true; }
+bool decode(ByteReader &in, Accept &message)
+{
+    message.room = in.u32();
+    return true;
+}
 
 bool decode(ByteReader &in, Reject &message)
 {

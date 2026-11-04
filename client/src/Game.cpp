@@ -35,11 +35,11 @@ constexpr int statusFontSize = 30;
 
 Game::Game(const std::string &host, std::uint16_t port,
            const GameOptions &options)
-    : m_network(host, port), m_graphics(gfx::createGraphics({
-                                 .width = windowWidth,
-                                 .height = windowHeight,
-                                 .title = "R-Type",
-                             })),
+    : m_network(host, port, options.room), m_graphics(gfx::createGraphics({
+                                               .width = windowWidth,
+                                               .height = windowHeight,
+                                               .title = "R-Type",
+                                           })),
       m_sheets(*m_graphics)
 {
     m_sync.interpolate = options.interpolate;

@@ -58,10 +58,12 @@ class NetworkClient {
      * socket. The first Connect is sent by the first update().
      * @param host The server's host name or IP address.
      * @param port The server's UDP port.
+     * @param room The room to join, or AnyRoom.
      * @throws engine::net::NetworkError If the host cannot be resolved or
      * the socket cannot be opened.
      **/
-    NetworkClient(const std::string &host, std::uint16_t port);
+    NetworkClient(const std::string &host, std::uint16_t port,
+                  std::uint32_t room = rtype::protocol::AnyRoom);
 
     /**
      * @brief Uses an already opened socket (a fake one in tests). The first
@@ -69,9 +71,11 @@ class NetworkClient {
      * @param socket The socket, polled without blocking.
      * @param server The server's endpoint; datagrams from elsewhere are
      * dropped.
+     * @param room The room to join, or AnyRoom.
      **/
     NetworkClient(std::unique_ptr<engine::net::IUdpSocket> socket,
-                  const engine::net::Endpoint &server);
+                  const engine::net::Endpoint &server,
+                  std::uint32_t room = rtype::protocol::AnyRoom);
 
     /**
      * @brief Sends Disconnect{Left} if connected, so the server frees the
@@ -111,6 +115,12 @@ class NetworkClient {
     [[nodiscard]] State state() const { return m_state; }
 
     /**
+     * @brief Returns the room to join, then the room joined once connected.
+     * @return The room, AnyRoom if none was chosen and not connected yet.
+     **/
+    [[nodiscard]] std::uint32_t room() const { return m_room; }
+
+    /**
      * @brief Returns the bytes of every datagram received from the server
      * since the start, for the network benchmark.
      * @return The number of bytes received.
@@ -143,6 +153,7 @@ class NetworkClient {
     TimePoint m_lastSent;
     TimePoint m_nextConnect;
     std::uint32_t m_inputSequence = 0;
+    std::uint32_t m_room = rtype::protocol::AnyRoom;
     std::uint64_t m_bytesReceived = 0;
     std::uint64_t m_bytesSent = 0;
 };

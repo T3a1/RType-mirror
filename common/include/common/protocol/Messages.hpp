@@ -22,6 +22,8 @@ class ByteReader;
 class ByteWriter;
 
 inline constexpr std::uint8_t MaxPlayers = 4;
+/** Asks for the first room with a free slot, or a new one if none. */
+inline constexpr std::uint32_t AnyRoom = 0;
 
 // Sizes on the wire, used to split snapshots.
 inline constexpr std::size_t SnapshotHeaderSize = 8;
@@ -32,28 +34,33 @@ inline constexpr std::size_t MaxSnapshotParts = 255;
 
 /**
  * @struct Connect
- * @brief A client asks to join; repeated until Accept or Reject. Empty.
+ * @brief A client asks to join; repeated until Accept or Reject.
  * @param Type The packet type that carries this payload.
+ * @param room The room to join, created if needed, or AnyRoom.
  **/
 struct Connect {
     static constexpr PacketType Type = PacketType::Connect;
+    std::uint32_t room = AnyRoom;
     bool operator==(const Connect &) const = default;
 };
 
 /**
  * @struct Accept
- * @brief The server accepts the client and opens its session. Empty.
+ * @brief The server accepts the client and opens its session.
  * @param Type The packet type that carries this payload.
+ * @param room The room the client joined.
  **/
 struct Accept {
     static constexpr PacketType Type = PacketType::Accept;
+    std::uint32_t room = AnyRoom;
     bool operator==(const Accept &) const = default;
 };
 
 /**
  * @enum RejectReason
  * @brief Why the server refuses a client.
- * @param ServerFull MaxPlayers players are already connected.
+ * @param ServerFull The room has MaxPlayers players or its game is over, or
+ * the server runs as many rooms as it can.
  * @param VersionMismatch The client speaks another protocol version.
  **/
 enum class RejectReason : std::uint8_t {

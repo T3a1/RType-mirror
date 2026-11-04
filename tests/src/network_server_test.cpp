@@ -6,6 +6,7 @@
 */
 
 #include "FakeNetwork.hpp"
+#include "FakeRooms.hpp"
 #include "network/NetworkMessages.hpp"
 #include "network/NetworkServer.hpp"
 
@@ -35,10 +36,11 @@ Endpoint clientEndpoint(std::uint16_t port)
 class NetworkServerTest : public ::testing::Test {
   public:
     FakeNetwork m_network;
-    server::Inbound m_inbound;
-    server::Outbound m_outbound;
-    server::NetworkServer m_server{m_network.open(ServerEndpoint), m_inbound,
-                                   m_outbound};
+    tests::FakeRooms m_fakeRooms;
+    server::Inbound &m_inbound = m_fakeRooms.inbound;
+    server::Outbound &m_outbound = m_fakeRooms.outbound;
+    server::NetworkServer m_server{m_network.open(ServerEndpoint),
+                                   m_fakeRooms.rooms};
     std::vector<server::InboundMessage> m_received;
 
     void SetUp() override { m_server.start(); }
