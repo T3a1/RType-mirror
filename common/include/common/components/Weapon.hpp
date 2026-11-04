@@ -10,8 +10,6 @@
 
 #include "engine/Clock.hpp"
 
-#include <cstdint>
-
 namespace rtype {
 
 /**
@@ -19,17 +17,18 @@ namespace rtype {
  * @param fireInterval The time between two shots.
  * @param cooldown The time left before the next shot.
  * @param triggered Whether the weapon is currently shooting or not.
- * @param level The upgrade level of a player's weapon, from 1: more shots
- * at once at each level. Raised by power-ups.
  * @param charge How long the fire key has been held, for the charged
  * shot of a player.
+ * @param fired Whether a player's weapon fires this tick, set by the
+ * shoot system; the system of the player's shot style turns it into
+ * projectiles.
  **/
 struct Weapon {
     engine::Duration fireInterval{0.25F};
     engine::Duration cooldown{0.0F};
     bool triggered = false;
-    std::uint8_t level = 1;
     engine::Duration charge{0.0F};
+    bool fired = false;
 };
 
 } // namespace rtype

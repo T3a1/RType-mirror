@@ -28,8 +28,9 @@ namespace server {
 void powerUpDropSystem(engine::Registry &registry, EntityFactory &factory);
 
 /**
- * @brief Gives one more weapon level, up to maxLevel, to each player who
- * touches a power-up this tick, and removes the power-up.
+ * @brief Gives the shot style of a power-up, or one more level of it up
+ * to maxLevel, to each player who touches one this tick, and removes the
+ * power-up.
  * @param registry The registry holding the players and the power-ups.
  * @param collisions The collisions of this tick.
  * @param outbound Where the removal of the power-ups is announced.

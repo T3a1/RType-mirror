@@ -103,6 +103,7 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
 
     registry.emplace<KeepInPlayfield>(player);
     registry.emplace<rtype::Weapon>(player);
+    registry.emplace<SpreadShot>(player);
 
     BB_DEBUG("Player " << static_cast<int>(request.slot) << " spawned with id "
                        << networkId);
@@ -182,7 +183,7 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
                      .layer = rtype::CollisionLayer::Pickup,
                      .mask = rtype::CollisionLayer::Player,
                  });
-    registry.emplace<PowerUp>(powerUp);
+    registry.emplace<PowerUp>(powerUp, PowerUp{.kind = request.kind});
     registry.emplace<DestroyOffScreen>(powerUp);
 
     BB_DEBUG("Power-up spawned with id " << networkId);

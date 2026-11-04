@@ -10,6 +10,7 @@
 
 #include "common/components/Enemy.hpp"
 #include "common/components/MovementPattern.hpp"
+#include "components/ShotStyles.hpp"
 #include "engine/Entity.hpp"
 #include "engine/Vec2.hpp"
 
@@ -62,10 +63,15 @@ struct SpawnProjectile {
 /**
  * A request to spawn a power-up, dropped by a destroyed enemy.
  * @param position Where it appears.
+ * @param kind The shot style it gives.
  **/
 struct SpawnPowerUp {
     engine::Vec2f position{};
+    PowerUpKind kind = PowerUpKind::Spread;
 };
+
+/** Distance between the center of a ship and the start of its shots. */
+inline constexpr float MuzzleOffset = 40.0F;
 
 } // namespace server
 

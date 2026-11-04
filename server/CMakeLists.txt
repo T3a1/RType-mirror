@@ -64,6 +64,7 @@ add_library(r-type_server_spawn STATIC
     src/systems/LevelSystem.cpp
     src/systems/PowerUpSystem.cpp
     src/systems/ShootSystem.cpp
+    src/systems/ShotStyleSystems.cpp
     src/systems/SpawnSystem.cpp
 )
 

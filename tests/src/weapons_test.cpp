@@ -14,12 +14,14 @@
 #include "common/components/Weapon.hpp"
 #include "components/Piercing.hpp"
 #include "components/PowerUp.hpp"
+#include "components/ShotStyles.hpp"
 #include "engine/Entity.hpp"
 #include "engine/Registry.hpp"
 #include "network/NetworkMessages.hpp"
 #include "systems/CollisionSystem.hpp"
 #include "systems/PowerUpSystem.hpp"
 #include "systems/ShootSystem.hpp"
+#include "systems/ShotStyleSystems.hpp"
 
 #include <gtest/gtest.h>
 
@@ -58,6 +60,7 @@ class WeaponTest : public testing::Test {
         for (int i = 0; i < ticks; ++i) {
             m_registry.get<rtype::Weapon>(m_ship).triggered = fire;
             server::shootSystem(m_registry, m_factory, Tick, m_stats);
+            server::spreadShotSystem(m_registry, m_factory, m_stats);
             m_registry.flush();
         }
     }
@@ -111,7 +114,7 @@ TEST_F(WeaponTest, EachPressFiresAndEachLevelAddsTwoShots)
     hold(true, 1);
     EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 1U);
 
-    registry().get<rtype::Weapon>(ship()).level = 3;
+    registry().get<server::SpreadShot>(ship()).level = 3;
     hold(false, static_cast<int>(stats().fireInterval / Tick) + 2);
     hold(true, 1);
     EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 6U);
@@ -183,6 +186,20 @@ TEST_F(WeaponTest, APowerUpRaisesTheWeaponLevelUpToTheMaximum)
         registry().flush();
     }
 
-    EXPECT_EQ(registry().get<rtype::Weapon>(ship()).level, stats().maxLevel);
+    EXPECT_EQ(registry().get<server::SpreadShot>(ship()).level,
+              stats().maxLevel);
     EXPECT_EQ(countType(registry(), rtype::EntityType::PowerUp), 0U);
+}
+
+TEST_F(WeaponTest, EveryShipStartsWithASingleShotSpread)
+{
+    EXPECT_EQ(registry().get<server::SpreadShot>(ship()).level, 1);
+}
+
+TEST_F(WeaponTest, WithoutAShotStyleFiringMakesNoShot)
+{
+    registry().remove<server::SpreadShot>(ship());
+    hold(true, 1);
+    EXPECT_TRUE(registry().get<rtype::Weapon>(ship()).fired);
+    EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 0U);
 }

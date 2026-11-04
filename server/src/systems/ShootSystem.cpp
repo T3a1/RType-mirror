@@ -7,14 +7,9 @@
 
 #include "systems/ShootSystem.hpp"
 
-#include <cmath>
-
 namespace server {
 
 namespace {
-
-// Distance between the center of the shooter and the start of its shot.
-constexpr float MuzzleOffset = 40.0F;
 
 /**
  * Builds the shot of an enemy, straight to the left.
@@ -34,33 +29,6 @@ SpawnProjectile enemyShot(engine::Entity shooter,
         .velocity = {.x = -stats.enemyShotSpeed, .y = 0.0F},
         .fromPlayer = false,
     };
-}
-
-/**
- * Builds the shots of a player: one at level 1, then a spread of two more
- * shots at each level.
- * @param shooter The player's ship.
- * @param transform Its position.
- * @param level The level of its weapon.
- * @param stats The weapon stats.
- * @param shots Where the spawn requests go.
- **/
-void playerShots(engine::Entity shooter, const rtype::Transform &transform,
-                 std::uint8_t level, const WeaponStats &stats,
-                 std::vector<SpawnProjectile> &shots)
-{
-    const int side = static_cast<int>(level) - 1;
-    for (int i = -side; i <= side; ++i) {
-        const float angle = static_cast<float>(i) * stats.spreadAngle;
-        shots.push_back({
-            .owner = shooter,
-            .position = {.x = transform.position.x + MuzzleOffset,
-                         .y = transform.position.y},
-            .velocity = {.x = std::cos(angle) * stats.shotSpeed,
-                         .y = std::sin(angle) * stats.shotSpeed},
-            .damage = stats.shotDamage,
-        });
-    }
 }
 
 /**
@@ -103,6 +71,7 @@ void shootSystem(engine::Registry &registry, EntityFactory &factory,
                 }
                 return;
             }
+            weapon.fired = false;
             if (!weapon.triggered) {
                 // Released: a charged shot if the key was held long enough.
                 if (weapon.charge >= stats.chargeTime) {
@@ -112,12 +81,12 @@ void shootSystem(engine::Registry &registry, EntityFactory &factory,
                 weapon.charge = engine::Duration{0.0F};
                 return;
             }
-            // Pressed: one shot. Held: only charges, no more shots.
+            // Pressed: one shot, made by the shot style's system. Held: only
+            // charges, no more shots.
             const bool pressed = weapon.charge.count() == 0.0F;
             weapon.charge += dt;
-            if (pressed && weapon.cooldown.count() <= 0.0F) {
-                playerShots(entity, transform, weapon.level, stats,
-                            shotRequests);
+            weapon.fired = pressed && weapon.cooldown.count() <= 0.0F;
+            if (weapon.fired) {
                 weapon.cooldown = stats.fireInterval;
             }
         });

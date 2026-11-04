@@ -34,6 +34,7 @@
 #include "systems/RoomPhaseSystem.hpp"
 #include "systems/SessionSystem.hpp"
 #include "systems/ShootSystem.hpp"
+#include "systems/ShotStyleSystems.hpp"
 #include "systems/SnapshotSystem.hpp"
 #include "systems/SpawnSystem.hpp"
 

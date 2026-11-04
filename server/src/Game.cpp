@@ -97,6 +97,12 @@ void Game::registerSystems()
         },
         playing);
     m_scheduler.add(
+        Stage::Simulation, "spreadShot",
+        [this](Registry &r, Duration) {
+            server::spreadShotSystem(r, m_factory, m_weapons);
+        },
+        playing);
+    m_scheduler.add(
         Stage::Simulation, "playerControl",
         [](Registry &r, Duration) { rtype::playerControlSystem(r); }, playing);
     m_scheduler.add(Stage::Simulation, "pattern", rtype::patternSystem,

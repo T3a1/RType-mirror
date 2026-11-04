@@ -12,14 +12,43 @@
 #include "common/components/Health.hpp"
 #include "common/components/Player.hpp"
 #include "common/components/Transform.hpp"
-#include "common/components/Weapon.hpp"
 #include "components/PowerUp.hpp"
+#include "components/ShotStyles.hpp"
 #include "engine/Entity.hpp"
 #include "engine/Logger.hpp"
 
 #include <algorithm>
 
 namespace server {
+
+namespace {
+
+/**
+ * @brief Gives a player the shot style of a power-up. Picking the style it
+ * already has raises its level; a new style would replace the old one.
+ * @param registry The registry holding the player.
+ * @param player The player's ship.
+ * @param kind The shot style of the power-up.
+ * @param maxLevel The highest level of a style.
+ **/
+void applyPowerUp(engine::Registry &registry, engine::Entity player,
+                  PowerUpKind kind, std::uint8_t maxLevel)
+{
+    switch (kind) {
+    case PowerUpKind::Spread: {
+        auto *spread = registry.tryGet<SpreadShot>(player);
+        if (spread == nullptr) {
+            registry.emplace<SpreadShot>(player);
+            break;
+        }
+        spread->level = std::min<std::uint8_t>(spread->level + 1, maxLevel);
+        BB_DEBUG("Spread level " << static_cast<int>(spread->level));
+        break;
+    }
+    }
+}
+
+} // namespace
 
 void powerUpDropSystem(engine::Registry &registry, EntityFactory &factory)
 {
@@ -43,14 +72,12 @@ void pickupSystem(engine::Registry &registry,
 {
     std::vector<engine::Entity> taken;
     const auto pick = [&](engine::Entity player, engine::Entity powerUp) {
-        auto *weapon = registry.tryGet<rtype::Weapon>(player);
-        if (weapon == nullptr || !registry.has<rtype::Player>(player) ||
-            !registry.has<PowerUp>(powerUp) ||
+        const auto *bonus = registry.tryGet<PowerUp>(powerUp);
+        if (bonus == nullptr || !registry.has<rtype::Player>(player) ||
             std::ranges::find(taken, powerUp) != taken.end()) {
             return;
         }
-        weapon->level = std::min<std::uint8_t>(weapon->level + 1, maxLevel);
-        BB_DEBUG("Weapon level " << static_cast<int>(weapon->level));
+        applyPowerUp(registry, player, bonus->kind, maxLevel);
         taken.push_back(powerUp);
         despawn(registry, powerUp, outbound);
     };
