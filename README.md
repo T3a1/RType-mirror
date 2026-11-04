@@ -24,7 +24,7 @@ hand only.
 | Left hand | Right hand | Action |
 |-----------|------------|--------|
 | W A S D | Arrow keys | Move the ship |
-| Space | Right Ctrl | Shoot (hold the key) |
+| Space | Right Ctrl | Shoot (hold the key). Held for 1 second, then released: a charged shot that goes through enemies |
 | F | Right Shift | Auto-fire on or off: the ship shoots on its own |
 | Escape | Escape | Quit |
 
@@ -67,6 +67,7 @@ all the options.
 | [Architecture](docs/ARCHITECTURE.md) | How the code is organized: game engine, subsystems, game loop, threads. |
 | [Network protocol](docs/PROTOCOL.md) | The messages exchanged between the server and the clients. |
 | [Levels](docs/LEVELS.md) | Writing a level: the JSON file of its enemy waves, and how the server plays the levels. |
+| [Weapons](docs/WEAPONS.md) | The charged shot, the power-ups and the weapon settings file. |
 | [Network testing](docs/NETWORK_TESTING.md) | Playing with added latency and packet loss on one machine, to test the networking. |
 | [Network performance comparison](docs/NETWORK_COMPARISON.md) | Measured effect of interpolation and prediction under latency and packet loss, compared with the Part 1 prototype. |
 | [Contributing](docs/CONTRIBUTORS.md) | How to work on the project: workflow, conventions, tools. |
