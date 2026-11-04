@@ -161,9 +161,11 @@ void Logger::log(LogLevel level, const char *file, int line,
     };
 
     if (m_running && level != LogLevel::Fatal) {
+        ++m_queued;
         if (m_queue.push(std::move(entry))) {
             return;
         }
+        --m_queued;
         if (!m_queue.closed()) {
             ++m_dropped;
             return;
@@ -173,10 +175,32 @@ void Logger::log(LogLevel level, const char *file, int line,
     const std::scoped_lock lock(m_writeMutex);
     // NOLINTNEXTLINE(bugprone-use-after-move)
     write(entry);
+    *m_console << m_frameAfter;
     m_console->flush();
     if (m_file.is_open()) {
         m_file.flush();
     }
+}
+
+void Logger::flush()
+{
+    while (m_running && m_written < m_queued) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+}
+
+void Logger::setConsoleFrame(std::string before, std::string after)
+{
+    const std::scoped_lock lock(m_writeMutex);
+    m_frameBefore = std::move(before);
+    m_frameAfter = std::move(after);
+}
+
+void Logger::print(std::string_view text)
+{
+    const std::scoped_lock lock(m_writeMutex);
+    *m_console << text;
+    m_console->flush();
 }
 
 void Logger::run()
@@ -189,10 +213,12 @@ void Logger::run()
             write(entry);
         }
         reportDropped();
+        *m_console << m_frameAfter;
         m_console->flush();
         if (m_file.is_open()) {
             m_file.flush();
         }
+        m_written += 1 + rest.size();
     }
 }
 
@@ -212,6 +238,7 @@ void Logger::write(const Entry &entry)
            << entry.line << "] " << entry.message;
     const std::string text = std::move(stream).str();
 
+    *m_console << m_frameBefore;
     if (m_colors) {
         *m_console << colorFor(entry.level) << text << resetColor << '\n';
     } else {

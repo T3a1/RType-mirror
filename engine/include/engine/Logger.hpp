@@ -61,6 +61,26 @@ class Logger {
 
     void log(LogLevel level, const char *file, int line, std::string message);
 
+    /**
+     * @brief Waits until every line queued so far is written.
+     **/
+    void flush();
+
+    /**
+     * @brief Sets what surrounds the console output, so that the lines of an
+     * interactive console stay readable. Not written to the log file.
+     * @param before Written before each line, to clear the prompt.
+     * @param after Written after each batch of lines, to show the prompt again.
+     **/
+    void setConsoleFrame(std::string before, std::string after);
+
+    /**
+     * @brief Writes text as it is to the console, at once and without mixing
+     * it with a log line, for the answers of an interactive console.
+     * @param text The text.
+     **/
+    void print(std::string_view text);
+
     // Runs `format` on a stream only if the level is enabled.
     template <typename Format>
     void logWith(LogLevel level, const char *file, int line, Format &&format)
@@ -93,6 +113,10 @@ class Logger {
     std::atomic<bool> m_started = false;
     std::atomic<bool> m_running = false;
     std::atomic<std::uint64_t> m_dropped = 0;
+    std::atomic<std::uint64_t> m_queued = 0;
+    std::atomic<std::uint64_t> m_written = 0;
+    std::string m_frameBefore;
+    std::string m_frameAfter;
     std::mutex m_writeMutex;
     std::ofstream m_file;
     std::thread m_writer;
