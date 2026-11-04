@@ -8,6 +8,8 @@
 #include "systems/HudSystem.hpp"
 #include "Menu.hpp"
 #include "PlayerColors.hpp"
+#include "common/components/EntityType.hpp"
+#include "common/components/Health.hpp"
 #include "common/components/Transform.hpp"
 #include "components/ShipOwner.hpp"
 #include "engine/Entity.hpp"
@@ -39,6 +41,11 @@ constexpr float ButtonHeight = 52.0F;
 constexpr gfx::Color PanelColor = gfx::rgb(24, 24, 36);
 
 constexpr float BannerFade = 0.5F;
+
+constexpr float BossBarShare = 0.6F; // of the window's width
+constexpr float BossBarHeight = 16.0F;
+constexpr float BossBarBottom = 40.0F;
+constexpr gfx::Color BossBarColor = gfx::rgb(213, 94, 0);
 constexpr gfx::Color BannerColor = gfx::rgb(255, 214, 90);
 
 } // namespace
@@ -79,6 +86,32 @@ void hudSystem(const SyncState &state, bool autoFire, gfx::IGraphics &graphics)
         graphics.drawText("Auto-fire ON", {.x = HudX, .y = y}, HudFontSize,
                           gfx::colors::OffWhite);
     }
+}
+
+void bossHealthBar(engine::Registry &registry, gfx::IGraphics &graphics)
+{
+    registry.each<rtype::EntityType, rtype::Health>(
+        [&graphics](engine::Entity, const rtype::EntityType &type,
+                    const rtype::Health &health) {
+            if (type != rtype::EntityType::Boss || health.max <= 0) {
+                return;
+            }
+            const engine::Vec2f screen = graphics.screenSize();
+            const float ratio = std::clamp(static_cast<float>(health.current) /
+                                               static_cast<float>(health.max),
+                                           0.0F, 1.0F);
+            const float width = screen.x * BossBarShare;
+            gfx::Rect bar{.x = (screen.x - width) / 2.0F,
+                          .y = screen.y - BossBarBottom,
+                          .width = width,
+                          .height = BossBarHeight};
+            drawCentered(graphics, "WARSHIP", screen.x / 2.0F,
+                         bar.y - HudLineHeight, HudFontSize,
+                         gfx::colors::OffWhite);
+            graphics.drawRectangle(bar, gfx::colors::DarkGray);
+            bar.width = width * ratio;
+            graphics.drawRectangle(bar, BossBarColor);
+        });
 }
 
 void levelBannerScreen(const SyncState &state, gfx::IGraphics &graphics)

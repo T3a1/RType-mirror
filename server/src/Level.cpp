@@ -48,6 +48,11 @@ constexpr std::array<std::pair<std::string_view, rtype::EnemyType>, 6>
         {"large", rtype::EnemyType::Large},
     }};
 
+constexpr std::array<std::pair<std::string_view, rtype::EnemyType>, 1>
+    BossNames{{
+        {"warship", rtype::EnemyType::Boss},
+    }};
+
 constexpr std::array<std::pair<std::string_view, rtype::MovementKind>, 4>
     PatternNames{{
         {"straight", rtype::MovementKind::Straight},
@@ -229,7 +234,7 @@ Wave readWave(const Json &wave, const std::string &where)
  **/
 Level readLevel(const Json &root)
 {
-    checkKeys(root, {"name", "waves"}, "level");
+    checkKeys(root, {"name", "waves", "boss"}, "level");
     const auto name = root.find("name");
     if (name == root.end() || !name->is_string() ||
         name->get_ref<const std::string &>().empty() ||
@@ -250,6 +255,9 @@ Level readLevel(const Json &root)
             readWave(waves->at(i), "waves[" + std::to_string(i) + "]"));
     }
     std::ranges::stable_sort(level.waves, {}, &Wave::time);
+    if (root.contains("boss")) {
+        level.boss = named(root, "boss", BossNames, "level");
+    }
     return level;
 }
 

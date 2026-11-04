@@ -7,6 +7,7 @@
 
 #include "systems/NetworkSyncSystem.hpp"
 #include "SpriteSheets.hpp"
+#include "common/components/Enemy.hpp"
 #include "common/components/EntityType.hpp"
 #include "common/components/Health.hpp"
 #include "common/components/NetworkId.hpp"
@@ -112,10 +113,13 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
     registry.emplace<rtype::EntityType>(created, entity.type);
     registry.emplace<rtype::Transform>(
         created, rtype::Transform{.position = sample.position});
-    registry.emplace<rtype::Health>(created, rtype::Health{
-                                                 .current = entity.health,
-                                                 .max = rtype::PlayerMaxHealth,
-                                             });
+    registry.emplace<rtype::Health>(
+        created, rtype::Health{
+                     .current = entity.health,
+                     .max = entity.type == rtype::EntityType::Boss
+                                ? rtype::BossMaxHealth
+                                : rtype::PlayerMaxHealth,
+                 });
     const bool local = entity.networkId == state.localShip;
     attachSprite(registry, created, sheets, entity.type, 0);
     if (entity.type == rtype::EntityType::PlayerShip) {

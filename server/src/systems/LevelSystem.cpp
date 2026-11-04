@@ -6,7 +6,9 @@
 */
 
 #include "systems/LevelSystem.hpp"
+#include "EnemyDefs.hpp"
 #include "Formations.hpp"
+#include "common/Playfield.hpp"
 #include "common/components/Enemy.hpp"
 #include "common/components/Spawner.hpp"
 #include "components/LevelProgress.hpp"
@@ -53,6 +55,24 @@ void queueDueWaves(LevelProgress &progress, rtype::Spawner &spawner,
     }
 }
 
+/**
+ * @brief Queues a boss in the middle of the right edge.
+ * @param type The enemy type of the boss.
+ * @param queue The queue it goes to.
+ **/
+void queueBoss(rtype::EnemyType type, SpawnQueue &queue)
+{
+    const EnemyDef &stat = enemyDef(type);
+    queue.pending.push_back({
+        .request =
+            {
+                .type = type,
+                .position = {.x = rtype::PlayfieldWidth + (stat.size.x / 2.0F),
+                             .y = rtype::PlayfieldHeight / 2.0F},
+            },
+    });
+}
+
 /** @brief The level number sent to the clients, from 1, capped at 255. */
 std::uint8_t levelNumber(std::size_t index)
 {
@@ -97,7 +117,14 @@ std::optional<std::uint8_t> levelSystem(engine::Registry &registry,
                 !queue.pending.empty() || enemiesLeft) {
                 return;
             }
+            if (level.boss && !progress.bossSpawned) {
+                queueBoss(*level.boss, queue);
+                progress.bossSpawned = true;
+                BB_INFO("Boss of level " << progress.level + 1);
+                return;
+            }
             ++progress.level;
+            progress.bossSpawned = false;
             progress.nextWave = 0;
             progress.elapsed = engine::Duration{0.0F};
             progress.pause = LevelPause;

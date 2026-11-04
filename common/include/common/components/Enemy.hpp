@@ -21,7 +21,11 @@ enum class EnemyType : std::uint8_t {
     Small,
     Medium,
     Large,
+    Boss,
 };
+
+// Health of the end-level boss; the clients draw its health bar from it.
+inline constexpr int BossMaxHealth = 2500;
 
 // Behavior of an enemy, read by the AI system.
 struct Enemy {

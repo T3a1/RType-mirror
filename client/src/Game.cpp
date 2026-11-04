@@ -259,6 +259,7 @@ void Game::drawScreens()
     } else {
         hudSystem(m_sync, m_autoFire.enabled, *m_graphics);
         if (!m_sync.gameOver) {
+            bossHealthBar(m_registry, *m_graphics);
             levelBannerScreen(m_sync, *m_graphics);
         }
         const bool keyboard =
