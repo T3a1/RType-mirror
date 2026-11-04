@@ -10,6 +10,9 @@
 
 namespace server {
 
+static_assert(rtype::Damage{}.points >= rtype::PlayerMaxHealth,
+              "a single collision with an enemy must kill a player");
+
 engine::Entity EntityFactory::create(engine::Registry &registry,
                                      const SpawnEnemy &request)
 {

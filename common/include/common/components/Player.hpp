@@ -12,7 +12,8 @@
 
 namespace rtype {
 
-inline constexpr int PlayerMaxHealth = 100;
+// A player dies from a single enemy shot or collision.
+inline constexpr int PlayerMaxHealth = 1;
 
 struct Player {
     std::uint8_t slot = 0;
