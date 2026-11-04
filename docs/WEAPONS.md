@@ -72,8 +72,8 @@ flowchart LR
     input["Fire pressed<br/>(InputState)"] --> shoot["shootSystem<br/>cooldown, charge"]
     shoot -- "Weapon::fired" --> spread["spreadShotSystem<br/>(SpreadShot)"]
     shoot -- "Weapon::fired" --> other["burstShotSystem<br/>(BurstShot, to come)"]
-    spread --> factory["EntityFactory<br/>projectiles"]
-    other --> factory
+    spread --> commands["SpawnCommands<br/>projectiles, created in Cleanup"]
+    other --> commands
 ```
 
 - `shootSystem` handles what every weapon shares: the fire rate, holding to
@@ -94,10 +94,10 @@ Example: a burst, which fires 3 shots one after the other.
    `struct BurstShot { std::uint8_t level = 1; std::uint8_t left = 0; engine::Duration next{0.0F}; };`,
    and a new `PowerUpKind::Burst`.
 2. **System**, in `server/include/systems/ShotStyleSystems.hpp` and its
-   `.cpp`: `burstShotSystem(registry, factory, stats, dt)` iterates
+   `.cpp`: `burstShotSystem(registry, commands, stats, dt)` iterates
    `Weapon, BurstShot, Transform`; on `weapon.fired` it starts a burst
    (`left = 3`) and fires the remaining shots as `next` runs out, with
-   `factory.create(registry, SpawnProjectile{...})`.
+   `commands.emplace_back(SpawnProjectile{...})`.
 3. **Register it** in `server::Game::registerSystems()`, right after
    `"spreadShot"`, with the `playing` option.
 4. **Power-up**: in `applyPowerUp()` (`server/src/systems/PowerUpSystem.cpp`)
