@@ -10,9 +10,11 @@
 
 #include "EnemyDefs.hpp"
 #include "EntityFactory.hpp"
+#include "Formations.hpp"
 #include "SpawnRequests.hpp"
 #include "common/components/Enemy.hpp"
 #include "common/components/Spawner.hpp"
+#include "components/SpawnQueue.hpp"
 #include "engine/Clock.hpp"
 #include "engine/Entity.hpp"
 #include "engine/Registry.hpp"
@@ -25,11 +27,11 @@
 namespace server {
 
 /**
- * @brief Spawns enemies of random types at random heights on the right of
- * the playfield, after a random delay.
+ * @brief Starts random formations at random heights on the right of the
+ * playfield, after a random delay, and spawns their enemies when they are due.
  *
- * Reads and writes each Spawner's countdown, then creates the enemies with
- * the factory after the loop.
+ * Reads and writes the countdowns of each entity with a Spawner and a
+ * SpawnQueue, then creates the enemies with the factory after the loop.
  * @param registry The registry holding the spawners.
  * @param factory The factory that creates the enemies.
  * @param dt The time elapsed since the last tick, in seconds.

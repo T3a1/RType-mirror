@@ -13,11 +13,9 @@ set(SOURCE_FILES
     src/systems/NetworkInputSystem.cpp
     src/systems/SessionSystem.cpp
     src/systems/SnapshotSystem.cpp
-    src/systems/SpawnSystem.cpp
     src/systems/BoundarySystem.cpp
     src/systems/ShootSystem.cpp
     src/systems/LifetimeSystem.cpp
-    src/EntityFactory.cpp
 )
 
 # The network thread is a library so the tests can run it on a fake socket.
@@ -31,6 +29,21 @@ target_link_libraries(r-type_server_network
     PUBLIC r-type_common
 )
 
+# Spawning is a library so the tests can run it without the game loop.
+add_library(r-type_server_spawn STATIC
+    src/EntityFactory.cpp
+    src/Formations.cpp
+    src/systems/SpawnSystem.cpp
+)
+
+target_include_directories(r-type_server_spawn
+    PUBLIC include
+)
+
+target_link_libraries(r-type_server_spawn
+    PUBLIC r-type_common
+)
+
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 target_include_directories(${PROJECT_NAME}
@@ -38,5 +51,5 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
-    PRIVATE r-type_server_network
+    PRIVATE r-type_server_network r-type_server_spawn
 )

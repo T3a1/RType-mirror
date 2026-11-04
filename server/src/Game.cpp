@@ -48,7 +48,10 @@ void Game::run()
     Clock::time_point previous = Clock::now();
 
     const engine::Entity world = m_registry.create();
-    m_registry.emplace<rtype::Spawner>(world);
+    m_registry.emplace<rtype::Spawner>(
+        world, rtype::Spawner{.minDelay = engine::Duration{2.5F},
+                              .maxDelay = engine::Duration{4.5F}});
+    m_registry.emplace<SpawnQueue>(world);
 
     while (m_running) {
         const Clock::time_point now = Clock::now();
