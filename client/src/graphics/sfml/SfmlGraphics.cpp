@@ -14,6 +14,7 @@
 #include <SFML/System/Err.hpp>
 #include <SFML/Window/Event.hpp>
 #include <SFML/Window/Keyboard.hpp>
+#include <SFML/Window/Mouse.hpp>
 #include <SFML/Window/VideoMode.hpp>
 
 #ifdef _WIN32
@@ -62,6 +63,17 @@ sf::Color toSfml(Color color) { return {color.r, color.g, color.b, color.a}; }
 
 sf::Keyboard::Key toSfml(Key key)
 {
+    const auto index = static_cast<int>(key);
+    if (key >= Key::A && key <= Key::Z) {
+        return static_cast<sf::Keyboard::Key>(
+            static_cast<int>(sf::Keyboard::Key::A) + index -
+            static_cast<int>(Key::A));
+    }
+    if (key >= Key::Num0 && key <= Key::Num9) {
+        return static_cast<sf::Keyboard::Key>(
+            static_cast<int>(sf::Keyboard::Key::Num0) + index -
+            static_cast<int>(Key::Num0));
+    }
     switch (key) {
     case Key::Up:
         return sf::Keyboard::Key::Up;
@@ -73,8 +85,25 @@ sf::Keyboard::Key toSfml(Key key)
         return sf::Keyboard::Key::Right;
     case Key::Space:
         return sf::Keyboard::Key::Space;
+    case Key::Enter:
+        return sf::Keyboard::Key::Enter;
+    case Key::Tab:
+        return sf::Keyboard::Key::Tab;
+    case Key::LeftShift:
+        return sf::Keyboard::Key::LShift;
+    case Key::RightShift:
+        return sf::Keyboard::Key::RShift;
+    case Key::LeftControl:
+        return sf::Keyboard::Key::LControl;
+    case Key::RightControl:
+        return sf::Keyboard::Key::RControl;
+    case Key::LeftAlt:
+        return sf::Keyboard::Key::LAlt;
+    case Key::RightAlt:
+        return sf::Keyboard::Key::RAlt;
+    default:
+        return sf::Keyboard::Key::Unknown;
     }
-    return sf::Keyboard::Key::Unknown;
 }
 
 } // namespace
@@ -105,9 +134,16 @@ SfmlGraphics::SfmlGraphics(const WindowConfig &config)
 
 bool SfmlGraphics::shouldClose()
 {
+    m_mousePressed = false;
     while (const std::optional event = m_window.pollEvent()) {
-        if (event->is<sf::Event::Closed>()) {
+        const auto *key = event->getIf<sf::Event::KeyPressed>();
+        if (event->is<sf::Event::Closed>() ||
+            (key != nullptr && key->code == sf::Keyboard::Key::Escape)) {
             m_closeRequested = true;
+        }
+        const auto *mouse = event->getIf<sf::Event::MouseButtonPressed>();
+        if (mouse != nullptr && mouse->button == sf::Mouse::Button::Left) {
+            m_mousePressed = true;
         }
     }
     return m_closeRequested;
@@ -147,7 +183,7 @@ void SfmlGraphics::useScreenView()
         sf::View(sf::FloatRect({0.0F, 0.0F}, {screen.x, screen.y})));
 }
 
-Texture SfmlGraphics::loadTexture(const std::string &path)
+Texture SfmlGraphics::loadTexture(const std::string &path, TextureFilter filter)
 {
     const std::filesystem::path fullPath = m_directory / path;
     std::error_code error;
@@ -158,7 +194,7 @@ Texture SfmlGraphics::loadTexture(const std::string &path)
     if (!texture.loadFromFile(fullPath)) {
         return {};
     }
-    texture.setSmooth(true);
+    texture.setSmooth(filter == TextureFilter::Smooth);
 
     const sf::Vector2u size = texture.getSize();
     const std::uint32_t id = m_nextTexture++;
@@ -216,5 +252,14 @@ bool SfmlGraphics::isKeyDown(Key key) const
     // SFML reads the global keyboard state: ignore it when unfocused.
     return m_window.hasFocus() && sf::Keyboard::isKeyPressed(toSfml(key));
 }
+
+engine::Vec2f SfmlGraphics::mousePosition() const
+{
+    const sf::Vector2i position = sf::Mouse::getPosition(m_window);
+    return {.x = static_cast<float>(position.x),
+            .y = static_cast<float>(position.y)};
+}
+
+bool SfmlGraphics::isMousePressed() const { return m_mousePressed; }
 
 } // namespace client::gfx

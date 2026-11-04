@@ -45,7 +45,8 @@ class SfmlGraphics final : public IGraphics {
     void beginWorld(float zoom) override;
     void endWorld() override;
 
-    [[nodiscard]] Texture loadTexture(const std::string &path) override;
+    [[nodiscard]] Texture loadTexture(const std::string &path,
+                                      TextureFilter filter) override;
     void unloadTexture(Texture texture) override;
 
     void drawRectangle(Rect rect, Color color) override;
@@ -55,6 +56,8 @@ class SfmlGraphics final : public IGraphics {
                   Color color) override;
 
     [[nodiscard]] bool isKeyDown(Key key) const override;
+    [[nodiscard]] engine::Vec2f mousePosition() const override;
+    [[nodiscard]] bool isMousePressed() const override;
 
   private:
     /** @brief Draws in screen pixels, whatever the window's current size. */
@@ -65,6 +68,7 @@ class SfmlGraphics final : public IGraphics {
     sf::Font m_font;
     bool m_hasFont = false;
     bool m_closeRequested = false;
+    bool m_mousePressed = false;
     std::unordered_map<std::uint32_t, sf::Texture> m_textures;
     std::uint32_t m_nextTexture = 1;
 };

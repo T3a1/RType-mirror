@@ -14,16 +14,17 @@ namespace engine {
  * @param stage The stage the system runs in.
  * @param name The name of the system, for logs and debugging.
  * @param system The system to run.
- * @param every Runs the system once every this many ticks.
+ * @param options When the system runs.
  **/
 void Scheduler::add(Stage stage, std::string name, System system,
-                    std::uint32_t every)
+                    SystemOptions options)
 {
     m_systems.push_back(Entry{
         .stage = stage,
         .name = std::move(name),
         .system = std::move(system),
-        .every = every == 0 ? 1 : every,
+        .every = options.every == 0 ? 1 : options.every,
+        .when = std::move(options.when),
     });
 }
 
@@ -37,7 +38,8 @@ void Scheduler::run(Registry &registry, Duration dt)
 {
     for (const Stage stage : STAGE_ORDER) {
         for (const Entry &entry : m_systems) {
-            if (entry.stage == stage && m_tick % entry.every == 0) {
+            if (entry.stage == stage && m_tick % entry.every == 0 &&
+                (!entry.when || entry.when())) {
                 entry.system(registry, dt);
             }
         }

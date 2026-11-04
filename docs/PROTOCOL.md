@@ -1,4 +1,4 @@
-# R-Type network protocol (version 1)
+# R-Type network protocol (version 5)
 
 This document specifies the binary protocol spoken between the R-Type server
 and its clients. It is precise enough to write a compatible client or server
@@ -73,7 +73,7 @@ Every packet starts with this 12-byte header:
 | Offset | Size | Field | Value |
 |-------:|-----:|-------|-------|
 | 0 | 2 | magic | `52 54` (ASCII `"RT"`). Recognizes our packets: a random datagram almost never starts with these bytes |
-| 2 | 1 | version | `1`. See [Versioning](#12-versioning) |
+| 2 | 1 | version | `5`. See [Versioning](#12-versioning) |
 | 3 | 1 | type | Which payload follows. See [Packet types](#5-packet-types) |
 | 4 | 1 | flags | Bit 0: **Reliable**. Bits 1 to 7 are reserved and **MUST** be 0 |
 | 5 | 1 | reserved | **MUST** be 0 |
@@ -94,7 +94,7 @@ The names are the `DecodeError` values of the reference implementation.
 | 1 | At most 1200 bytes | `TooLarge` |
 | 2 | At least 12 bytes | `TooShort` |
 | 3 | Magic is `"RT"` | `BadMagic` |
-| 4 | Version is 1 | `BadVersion` |
+| 4 | Version is 5 | `BadVersion` |
 | 5 | Type is listed in section 5 | `UnknownType` |
 | 6 | No reserved flag bit, and Reliable set exactly on reliable types | `BadFlags` |
 | 7 | Reserved byte is 0 | `BadReserved` |
@@ -117,9 +117,16 @@ Check 8 catches truncated and padded datagrams before any payload decoding.
 | `0x20` | `Snapshot` | Server | Unreliable | 8 + players block + 16 per entity |
 | `0x21` | `Welcome` | Server | Reliable | 9 |
 | `0x22` | `GameEvent` | Server | Reliable | 1 to 5 |
+| `0x30` | `RoomList` | Server | Unreliable, repeated | 1 + 6 per room |
+| `0x31` | `JoinRoom` | Client | Reliable | 4 |
+| `0x32` | `LeaveRoom` | Client | Reliable | 0 |
+| `0x33` | `StartGame` | Client | Reliable | 0 |
+| `0x34` | `RoomJoined` | Server | Reliable | 4 |
+| `0x35` | `RoomRefused` | Server | Reliable | 0 |
 
 Values are grouped by range: `0x0_` for the connection (both directions),
-`0x1_` from client to server, `0x2_` from server to client. A packet sent by
+`0x1_` from client to server, `0x2_` from server to client, `0x3_` for the
+rooms (both directions). A packet sent by
 the wrong side (for example a `Snapshot` sent by a client) **MUST** be dropped.
 
 ## 6. Payloads
@@ -129,15 +136,43 @@ byte 12 of the datagram.
 
 ### `Connect` (0x01), `Accept` (0x02), `Ack` (0x05)
 
-No payload. `Connect` asks to join (the protocol version is in the header).
-`Accept` answers it. `Ack` carries only the header's `ack` field, for a peer
-that has nothing else to send.
+No payload. `Connect` asks to enter the lobby (the protocol version is in the
+header). `Accept` answers it. `Ack` carries only the header's `ack` field, for
+a peer that has nothing else to send.
+
+### `RoomList` (0x30)
+
+The rooms of the server, sent to the clients in the lobby every 500 ms. Each
+list replaces the previous one, so a lost one does not matter.
+
+| Size | Field | Values |
+|-----:|-------|--------|
+| 1 | roomCount | `0` to `16` |
+| 4 | room | `u32`, at least `1`, repeated `roomCount` times with the next two fields |
+| 1 | players | `0` to `4` |
+| 1 | status | `0` Waiting, `1` Playing, `2` Over (nobody can join) |
+
+### `JoinRoom` (0x31), `RoomJoined` (0x34)
+
+`JoinRoom` asks to enter a room (client, reliable), and `RoomJoined` answers it
+(server, reliable). A client already in a room is ignored.
+
+| Offset | Size | Field | Values |
+|-------:|-----:|-------|--------|
+| 0 | 4 | room | `u32`. In `JoinRoom`: the room, created if it does not exist, `0` for the first room with a free slot (a new one if none), or `0xFFFFFFFF` for a new room. In `RoomJoined`: the room entered, at least `1` |
+
+### `LeaveRoom` (0x32), `StartGame` (0x33), `RoomRefused` (0x35)
+
+No payload, all reliable. `LeaveRoom` (client) goes back to the lobby.
+`StartGame` (client) starts the game of the room, and is ignored if it already
+started. `RoomRefused` (server) answers a `JoinRoom` for a full room or a room
+whose game is over, or when 16 rooms already run.
 
 ### `Reject` (0x03)
 
 | Offset | Size | Field | Values |
 |-------:|-----:|-------|--------|
-| 0 | 1 | reason | `0` ServerFull, `1` VersionMismatch |
+| 0 | 1 | reason | `0` ServerFull (the server has 64 clients, what its 16 rooms can hold), `1` VersionMismatch |
 
 ### `Disconnect` (0x04)
 
@@ -189,13 +224,15 @@ not fit in one datagram is split into several **parts**
 | 5 | 1 | partCount | Number of parts for this tick, at least `1` |
 | 6 | 2 | entityCount | `u16`, number of entity records in this part |
 
-**Players block (part 0 only): 1 + 5 bytes per player**
+**Players block (part 0 only): 1 + 13 bytes per player**
 
 | Size | Field | Values |
 |-----:|-------|--------|
 | 1 | playerCount | `0` to `4` |
-| 1 | slot | `1` to `4`, repeated `playerCount` times with the score |
+| 1 | slot | `1` to `4`, repeated `playerCount` times with the next three fields |
 | 4 | score | `u32` |
+| 4 | lastInput | `u32`. `sequence` of the last `Input` of this player that the server applied at this tick, `0` if none. The client replays its newer inputs on top of this state (client-side prediction) |
+| 4 | shipId | `u32`, network id of the player's ship, `0` if it has none (destroyed). Lets every client tell which ship belongs to which player (color and label) |
 
 **Entity record (16 bytes), repeated `entityCount` times**
 
@@ -204,7 +241,7 @@ not fit in one datagram is split into several **parts**
 | 0 | 4 | networkId | `u32`, identifies the entity. Never reused by the server |
 | 4 | 1 | type | Entity type, see below. The client chooses the sprite from it |
 | 5 | 1 | flags | Bit 0 (`0x01`) Invincible (blinking), bit 1 (`0x02`) Charging. Bits 2 to 4 (`0x1C`) Owner: the slot (`1` to `4`) of the player who fired a `PlayerMissile`, `0` for every other entity. Bits 5 to 7 **MUST** be 0 |
-| 6 | 2 | health | `u16`, for health bars |
+| 6 | 2 | health | `u16`, the health points |
 | 8 | 4 | x | `f32`, center, in playfield units |
 | 12 | 4 | y | `f32`, center, in playfield units |
 
@@ -239,7 +276,8 @@ A one-off fact. The body depends on the kind:
 | 1 | PlayerJoined | slot (`u8`, 1 to 4) | Another player joined |
 | 2 | PlayerLeft | slot (`u8`, 1 to 4) | A player left, timed out or was kicked |
 | 3 | PlayerHit | slot (`u8`, 1 to 4) | A player was hit (sound, screen flash) |
-| 4 | GameOver | none | The game is over |
+| 4 | GameOver | none | The ship of every connected player is destroyed: the game is over. Snapshots keep carrying the final scores |
+| 5 | GameStarted | none | The game of the room started |
 
 ## 7. Reliability
 
@@ -320,14 +358,23 @@ sequenceDiagram
     participant S as Server
 
     C->>S: Connect (every 500 ms until answered)
-    alt 4 players already
+    alt 64 clients already
         S-->>C: Reject{ServerFull}
     else
-        S-->>C: Accept (reliable 1)
-        S-->>C: Welcome{slot, shipId, tick} (reliable 2)
-        S-->>C: GameEvent{PlayerJoined} to the other clients
-        C->>S: Input... (ack = 2)
-        S-->>C: Snapshot... (20 per second)
+        S-->>C: Accept (reliable)
+        S-->>C: RoomList (every 500 ms while in the lobby)
+        C->>S: JoinRoom{room} (reliable)
+        alt room full, game over or 16 rooms already
+            S-->>C: RoomRefused (reliable)
+        else
+            S-->>C: RoomJoined{room} (reliable)
+            S-->>C: Welcome{slot, shipId, tick} (reliable)
+            S-->>C: GameEvent{PlayerJoined} to the others of the room
+            S-->>C: Snapshot... (20 per second)
+            C->>S: StartGame (reliable), from any player of the room
+            S-->>C: GameEvent{GameStarted} to the whole room
+            C->>S: Input...
+        end
     end
 ```
 
@@ -335,15 +382,28 @@ In words:
 
 1. The client sends `Connect` and repeats it every **500 ms** until it
    receives `Accept` or `Reject`.
-2. The server accepts at most **4** clients. A fifth one receives
+2. The server keeps at most **64** clients. One more receives
    `Reject{ServerFull}` and no session is created for it.
 3. Otherwise the server creates a session for the client's address and port
    and answers `Accept`. A `Connect` from an address that already has a
    session is ignored: the reliability layer resends the pending `Accept`.
-4. The server creates the player's ship and sends `Welcome` to the new player
-   and `GameEvent{PlayerJoined}` to the others.
-5. From then on, the client sends `Input` continuously and receives
-   snapshots and events.
+4. The client is now in the **lobby**: it receives `RoomList` every 500 ms and
+   after leaving a room. Its `Input` packets only keep the connection alive.
+5. The client sends `JoinRoom`. The server answers `RoomJoined`, or
+   `RoomRefused` and the client stays in the lobby. It then creates the
+   player's ship and sends `Welcome` to the new player and
+   `GameEvent{PlayerJoined}` to the others of the room.
+6. A new game **waits**: nothing moves, and only the players and their ships
+   are sent. Any player starts it with `StartGame`, and the whole room receives
+   `GameEvent{GameStarted}`. A player who enters a running game receives it
+   alone. The client then sends its held actions in `Input`.
+7. `LeaveRoom` brings the client back to the lobby at any time, without a new
+   handshake. A client that has left **MUST** ignore the snapshots still on
+   their way.
+
+Everything a client exchanges in a room only concerns that room. A room is
+created by its first player and destroyed when its last player leaves, and its
+number can then be used again. A server runs at most **16** rooms.
 
 The server **MUST** drop every packet other than `Connect` from an address
 that has no session. A client **MUST** drop datagrams that do not come from
@@ -394,7 +454,7 @@ entities. Only part 0 carries the players block.
 
 | Part | Room for entities |
 |------|-------------------|
-| Part 0, with 4 players | (1188 − 8 − 21) / 16 = **72** entities |
+| Part 0, with 4 players | (1188 − 8 − 53) / 16 = **70** entities |
 | Other parts | (1188 − 8) / 16 = **73** entities |
 
 `partCount` is at most 255.
@@ -426,7 +486,7 @@ or make it use unbounded memory:
 - The number of stored reliable packets per peer is capped
   ([section 7](#resending)).
 
-**Known limitation.** Version 1 has no handshake token. A `Connect` sent with
+**Known limitation.** This version has no handshake token. A `Connect` sent with
 a forged source address makes the server send `Accept`, `Welcome` and
 snapshots to that address until the 5-second timeout, and takes one of the 4
 slots meanwhile. A challenge-response handshake (the server answers
@@ -447,7 +507,7 @@ All bytes in hexadecimal.
 Unreliable sequence 298, acknowledging reliable packet 17, input number 1000:
 
 ```text
-52 54 01 10 00 00 2A 01 11 00 05 00   header: "RT", v1, Input, no flags,
+52 54 04 10 00 00 2A 01 11 00 05 00   header: "RT", v4, Input, no flags,
                                               sequence 298, ack 17, size 5
 E8 03 00 00                           sequence 1000
 11                                    actions 0x11 = Up | Fire
@@ -458,7 +518,7 @@ E8 03 00 00                           sequence 1000
 Reliable sequence 2, slot 2, ship 58, tick 1200:
 
 ```text
-52 54 01 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
+52 54 04 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
                                               sequence 2, ack 0, size 9
 02                                    slot 2
 3A 00 00 00                           shipId 58
@@ -468,12 +528,13 @@ B0 04 00 00                           tick 1200
 ### `Snapshot` with one player and one entity
 
 ```text
-52 54 01 20 00 00 2B 01 11 00 1E 00   header: Snapshot, size 30
+52 54 04 20 00 00 2B 01 11 00 26 00   header: Snapshot, size 38
 2C 01 00 00                           tick 300
 00 01                                 part 0 of 1
 01 00                                 1 entity
 01                                    1 player
-01 DC 05 00 00                          slot 1, score 1500
+01 DC 05 00 00 E8 03 00 00              slot 1, score 1500, last input 1000,
+07 00 00 00                               ship 7
 07 00 00 00                           networkId 7
 00                                      type PlayerShip
 00                                      flags none
@@ -491,3 +552,11 @@ B0 04 00 00                           tick 1200
   ([section 8](#version-mismatch)).
 - New packet types, enumeration values and flag bits are added only with a
   new version: until then, receivers reject them.
+
+| Version | Changes |
+|--------:|---------|
+| 1 | Part 1 prototype. |
+| 2 | Snapshot players block: `lastInput` added (9 bytes per player). Entity flags: Owner bits 2 to 4. Entity types `EnemySmall`, `EnemyMedium` and `EnemyLarge`. |
+| 3 | Snapshot players block: `shipId` added (13 bytes per player). |
+| 4 | `Connect` and `Accept` carry a room number (4 bytes). |
+| 5 | Lobby: `Connect` and `Accept` are empty again; new `RoomList`, `JoinRoom`, `LeaveRoom`, `StartGame`, `RoomJoined` and `RoomRefused`; new event `GameStarted`. |

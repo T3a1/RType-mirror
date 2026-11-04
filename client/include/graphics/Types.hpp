@@ -8,6 +8,7 @@
 #ifndef CLIENT_GRAPHICS_TYPES_HPP
 #define CLIENT_GRAPHICS_TYPES_HPP
 
+#include <cstddef>
 #include <cstdint>
 
 namespace client::gfx {
@@ -64,14 +65,75 @@ struct Texture {
     int height = 0;
 };
 
-/** @brief The keyboard keys the client reads. */
+/** @brief How a texture is sampled when it is drawn bigger or smaller. */
+enum class TextureFilter : std::uint8_t {
+    /** @brief Bilinear: blends neighboring pixels, for photos. */
+    Smooth,
+    /** @brief Nearest pixel: keeps pixel art sharp. */
+    Pixelated,
+};
+
+/**
+ * @brief The keyboard keys the client can read. A to Z and Num0 to Num9
+ * are contiguous. Backends that cannot see a key (ncurses has no Shift,
+ * Ctrl or Alt alone) never report it held.
+ */
 enum class Key : std::uint8_t {
     Up,
     Down,
     Left,
     Right,
     Space,
+    Enter,
+    Tab,
+    LeftShift,
+    RightShift,
+    LeftControl,
+    RightControl,
+    LeftAlt,
+    RightAlt,
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    G,
+    H,
+    I,
+    J,
+    K,
+    L,
+    M,
+    N,
+    O,
+    P,
+    Q,
+    R,
+    S,
+    T,
+    U,
+    V,
+    W,
+    X,
+    Y,
+    Z,
+    Num0,
+    Num1,
+    Num2,
+    Num3,
+    Num4,
+    Num5,
+    Num6,
+    Num7,
+    Num8,
+    Num9,
+    /** @brief The number of keys, not a key. */
+    Count,
 };
+
+/** @brief The number of keys in Key. */
+inline constexpr std::size_t KeyCount = static_cast<std::size_t>(Key::Count);
 
 } // namespace client::gfx
 

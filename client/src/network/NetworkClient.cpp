@@ -61,6 +61,9 @@ std::vector<Payload> NetworkClient::update(TimePoint now)
             m_state = State::Lost;
             return received;
         }
+        for (const Packet &packet : m_channel.resendsDue(now)) {
+            sendPacket(packet, now);
+        }
         if (m_channel.needsAck() && now - m_lastSent >= AckDelay) {
             send(Ack{}, now);
         }
@@ -68,12 +71,34 @@ std::vector<Payload> NetworkClient::update(TimePoint now)
     return received;
 }
 
-void NetworkClient::sendInput(std::uint8_t actions, TimePoint now)
+std::uint32_t NetworkClient::sendInput(std::uint8_t actions, TimePoint now)
 {
     if (m_state != State::Connected) {
-        return;
+        return 0;
     }
     send(Input{.sequence = ++m_inputSequence, .actions = actions}, now);
+    return m_inputSequence;
+}
+
+void NetworkClient::joinRoom(std::uint32_t room, TimePoint now)
+{
+    if (m_state == State::Connected) {
+        send(JoinRoom{.room = room}, now);
+    }
+}
+
+void NetworkClient::leaveRoom(TimePoint now)
+{
+    if (m_state == State::Connected) {
+        send(LeaveRoom{}, now);
+    }
+}
+
+void NetworkClient::startGame(TimePoint now)
+{
+    if (m_state == State::Connected) {
+        send(StartGame{}, now);
+    }
 }
 
 void NetworkClient::receivePending(TimePoint now,
@@ -84,6 +109,7 @@ void NetworkClient::receivePending(TimePoint now,
         if (datagram->sender != m_server) {
             continue;
         }
+        m_bytesReceived += datagram->size;
         const auto result =
             decodePacket({m_buffer.data(), datagram->size}, Side::Server);
         if (const auto *decodeError = std::get_if<DecodeError>(&result)) {
@@ -130,9 +156,13 @@ void NetworkClient::handlePacket(const Packet &packet,
 void NetworkClient::send(const Payload &payload, TimePoint now)
 {
     Packet packet{.payload = payload};
-    if (!m_channel.prepare(packet, now)) {
-        return;
+    if (m_channel.prepare(packet, now)) {
+        sendPacket(packet, now);
     }
+}
+
+void NetworkClient::sendPacket(const Packet &packet, TimePoint now)
+{
     ByteWriter writer;
     if (!encodePacket(packet, writer)) {
         return;
@@ -141,6 +171,8 @@ void NetworkClient::send(const Payload &payload, TimePoint now)
         m_socket->sendTo(m_server, {writer.data().data(), writer.size()});
     if (error) {
         BB_DEBUG("Send failed: " << error.message());
+    } else {
+        m_bytesSent += writer.size();
     }
     m_lastSent = now;
 }

@@ -6,8 +6,12 @@
 */
 
 #include "EntityFactory.hpp"
+#include "common/Playfield.hpp"
 
 namespace server {
+
+static_assert(rtype::Damage{}.points >= rtype::PlayerMaxHealth,
+              "a single collision with an enemy must kill a player");
 
 engine::Entity EntityFactory::create(engine::Registry &registry,
                                      const SpawnEnemy &request)
@@ -22,6 +26,8 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
         enemy, rtype::Transform{.position = request.position});
     registry.emplace<rtype::Velocity>(
         enemy, rtype::Velocity{.value = {.x = -stat.speed, .y = 0.0F}});
+    registry.emplace<rtype::MovementPattern>(
+        enemy, request.pattern.value_or(stat.pattern));
     registry.emplace<rtype::Health>(
         enemy, rtype::Health{.current = stat.health, .max = stat.health});
     registry.emplace<rtype::Damage>(enemy);
@@ -70,7 +76,7 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
     registry.emplace<rtype::EntityType>(player, rtype::EntityType::PlayerShip);
     registry.emplace<rtype::Collider>(
         player, rtype::Collider{
-                    .size = {.x = 64.0F, .y = 64.0F},
+                    .size = rtype::PlayerShipSize,
                     .layer = rtype::CollisionLayer::Player,
                     .mask = rtype::CollisionLayer::Enemy |
                             rtype::CollisionLayer::EnemyProjectile |

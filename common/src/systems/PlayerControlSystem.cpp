@@ -32,20 +32,25 @@ float axis(std::uint8_t actions, std::uint8_t negative, std::uint8_t positive)
 
 } // namespace
 
+engine::Vec2f shipVelocity(std::uint8_t actions)
+{
+    engine::Vec2f direction{
+        .x = axis(actions, Action::Left, Action::Right),
+        .y = axis(actions, Action::Up, Action::Down),
+    };
+    // A diagonal (1, 1) is sqrt(2) long: shrink it back to 1 so the ship is
+    // not faster diagonally.
+    if (direction.x != 0.0F && direction.y != 0.0F) {
+        direction *= 1.0F / std::numbers::sqrt2_v<float>;
+    }
+    return direction * playerSpeed;
+}
+
 void playerControlSystem(engine::Registry &registry)
 {
     registry.each<InputState, Velocity>(
         [](engine::Entity, const InputState &input, Velocity &velocity) {
-            engine::Vec2f direction{
-                .x = axis(input.actions, Action::Left, Action::Right),
-                .y = axis(input.actions, Action::Up, Action::Down),
-            };
-            // A diagonal (1, 1) is sqrt(2) long: shrink it back to 1 so
-            // the ship is not faster diagonally.
-            if (direction.x != 0.0F && direction.y != 0.0F) {
-                direction *= 1.0F / std::numbers::sqrt2_v<float>;
-            }
-            velocity.value = direction * playerSpeed;
+            velocity.value = shipVelocity(input.actions);
         });
 }
 

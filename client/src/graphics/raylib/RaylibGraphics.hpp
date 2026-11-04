@@ -37,7 +37,8 @@ class RaylibGraphics final : public IGraphics {
     void beginWorld(float zoom) override;
     void endWorld() override;
 
-    [[nodiscard]] Texture loadTexture(const std::string &path) override;
+    [[nodiscard]] Texture loadTexture(const std::string &path,
+                                      TextureFilter filter) override;
     void unloadTexture(Texture texture) override;
 
     void drawRectangle(Rect rect, Color color) override;
@@ -47,6 +48,8 @@ class RaylibGraphics final : public IGraphics {
                   Color color) override;
 
     [[nodiscard]] bool isKeyDown(Key key) const override;
+    [[nodiscard]] engine::Vec2f mousePosition() const override;
+    [[nodiscard]] bool isMousePressed() const override;
 
   private:
     std::unordered_map<std::uint32_t, Texture2D> m_textures;

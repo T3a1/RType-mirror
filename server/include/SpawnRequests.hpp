@@ -9,10 +9,12 @@
 #define SERVER_SPAWNREQUESTS_HPP
 
 #include "common/components/Enemy.hpp"
+#include "common/components/MovementPattern.hpp"
 #include "engine/Entity.hpp"
 #include "engine/Vec2.hpp"
 
 #include <cstdint>
+#include <optional>
 
 namespace server {
 
@@ -20,10 +22,12 @@ namespace server {
  * A request to spawn an enemy.
  * @param type The type of the enemy to spawn.
  * @param position The position to spawn the enemy at.
+ * @param pattern The path it follows, or nothing for the one of its type.
  **/
 struct SpawnEnemy {
     rtype::EnemyType type = rtype::EnemyType::Basic;
     engine::Vec2f position{};
+    std::optional<rtype::MovementPattern> pattern;
 };
 
 /**

@@ -338,7 +338,8 @@ The client renders as fast as the display allows (or with V-Sync) and uses the
 real elapsed time (delta time) for animations and the star-field scrolling.
 Remote entities are drawn slightly in the past and **interpolated** between the
 two latest snapshots, so their movement looks smooth even with 20 snapshots per
-second.
+second. The local ship is **predicted**: it moves as soon as a key is pressed,
+and the server's snapshots correct it (section 6.9).
 
 ## 6. Threading and networking
 
@@ -656,8 +657,57 @@ The client uses the same pattern with roles reversed:
   snapshot system keeps the last few snapshots in a small buffer, and the
   interpolation system draws remote entities about **100 ms in the past**
   (two snapshot intervals), between the two snapshots around that time.
+- **Prediction of the local ship:** the client keeps the inputs it sent and
+  moves its ship with the same code as the server (`shipVelocity`, then
+  `keepInPlayfield`), without waiting for the server. Each snapshot gives the
+  ship's position on the server and, in the players block, the sequence of the
+  player's last input the server applied (`lastInput`). The client restarts
+  from that position, drops the applied inputs and replays the others
+  (**reconciliation**). When the result differs from what it drew, the
+  difference is not applied at once: it fades out in about 0.3 s, so the ship
+  never jumps (except for a difference over 150 units). Missiles are not
+  predicted: they appear when the server creates them.
 
-### 6.10 Shutdown
+### 6.10 Parallel games
+
+One server process runs up to 16 independent games, one per **room**. A client
+first arrives in a **lobby**, without any room: `NetworkServer` sends it the
+list of the rooms, and it enters one with `JoinRoom`. A new game waits until a
+player starts it (`RoomPhaseSystem`), and a client can go back to the lobby at
+any time without a new handshake. The mechanism is in the engine and knows
+nothing about R-Type:
+
+| Part | Where | Job |
+|------|-------|-----|
+| `engine::IInstance` | Engine, implemented by the game | One run of a game: `tick()`, `onStop()`, `joinable()`, `status()` |
+| `engine::InstanceRunner` | Engine | The thread of one instance: fixed time step, catches its exceptions |
+| `engine::InstanceManager<In, Out>` | Engine | Creates an instance for its first member and stops it after the last one, gives each one its own queues, finds an instance with room, lists them |
+| `server::Game`, `server::Rooms` | Server | The R-Type game as an instance, with the R-Type messages and limits |
+| `NetworkServer`, room messages | Server, protocol | The lobby, the room of each session and the routing of the messages |
+
+Another game reuses it by implementing `IInstance` and choosing its message
+types and limits:
+
+```cpp
+engine::InstanceManager<MyInbound, MyOutbound> instances(
+    [](auto &link) { return std::make_unique<MyGame>(link.inbound, link.outbound); },
+    {.maxInstances = 8, .maxMembers = 2}, MyGame::TickStep);
+const auto membership = instances.join(engine::AnyInstance);
+```
+
+- **Isolation:** each game has its own thread, registry and queues. A slow game
+  only slows itself. An exception ends that game only: `reap()` reports it, and
+  the network thread disconnects its players.
+- **Limit:** a process-wide crash, such as a segmentation fault, still stops
+  every game. Isolating that would need one process per game.
+- **The network thread never waits for a game:** a stopped game finishes in the
+  background and is destroyed by `reap()` once its thread is over.
+- **What is not generic yet:** sessions, handshake and timeouts live in
+  `server::NetworkServer` and the protocol in `common/`, tied to the R-Type
+  messages. Another game can reuse `InstanceManager` and `IUdpSocket`, but
+  writes its own session layer.
+
+### 6.11 Shutdown
 
 - `SIGINT` and `SIGTERM` (sent by `docker stop`) set the atomic `running` flag
   to `false`. The signal handler does nothing else.
@@ -668,7 +718,7 @@ The client uses the same pattern with roles reversed:
 - A client closing its window does the same on its side: it sends a disconnect
   message, stops its network thread and exits.
 
-### 6.11 Summary of network-related systems
+### 6.12 Summary of network-related systems
 
 | Side | Stage | System | Job |
 |------|-------|--------|-----|
@@ -714,13 +764,9 @@ The client uses the same pattern with roles reversed:
   depend on the choice).
 - **Network library**: Asio, behind `engine::net::IUdpSocket` (see
   [2.1](#21-network-abstraction)); raw sockets would be a new backend.
-- **Client-side prediction** of the local player's ship, to hide latency. Not
-  planned for v1.
 - **Tick and snapshot rates**: 60 and 20 per second are starting values, to be
   tuned once the prototype runs. The same goes for the network values of
   section 6: 5 s timeout, 100 ms resend interval, 100 ms interpolation delay,
   1200-byte datagrams, queue capacities.
-- **Lobby and game start**: v1 starts the game as soon as a player joins.
-  Rooms, a lobby or a "ready" step are not designed yet.
 - **Windows support** (issue #6): the design above has no Linux-only parts
   except the sockets, which are hidden behind `engine::net::IUdpSocket`.

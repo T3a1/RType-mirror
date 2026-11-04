@@ -9,8 +9,10 @@ set_property(CACHE RTYPE_NETWORK_BACKEND PROPERTY STRINGS asio)
 
 set(SOURCE_FILES
     src/systems/MovementSystem.cpp
+    src/systems/PatternSystem.cpp
     src/systems/PlayerControlSystem.cpp
     src/systems/InterpolationSystem.cpp
+    src/systems/PredictionSystem.cpp
     src/protocol/ByteWriter.cpp
     src/protocol/ByteReader.cpp
     src/protocol/PacketHeader.cpp

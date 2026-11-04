@@ -8,16 +8,24 @@
 #ifndef SERVER_NETWORKMESSAGES_HPP
 #define SERVER_NETWORKMESSAGES_HPP
 #include "common/protocol/Packet.hpp"
+#include "engine/InstanceManager.hpp"
 #include "engine/MessageQueue.hpp"
+#include <cstddef>
 #include <cstdint>
 
 namespace server {
 
 /**
+ * How many clients a server keeps, in the lobby or in a room.
+ **/
+inline constexpr std::size_t MaxSessions =
+    std::size_t{rtype::protocol::MaxRooms} * rtype::protocol::MaxPlayers;
+
+/**
  * @enum Recipient
- * @brief Which clients an outbound message is sent to.
- * @param All Every connected client.
- * @param AllExcept Every connected client but OutboundMessage::cliendId.
+ * @brief Which clients of the game's room an outbound message is sent to.
+ * @param All Every client of the room.
+ * @param AllExcept Every client of the room but OutboundMessage::cliendId.
  * @param One Only OutboundMessage::cliendId.
  **/
 enum class Recipient : std::uint8_t { All, AllExcept, One };
@@ -25,11 +33,13 @@ enum class Recipient : std::uint8_t { All, AllExcept, One };
 /**
  * @enum InboundKind
  * @brief What an inbound message tells the game thread.
- * @param Connected A client finished the handshake.
- * @param Disconnected A client left, timed out or was kicked.
+ * @param Connected A client entered the room.
+ * @param Disconnected A client left the room or the server, timed out or was
+ * kicked.
  * @param Input A newer input from a client.
+ * @param Start A client asks to start the game.
  **/
-enum class InboundKind : std::uint8_t { Connected, Disconnected, Input };
+enum class InboundKind : std::uint8_t { Connected, Disconnected, Input, Start };
 
 /**
  * @struct InboundMessage
@@ -73,6 +83,11 @@ using Inbound = engine::MessageQueue<InboundMessage>;
  * @brief Queue from the game thread to the network thread.
  **/
 using Outbound = engine::MessageQueue<OutboundMessage>;
+
+/**
+ * @brief The running games, one per room, with their queues.
+ **/
+using Rooms = engine::InstanceManager<InboundMessage, OutboundMessage>;
 
 } // namespace server
 

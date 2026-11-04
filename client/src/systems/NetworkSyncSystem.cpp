@@ -6,13 +6,15 @@
 */
 
 #include "systems/NetworkSyncSystem.hpp"
+#include "SpriteSheets.hpp"
 #include "common/components/EntityType.hpp"
 #include "common/components/Health.hpp"
 #include "common/components/NetworkId.hpp"
 #include "common/components/Player.hpp"
 #include "common/components/SnapshotHistory.hpp"
 #include "common/components/Transform.hpp"
-#include "components/Sprite.hpp"
+#include "common/systems/PredictionSystem.hpp"
+#include "components/ShipOwner.hpp"
 #include "engine/Logger.hpp"
 
 #include <algorithm>
@@ -23,50 +25,45 @@ namespace client {
 namespace {
 
 using namespace rtype::protocol;
-using gfx::rgb;
 
 constexpr std::uint32_t DestroyedMemory = 300;
 
-constexpr engine::Vec2f ShipSize{.x = 64.0F, .y = 32.0F};
-constexpr engine::Vec2f EnemySize{.x = 64.0F, .y = 64.0F};
-constexpr engine::Vec2f MissileSize{.x = 16.0F, .y = 8.0F};
-constexpr engine::Vec2f SmallEnemySize{.x = 50.0F, .y = 50.0F};
-constexpr engine::Vec2f MediumEnemySize{.x = 100.0F, .y = 50.0F};
-constexpr engine::Vec2f LargeEnemySize{.x = 100.0F, .y = 100.0F};
+/**
+ * @brief Returns the slot of the player owning a ship.
+ * @param state The sync state, for the players block and the local ship.
+ * @param networkId The NetworkId of the ship.
+ * @return The owner's slot, 0 if no known player owns it.
+ **/
+std::uint8_t ownerOfShip(const SyncState &state, std::uint32_t networkId)
+{
+    if (networkId == state.localShip) {
+        return state.localSlot;
+    }
+    for (const PlayerInfo &player : state.players) {
+        if (player.shipId == networkId) {
+            return player.slot;
+        }
+    }
+    return 0;
+}
 
 /**
- * @brief Returns how an entity type is drawn.
- * @param type The type of the entity.
- * @param local Whether it is the local player's ship.
- * @return Its size in playfield units, color and layer.
+ * @brief Gives a ship the sprite and ShipOwner of its player, unless it
+ * already has them.
+ * @param registry The client's registry.
+ * @param ship The ship entity.
+ * @param slot The owner's slot, 0 if unknown (nothing is changed).
+ * @param sheets The sprite sheets the ship is drawn with.
  **/
-Sprite spriteOf(rtype::EntityType type, bool local)
+void setShipOwner(engine::Registry &registry, engine::Entity ship,
+                  std::uint8_t slot, const SpriteSheets &sheets)
 {
-    switch (type) {
-    case rtype::EntityType::PlayerShip:
-        return {
-            .size = ShipSize,
-            .tint = local ? rgb(80, 160, 255) : rgb(120, 200, 120),
-            .layer = 2,
-        };
-    case rtype::EntityType::PlayerMissile:
-        return {.size = MissileSize, .tint = rgb(255, 220, 60), .layer = 1};
-    case rtype::EntityType::EnemyBasic:
-        return {.size = EnemySize, .tint = rgb(230, 60, 60), .layer = 1};
-    case rtype::EntityType::EnemyWave:
-        return {.size = EnemySize, .tint = rgb(240, 140, 40), .layer = 1};
-    case rtype::EntityType::EnemyShooter:
-        return {.size = EnemySize, .tint = rgb(170, 80, 220), .layer = 1};
-    case rtype::EntityType::EnemyMissile:
-        return {.size = MissileSize, .tint = rgb(255, 100, 180), .layer = 1};
-    case rtype::EntityType::EnemySmall:
-        return {.size = SmallEnemySize, .tint = gfx::colors::Red, .layer = 1};
-    case rtype::EntityType::EnemyMedium:
-        return {.size = MediumEnemySize, .tint = rgb(0, 121, 241), .layer = 1};
-    case rtype::EntityType::EnemyLarge:
-        return {.size = LargeEnemySize, .tint = gfx::colors::Green, .layer = 1};
+    const auto *owner = registry.tryGet<ShipOwner>(ship);
+    if (slot == 0 || (owner != nullptr && owner->slot == slot)) {
+        return;
     }
-    return {.size = EnemySize};
+    attachSprite(registry, ship, sheets, rtype::EntityType::PlayerShip, slot);
+    registry.emplace<ShipOwner>(ship, ShipOwner{.slot = slot});
 }
 
 /**
@@ -78,9 +75,11 @@ Sprite spriteOf(rtype::EntityType type, bool local)
  * @param entity The entity record from the snapshot.
  * @param tick The tick of the snapshot.
  * @param state The sync state.
+ * @param sheets The sprite sheets the new entities are drawn with.
  **/
 void applyEntity(engine::Registry &registry, const EntityState &entity,
-                 std::uint32_t tick, SyncState &state)
+                 std::uint32_t tick, SyncState &state,
+                 const SpriteSheets &sheets)
 {
     if (state.destroyed.contains(entity.networkId)) {
         return;
@@ -95,11 +94,16 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
         if (auto *history =
                 registry.tryGet<rtype::SnapshotHistory>(it->second)) {
             rtype::pushSample(*history, sample);
+            return;
+        }
+        if (entity.networkId == state.localShip && state.predict) {
+            state.shipTick = tick;
+            state.shipPosition = sample.position;
         } else {
             registry.get<rtype::Transform>(it->second).position =
                 sample.position;
-            registry.get<rtype::Health>(it->second).current = sample.health;
         }
+        registry.get<rtype::Health>(it->second).current = sample.health;
         return;
     }
     const engine::Entity created = registry.create();
@@ -113,8 +117,16 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
                                                  .max = rtype::PlayerMaxHealth,
                                              });
     const bool local = entity.networkId == state.localShip;
-    registry.emplace<Sprite>(created, spriteOf(entity.type, local));
-    if (!local) {
+    attachSprite(registry, created, sheets, entity.type, 0);
+    if (entity.type == rtype::EntityType::PlayerShip) {
+        setShipOwner(registry, created, ownerOfShip(state, entity.networkId),
+                     sheets);
+    }
+    if (local) {
+        state.shipTick = tick;
+        state.shipPosition = sample.position;
+    }
+    if (!local && state.interpolate) {
         const bool ownMissile =
             state.localSlot != 0 &&
             EntityFlag::ownerOf(entity.flags) == state.localSlot;
@@ -129,13 +141,15 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
 
 /**
  * @brief Applies one snapshot part if it is not older than the last one,
- * and forgets destroyed ids older than DestroyedMemory ticks.
+ * gives the known ships the color of their player, and forgets destroyed
+ * ids older than DestroyedMemory ticks.
  * @param registry The client's registry.
  * @param snapshot The snapshot part.
  * @param state The sync state.
+ * @param sheets The sprite sheets the new entities are drawn with.
  **/
 void applySnapshot(engine::Registry &registry, const SnapshotPart &snapshot,
-                   SyncState &state)
+                   SyncState &state, const SpriteSheets &sheets)
 {
     if (snapshot.tick < state.lastTick) {
         return;
@@ -143,9 +157,19 @@ void applySnapshot(engine::Registry &registry, const SnapshotPart &snapshot,
     state.lastTick = snapshot.tick;
     if (snapshot.part == 0) {
         state.players = snapshot.players;
+        for (const PlayerInfo &player : snapshot.players) {
+            if (player.slot == state.localSlot) {
+                state.ackTick = snapshot.tick;
+                state.ackInput = player.lastInput;
+            }
+            const auto ship = state.entities.find(player.shipId);
+            if (ship != state.entities.end()) {
+                setShipOwner(registry, ship->second, player.slot, sheets);
+            }
+        }
     }
     for (const EntityState &entity : snapshot.entities) {
-        applyEntity(registry, entity, snapshot.tick, state);
+        applyEntity(registry, entity, snapshot.tick, state, sheets);
     }
     std::erase_if(state.destroyed, [&state](const auto &entry) {
         return state.lastTick - entry.second > DestroyedMemory;
@@ -159,9 +183,10 @@ void applySnapshot(engine::Registry &registry, const SnapshotPart &snapshot,
  * @param registry The client's registry.
  * @param event The event.
  * @param state The sync state.
+ * @param sheets The sprite sheets explosions are drawn with.
  **/
 void applyEvent(engine::Registry &registry, const GameEvent &event,
-                SyncState &state)
+                SyncState &state, const SpriteSheets &sheets)
 {
     switch (event.kind) {
     case GameEventKind::EntityDestroyed: {
@@ -173,6 +198,7 @@ void applyEvent(engine::Registry &registry, const GameEvent &event,
                 state.dying.emplace_back(it->second,
                                          state.lastTick - history->lead);
             } else {
+                spawnExplosion(registry, it->second, sheets);
                 registry.destroy(it->second);
             }
             state.entities.erase(it);
@@ -186,28 +212,35 @@ void applyEvent(engine::Registry &registry, const GameEvent &event,
         BB_INFO("Player " << static_cast<int>(event.slot) << " left");
         break;
     case GameEventKind::PlayerHit:
+        break;
     case GameEventKind::GameOver:
+        BB_INFO("Game over");
+        state.gameOver = true;
+        break;
+    case GameEventKind::GameStarted:
+        BB_INFO("Game started");
+        state.started = true;
         break;
     }
 }
 
 /**
- * @brief Records the local player's ship and slot, and recolors the ship
- * and stops interpolating it if it already exists.
+ * @brief Records the local player's ship and slot, and gives the ship its
+ * player's color and stops interpolating it if it already exists.
  * @param registry The client's registry.
  * @param welcome The Welcome payload.
  * @param state The sync state.
+ * @param sheets The sprite sheets the ship is drawn with.
  **/
 void applyWelcome(engine::Registry &registry, const Welcome &welcome,
-                  SyncState &state)
+                  SyncState &state, const SpriteSheets &sheets)
 {
     BB_INFO("Playing as player " << static_cast<int>(welcome.slot));
     state.localShip = welcome.shipId;
     state.localSlot = welcome.slot;
     const auto it = state.entities.find(welcome.shipId);
     if (it != state.entities.end()) {
-        registry.get<Sprite>(it->second) =
-            spriteOf(rtype::EntityType::PlayerShip, true);
+        setShipOwner(registry, it->second, welcome.slot, sheets);
         registry.remove<rtype::SnapshotHistory>(it->second);
     }
 }
@@ -215,31 +248,54 @@ void applyWelcome(engine::Registry &registry, const Welcome &welcome,
 } // namespace
 
 void networkSyncSystem(engine::Registry &registry,
-                       const std::vector<Payload> &payloads, SyncState &state)
+                       const std::vector<Payload> &payloads, SyncState &state,
+                       const SpriteSheets &sheets)
 {
     for (const Payload &payload : payloads) {
         if (const auto *snapshot = std::get_if<SnapshotPart>(&payload)) {
-            applySnapshot(registry, *snapshot, state);
+            applySnapshot(registry, *snapshot, state, sheets);
         } else if (const auto *event = std::get_if<GameEvent>(&payload)) {
-            applyEvent(registry, *event, state);
+            applyEvent(registry, *event, state, sheets);
         } else if (const auto *welcome = std::get_if<Welcome>(&payload)) {
-            applyWelcome(registry, *welcome, state);
+            applyWelcome(registry, *welcome, state, sheets);
         }
+    }
+    if (state.predict && state.shipTick == state.ackTick &&
+        state.shipTick > state.acknowledgedTick) {
+        rtype::acknowledgeInputs(state.prediction, state.ackInput,
+                                 state.shipPosition);
+        state.acknowledgedTick = state.shipTick;
     }
 }
 
 void smoothingSystem(engine::Registry &registry, SyncState &state,
-                     engine::Duration dt)
+                     engine::Duration dt, const SpriteSheets &sheets)
 {
     rtype::advanceRenderClock(state.clock, state.lastTick, dt);
     rtype::interpolationSystem(registry, state.clock.tick);
-    std::erase_if(state.dying, [&registry, &state](const auto &dying) {
+    std::erase_if(state.dying, [&](const auto &dying) {
         if (state.clock.tick < dying.second) {
             return false;
         }
+        spawnExplosion(registry, dying.first, sheets);
         registry.destroy(dying.first);
         return true;
     });
+}
+
+void predictionSystem(engine::Registry &registry, SyncState &state,
+                      std::uint32_t sequence, std::uint8_t actions,
+                      engine::Duration dt)
+{
+    if (!state.predict) {
+        return;
+    }
+    rtype::recordInput(state.prediction, sequence, actions, dt);
+    const auto position = rtype::predictShip(state.prediction, dt);
+    const auto ship = state.entities.find(state.localShip);
+    if (position && ship != state.entities.end()) {
+        registry.get<rtype::Transform>(ship->second).position = *position;
+    }
 }
 
 } // namespace client

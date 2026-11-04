@@ -40,7 +40,10 @@ constexpr auto RepeatWindow = std::chrono::milliseconds{700};
 constexpr auto FrameTime = std::chrono::microseconds{16'667}; // 60 Hz
 
 constexpr int CtrlC = 3;
-constexpr int EscapeDelayMs = 25;
+constexpr int Escape = 27;
+// How long a lone Escape waits for the rest of an arrow key's sequence: too
+// short and a slow connection quits the game when an arrow is pressed.
+constexpr int EscapeDelayMs = 50;
 
 struct Rgb {
     int r;
@@ -131,6 +134,15 @@ short terminalColor(Color color)
 
 std::optional<Key> toKey(int character)
 {
+    if (character >= 'a' && character <= 'z') {
+        return static_cast<Key>(static_cast<int>(Key::A) + character - 'a');
+    }
+    if (character >= 'A' && character <= 'Z') {
+        return static_cast<Key>(static_cast<int>(Key::A) + character - 'A');
+    }
+    if (character >= '0' && character <= '9') {
+        return static_cast<Key>(static_cast<int>(Key::Num0) + character - '0');
+    }
     switch (character) {
     case KEY_UP:
         return Key::Up;
@@ -142,6 +154,12 @@ std::optional<Key> toKey(int character)
         return Key::Right;
     case ' ':
         return Key::Space;
+    case '\n':
+    case '\r':
+    case KEY_ENTER:
+        return Key::Enter;
+    case '\t':
+        return Key::Tab;
     default:
         return std::nullopt;
     }
@@ -197,6 +215,8 @@ NcursesGraphics::NcursesGraphics(const WindowConfig &config)
     nodelay(stdscr, TRUE);
     curs_set(0);
     set_escdelay(EscapeDelayMs);
+    mousemask(BUTTON1_PRESSED, nullptr);
+    mouseinterval(0);
     if (has_colors()) {
         start_color();
         m_colors = true;
@@ -229,8 +249,16 @@ NcursesGraphics::~NcursesGraphics()
 bool NcursesGraphics::shouldClose()
 {
     const Clock::time_point now = Clock::now();
+    m_mousePressed = false;
     for (int character = getch(); character != ERR; character = getch()) {
-        if (character == 'q' || character == 'Q' || character == CtrlC) {
+        MEVENT mouse{};
+        if (character == KEY_MOUSE && getmouse(&mouse) == OK) {
+            m_mousePosition = {.x = static_cast<float>(mouse.x) * CellWidth,
+                               .y = static_cast<float>(mouse.y) * CellHeight};
+            m_mousePressed = true;
+        }
+        if (character == 'q' || character == 'Q' || character == CtrlC ||
+            character == Escape) {
             m_closeRequested = true;
         } else if (const std::optional<Key> key = toKey(character)) {
             press(*key, now);
@@ -289,7 +317,8 @@ void NcursesGraphics::beginWorld(float zoom)
 
 void NcursesGraphics::endWorld() { m_zoom = 1.0F; }
 
-Texture NcursesGraphics::loadTexture(const std::string & /*path*/)
+Texture NcursesGraphics::loadTexture(const std::string & /*path*/,
+                                     TextureFilter /*filter*/)
 {
     return {};
 }
@@ -357,6 +386,10 @@ bool NcursesGraphics::isKeyDown(Key key) const
 {
     return Clock::now() < m_heldUntil.at(static_cast<std::size_t>(key));
 }
+
+engine::Vec2f NcursesGraphics::mousePosition() const { return m_mousePosition; }
+
+bool NcursesGraphics::isMousePressed() const { return m_mousePressed; }
 
 int NcursesGraphics::colorPair(short foreground, short background)
 {

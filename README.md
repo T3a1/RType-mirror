@@ -10,17 +10,42 @@ of enemies.
   players join it over the network from their own computers.
 - **Classic arcade action**: move your ship around the screen, shoot the
   enemies coming from the right, and avoid getting hit.
-- **Health and score**: a health bar follows each ship, and every player earns
-  points for each enemy shot down.
+- **One hit, one life**: a single enemy shot or collision destroys your ship,
+  and every player earns points for each enemy shot down. If you die, you watch
+  the others until the whole team is out and the final scores are shown.
 - **Fair play**: the server is the only judge of what happens in the game, so
   every player sees the same game.
 
 ### Controls
 
-| Key | Action |
-|-----|--------|
-| Arrow keys | Move the ship |
-| Space | Shoot |
+Every action has a key for each hand, so the game can be played with one
+hand only.
+
+| Left hand | Right hand | Action |
+|-----------|------------|--------|
+| W A S D | Arrow keys | Move the ship |
+| Space | Right Ctrl | Shoot (hold the key) |
+| F | Right Shift | Auto-fire on or off: the ship shoots on its own |
+| Escape | Escape | Quit |
+
+**Choose your own keys**: write a `controls.cfg` file in the folder you start
+the game from (or give its path with `--controls FILE`). Each line gives the
+keys of one action and replaces its default keys:
+
+```text
+# action = key key...
+fire = Enter Space
+autofire = Tab
+```
+
+- Actions: `up`, `down`, `left`, `right`, `fire`, `autofire`.
+- Keys: `Up`, `Down`, `Left`, `Right`, `Space`, `Enter`, `Tab`, `LeftShift`,
+  `RightShift`, `LeftCtrl`, `RightCtrl`, `LeftAlt`, `RightAlt`, the letters
+  `A` to `Z` and the digits `0` to `9`. With the default (Raylib) client a
+  letter is the key at that place on a US keyboard: W A S D are the keys
+  Z Q S D of a French AZERTY keyboard.
+- A line the game cannot read is reported when it starts, and that action
+  keeps its default keys.
 
 ## Getting started
 
@@ -42,6 +67,7 @@ all the options.
 | [Architecture](docs/ARCHITECTURE.md) | How the code is organized: game engine, subsystems, game loop, threads. |
 | [Network protocol](docs/PROTOCOL.md) | The messages exchanged between the server and the clients. |
 | [Network testing](docs/NETWORK_TESTING.md) | Playing with added latency and packet loss on one machine, to test the networking. |
+| [Network performance comparison](docs/NETWORK_COMPARISON.md) | Measured effect of interpolation and prediction under latency and packet loss, compared with the Part 1 prototype. |
 | [Contributing](docs/CONTRIBUTORS.md) | How to work on the project: workflow, conventions, tools. |
 | Code documentation | Every class and function of the code, generated with Doxygen: <https://DOCS_URL_PLACEHOLDER> (or `./rtype.py --docs` to build it locally). |
 

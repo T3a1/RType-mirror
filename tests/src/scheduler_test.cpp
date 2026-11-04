@@ -63,9 +63,9 @@ TEST(Scheduler, RunsASystemOnceEveryNTicks)
     engine::Registry registry;
     int runs = 0;
 
-    scheduler.add(
-        engine::Stage::Output, "snapshot",
-        [&runs](engine::Registry &, engine::Duration) { ++runs; }, 3);
+    scheduler.add(engine::Stage::Output, "snapshot",
+                  [&runs](engine::Registry &, engine::Duration) { ++runs; },
+                  {.every = 3});
     for (int i = 0; i < 9; ++i) {
         scheduler.run(registry, engine::Duration{0.016F});
     }
@@ -79,9 +79,9 @@ TEST(Scheduler, TreatsEveryZeroAsEveryTick)
     engine::Registry registry;
     int runs = 0;
 
-    scheduler.add(
-        engine::Stage::Simulation, "zero",
-        [&runs](engine::Registry &, engine::Duration) { ++runs; }, 0);
+    scheduler.add(engine::Stage::Simulation, "zero",
+                  [&runs](engine::Registry &, engine::Duration) { ++runs; },
+                  {.every = 0});
     scheduler.run(registry, engine::Duration{0.016F});
     scheduler.run(registry, engine::Duration{0.016F});
 
@@ -126,4 +126,61 @@ TEST(Scheduler, PassesDtToTheSystems)
     scheduler.run(registry, engine::Duration{0.5F});
 
     EXPECT_FLOAT_EQ(received.count(), 0.5F);
+}
+
+TEST(Scheduler, RunsASystemOnlyWhileItsConditionHolds)
+{
+    engine::Scheduler scheduler;
+    engine::Registry registry;
+    bool enabled = false;
+    int runs = 0;
+
+    scheduler.add(engine::Stage::Simulation, "gated",
+                  [&runs](engine::Registry &, engine::Duration) { ++runs; },
+                  {.when = [&enabled] { return enabled; }});
+    scheduler.run(registry, engine::Duration{0.016F});
+    EXPECT_EQ(runs, 0);
+
+    enabled = true;
+    scheduler.run(registry, engine::Duration{0.016F});
+    EXPECT_EQ(runs, 1);
+}
+
+TEST(Scheduler, ChecksAConditionAfterTheEarlierSystemsOfTheTick)
+{
+    engine::Scheduler scheduler;
+    engine::Registry registry;
+    bool enabled = false;
+    int runs = 0;
+
+    scheduler.add(
+        engine::Stage::Input, "enable",
+        [&enabled](engine::Registry &, engine::Duration) { enabled = true; });
+    scheduler.add(engine::Stage::Simulation, "gated",
+                  [&runs](engine::Registry &, engine::Duration) { ++runs; },
+                  {.when = [&enabled] { return enabled; }});
+    scheduler.run(registry, engine::Duration{0.016F});
+
+    EXPECT_EQ(runs, 1);
+}
+
+TEST(Scheduler, CombinesEveryAndWhen)
+{
+    engine::Scheduler scheduler;
+    engine::Registry registry;
+    int runs = 0;
+    int checks = 0;
+
+    scheduler.add(engine::Stage::Output, "both",
+                  [&runs](engine::Registry &, engine::Duration) { ++runs; },
+                  {.every = 2, .when = [&checks] {
+                       ++checks;
+                       return checks > 1;
+                   }});
+    for (int i = 0; i < 6; ++i) {
+        scheduler.run(registry, engine::Duration{0.016F});
+    }
+
+    EXPECT_EQ(checks, 3);
+    EXPECT_EQ(runs, 2);
 }

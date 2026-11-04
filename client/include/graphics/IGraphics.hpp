@@ -39,7 +39,8 @@ class IGraphics {
     IGraphics(IGraphics &&) = delete;
     IGraphics &operator=(IGraphics &&) = delete;
 
-    /** @brief Processes the window events, true once the user closed it. */
+    /** @brief Processes the window events, true once the user closed the
+     * window or pressed Escape. */
     [[nodiscard]] virtual bool shouldClose() = 0;
     /** @brief The size of the window's drawable area, in pixels. */
     [[nodiscard]] virtual engine::Vec2f screenSize() const = 0;
@@ -53,11 +54,13 @@ class IGraphics {
     virtual void endWorld() = 0;
 
     /**
-     * @brief Loads an image file with bilinear filtering.
+     * @brief Loads an image file.
      * @param path Path relative to the directory of the executable.
+     * @param filter How the texture is sampled when it is scaled.
      * @return The texture, with id 0 and a zero size if loading failed.
      */
-    [[nodiscard]] virtual Texture loadTexture(const std::string &path) = 0;
+    [[nodiscard]] virtual Texture loadTexture(const std::string &path,
+                                              TextureFilter filter) = 0;
     /** @brief Frees a texture, does nothing for id 0 or an unknown id. */
     virtual void unloadTexture(Texture texture) = 0;
 
@@ -70,6 +73,11 @@ class IGraphics {
                           int fontSize, Color color) = 0;
 
     [[nodiscard]] virtual bool isKeyDown(Key key) const = 0;
+    /** @brief The position of the mouse cursor, in screen pixels. */
+    [[nodiscard]] virtual engine::Vec2f mousePosition() const = 0;
+    /** @brief Whether the left mouse button was pressed since the last
+     * shouldClose(). */
+    [[nodiscard]] virtual bool isMousePressed() const = 0;
 };
 
 /** @brief Settings of the window opened by createGraphics(). */
