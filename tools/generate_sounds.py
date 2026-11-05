@@ -143,6 +143,63 @@ def effects():
         "game_over.wav": normalized(
             melody([69, 65, 62, 57, 53], 0.24, triangle), 0.7
         ),
+        "enemy_hit.wav": normalized(
+            mixed(
+                sweep(0.07, 900.0, 500.0, lambda p: square(p, 0.5), 4.0),
+                [s * 0.5 for s in noise(0.07, 5000.0, 5.0, rng)],
+            ),
+            0.22,
+        ),
+        "explosion_large.wav": normalized(
+            mixed(
+                noise(1.1, 900.0, 4.5, rng),
+                [s * 1.1 for s in sweep(0.9, 80.0, 28.0, triangle, 3.5)],
+            ),
+            0.85,
+        ),
+        "explosion_boss.wav": normalized(
+            mixed(
+                noise(2.4, 700.0, 3.5, rng),
+                [s * 1.2 for s in sweep(2.2, 70.0, 22.0, triangle, 2.5)],
+                [0.0] * int(0.35 * RATE) + noise(1.6, 1800.0, 4.0, rng),
+                [0.0] * int(0.8 * RATE) + noise(1.2, 1200.0, 4.0, rng),
+            ),
+            0.95,
+        ),
+        "player_death.wav": normalized(
+            mixed(
+                noise(1.2, 1100.0, 4.0, rng),
+                [s * 0.7 for s in sweep(1.2, 700.0, 45.0, lambda p: square(p, 0.5), 2.5)],
+            ),
+            0.9,
+        ),
+        "boss_alert.wav": normalized(
+            melody([52, 58, 52, 58, 52, 58], 0.22, lambda p: square(p, 0.5)), 0.65
+        ),
+        "power_up_spawn.wav": normalized(
+            melody([84, 91], 0.09, triangle), 0.32
+        ),
+        "game_start.wav": normalized(
+            melody([60, 67, 72, 79], 0.1, lambda p: square(p, 0.4)), 0.5
+        ),
+        "player_joined.wav": normalized(
+            melody([69, 76], 0.1, triangle), 0.4
+        ),
+        "player_left.wav": normalized(
+            melody([76, 69], 0.1, triangle), 0.4
+        ),
+        "menu_move.wav": normalized(
+            sweep(0.035, 900.0, 900.0, lambda p: square(p, 0.25), 3.0), 0.25
+        ),
+        "menu_confirm.wav": normalized(
+            melody([76, 83], 0.06, lambda p: square(p, 0.25)), 0.35
+        ),
+        "menu_back.wav": normalized(
+            melody([74, 67], 0.06, lambda p: square(p, 0.25)), 0.32
+        ),
+        "menu_refused.wav": normalized(
+            melody([46, 46], 0.1, lambda p: square(p, 0.5)), 0.4
+        ),
     }
 
 
@@ -254,6 +311,45 @@ def game_music():
     return normalized(music.samples, 0.75)
 
 
+def boss_music():
+    """A heavy, tense loop of 16 bars at 156 beats per minute."""
+    rng = random.Random(2600)
+    music = Loop(64, 156)
+    # One root per bar, repeated twice: Dm, Dm, Bb, A, Dm, Eb, C, A.
+    roots = [38, 38, 34, 33, 38, 39, 36, 33]
+    riff = [0, 0, 1, 0, 0, 7, 6, 3]
+    tune = [
+        [74, None, None, 75, 74, None, 69, None],
+        [74, None, 77, None, 75, 74, 70, None],
+        [70, None, 74, 77, 82, None, 77, None],
+        [73, None, 76, None, 81, None, 76, 73],
+        [86, None, None, 87, 86, None, 81, None],
+        [87, None, 82, 79, 75, None, 79, None],
+        [84, None, 79, 76, 72, None, 76, None],
+        [85, None, 81, 76, 73, 76, 81, None],
+    ]
+    for repeat in range(2):
+        for bar, root in enumerate(roots):
+            start = (repeat * 8 + bar) * 4
+            for step, offset in enumerate(riff):
+                music.note(
+                    start + step * 0.5, 0.5, root + offset, 0.34,
+                    lambda p: square(p, 0.5),
+                )
+                music.hit(start + step * 0.5, 0.1, 0.08, 8000.0, rng)
+            for beat in (0, 1.5, 2, 3.5):
+                music.note(start + beat, 0.35, 26, 0.55, triangle)
+            for beat in (1, 3):
+                music.hit(start + beat, 0.45, 0.46, 2800.0, rng)
+            for step, note in enumerate(tune[bar]):
+                if note is not None:
+                    music.note(
+                        start + step * 0.5, 0.75, note, 0.2,
+                        lambda p: square(p, 0.25),
+                    )
+    return normalized(music.samples, 0.78)
+
+
 def write_ogg(path, samples):
     """Writes mono samples between -1 and 1 as an Ogg Vorbis file."""
     with tempfile.TemporaryDirectory() as directory:
@@ -280,6 +376,7 @@ def main():
         write_wav(SOUNDS / name, samples)
     write_ogg(MUSIC / "menu.ogg", menu_music())
     write_ogg(MUSIC / "game.ogg", game_music())
+    write_ogg(MUSIC / "boss.ogg", boss_music())
 
 
 if __name__ == "__main__":

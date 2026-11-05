@@ -192,7 +192,8 @@ void Game::registerSystems()
     m_scheduler.add(Stage::Simulation, "animation", animationSystem);
 
     m_scheduler.add(Stage::Output, "audio", [this](Registry &, Duration) {
-        audioSystem(inRoom() && m_sync.started && !m_sync.gameOver, m_sounds);
+        audioSystem(m_registry, inRoom() && m_sync.started && !m_sync.gameOver,
+                    m_sounds);
     });
 }
 
@@ -258,6 +259,7 @@ void Game::handleLobbyMessages(const std::vector<rtype::protocol::Payload> &all)
                        payload)) {
             m_lobby.screen = LobbyState::Screen::Lobby;
             m_lobby.refused = true;
+            m_sounds.play(audio::SoundEvent::MenuRefused);
         } else if (std::holds_alternative<rtype::protocol::RoomClosed>(
                        payload)) {
             leaveRoom();
@@ -293,16 +295,29 @@ void Game::leaveRoom()
 
 void Game::drawScreens()
 {
+    const bool moved = m_menuKeys.up || m_menuKeys.down;
     if (!inRoom()) {
         if (m_network.state() == NetworkClient::State::Connected) {
-            applyLobbyChoice(lobbyScreen(m_lobby, *m_graphics, m_menuKeys));
+            if (moved) {
+                m_sounds.play(audio::SoundEvent::MenuMove);
+            }
+            const auto room = lobbyScreen(m_lobby, *m_graphics, m_menuKeys);
+            if (room) {
+                m_sounds.play(audio::SoundEvent::MenuConfirm);
+            }
+            applyLobbyChoice(room);
         }
     } else if (!m_sync.started) {
+        if (moved) {
+            m_sounds.play(audio::SoundEvent::MenuMove);
+        }
         const WaitingChoice choice =
             waitingRoomScreen(m_lobby, m_sync, *m_graphics, m_menuKeys);
         if (choice == WaitingChoice::Start) {
+            m_sounds.play(audio::SoundEvent::MenuConfirm);
             m_network.startGame(std::chrono::steady_clock::now());
         } else if (choice == WaitingChoice::Leave) {
+            m_sounds.play(audio::SoundEvent::MenuBack);
             leaveRoom();
         }
     } else {
@@ -314,6 +329,7 @@ void Game::drawScreens()
         const bool keyboard =
             m_menuKeys.confirm && m_gameOverTime >= GameOverKeyDelay;
         if (m_sync.gameOver && gameOverScreen(m_sync, *m_graphics, keyboard)) {
+            m_sounds.play(audio::SoundEvent::MenuBack);
             leaveRoom();
         }
     }

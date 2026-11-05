@@ -357,13 +357,16 @@ implemented by one of the three backends.
 | Sound | Played when | Where |
 |-------|-------------|-------|
 | `PlayerShot`, `ChargedShot`, `EnemyShot` | A new `PlayerMissile`, `ChargedShot` or `EnemyMissile` appears in a snapshot | `applyEntity()` |
+| `BossAlert`, `PowerUpSpawn` | A new `Boss` or `PowerUp` appears in a snapshot | `applyEntity()` |
+| `EnemyHit` | The health of an entity other than a player's ship goes down in a snapshot | `applyEntity()` |
 | `Charge` | The `Charging` flag of the local ship turns on; it stops when the flag turns off | `applyEntity()` |
-| `Explosion` | `spawnExplosion()` created an explosion, so inside the playfield only | `applyEvent()`, `smoothingSystem()` |
+| `Explosion`, `ExplosionLarge`, `ExplosionBoss`, `PlayerDeath` | `spawnExplosion()` created an explosion, so inside the playfield only; the sound depends on what exploded | `applyEvent()`, `smoothingSystem()` |
 | `PowerUp` | `EntityDestroyed` for a power-up inside the playfield, the only place it disappears when it is taken | `applyEvent()` |
-| `LevelStart`, `GameOver` | `GameEvent{LevelStarted}`, `GameEvent{GameOver}` | `applyEvent()` |
+| `GameStart`, `LevelStart`, `GameOver`, `PlayerJoined`, `PlayerLeft` | The `GameEvent` of the same name | `applyEvent()` |
+| `MenuMove`, `MenuConfirm`, `MenuBack`, `MenuRefused` | A key or choice in a menu, or `RoomRefused` | `Game` |
 
 `audioSystem` runs in the `Output` stage of every frame. It picks the music from the
-state of the game, and `SoundBoard::setMusic()` only restarts it when the track
+state of the game (the menu, the game, or the boss while one is alive), and `SoundBoard::setMusic()` only restarts it when the track
 changes. It also calls `update()`, which feeds the music stream with Raylib and does
 nothing with SFML, which streams on its own thread.
 

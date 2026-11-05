@@ -39,16 +39,30 @@ constexpr std::array SoundFiles = {
     SoundFile{SoundEvent::Charge, "assets/sounds/charge.wav"},
     SoundFile{SoundEvent::ChargedShot, "assets/sounds/charged_shot.wav"},
     SoundFile{SoundEvent::EnemyShot, "assets/sounds/enemy_shot.wav"},
+    SoundFile{SoundEvent::EnemyHit, "assets/sounds/enemy_hit.wav"},
     SoundFile{SoundEvent::Explosion, "assets/sounds/explosion.wav"},
+    SoundFile{SoundEvent::ExplosionLarge, "assets/sounds/explosion_large.wav"},
+    SoundFile{SoundEvent::ExplosionBoss, "assets/sounds/explosion_boss.wav"},
+    SoundFile{SoundEvent::PlayerDeath, "assets/sounds/player_death.wav"},
+    SoundFile{SoundEvent::BossAlert, "assets/sounds/boss_alert.wav"},
+    SoundFile{SoundEvent::PowerUpSpawn, "assets/sounds/power_up_spawn.wav"},
     SoundFile{SoundEvent::PowerUp, "assets/sounds/power_up.wav"},
+    SoundFile{SoundEvent::GameStart, "assets/sounds/game_start.wav"},
     SoundFile{SoundEvent::LevelStart, "assets/sounds/level_start.wav"},
     SoundFile{SoundEvent::GameOver, "assets/sounds/game_over.wav"},
+    SoundFile{SoundEvent::PlayerJoined, "assets/sounds/player_joined.wav"},
+    SoundFile{SoundEvent::PlayerLeft, "assets/sounds/player_left.wav"},
+    SoundFile{SoundEvent::MenuMove, "assets/sounds/menu_move.wav"},
+    SoundFile{SoundEvent::MenuConfirm, "assets/sounds/menu_confirm.wav"},
+    SoundFile{SoundEvent::MenuBack, "assets/sounds/menu_back.wav"},
+    SoundFile{SoundEvent::MenuRefused, "assets/sounds/menu_refused.wav"},
 };
 
 /** @brief The file of each music, in any order. */
 constexpr std::array MusicFiles = {
     MusicFile{MusicTrack::Menu, "assets/music/menu.ogg"},
     MusicFile{MusicTrack::Game, "assets/music/game.ogg"},
+    MusicFile{MusicTrack::Boss, "assets/music/boss.ogg"},
 };
 
 /**

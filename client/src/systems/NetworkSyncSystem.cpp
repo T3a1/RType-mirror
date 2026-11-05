@@ -85,8 +85,64 @@ std::optional<audio::SoundEvent> spawnSound(rtype::EntityType type)
         return audio::SoundEvent::ChargedShot;
     case rtype::EntityType::EnemyMissile:
         return audio::SoundEvent::EnemyShot;
+    case rtype::EntityType::Boss:
+        return audio::SoundEvent::BossAlert;
+    case rtype::EntityType::PowerUp:
+        return audio::SoundEvent::PowerUpSpawn;
     default:
         return std::nullopt;
+    }
+}
+
+/**
+ * @brief Plays the hit sound if an enemy lost health. A player's ship does not
+ * count: it is destroyed by its first hit.
+ * @param entity The entity record from the snapshot.
+ * @param previous The health the entity had.
+ * @param sounds The sounds of the game.
+ **/
+void playHitSound(const EntityState &entity, int previous,
+                  audio::SoundBoard &sounds)
+{
+    if (entity.type != rtype::EntityType::PlayerShip &&
+        entity.health < previous) {
+        sounds.play(audio::SoundEvent::EnemyHit);
+    }
+}
+
+/**
+ * @brief Creates the explosion of a destroyed entity and plays its sound, which
+ * depends on what the entity was.
+ * @param registry The client's registry.
+ * @param entity The destroyed entity.
+ * @param state The sync state, for the local ship.
+ * @param sheets The sprite sheets the explosion is drawn with.
+ * @param sounds The sounds of the game.
+ **/
+void explode(engine::Registry &registry, engine::Entity entity,
+             const SyncState &state, const SpriteSheets &sheets,
+             audio::SoundBoard &sounds)
+{
+    if (!spawnExplosion(registry, entity, sheets)) {
+        return;
+    }
+    const auto *networkId = registry.tryGet<rtype::NetworkId>(entity);
+    if (networkId != nullptr && networkId->value == state.localShip) {
+        sounds.play(audio::SoundEvent::PlayerDeath);
+        return;
+    }
+    switch (registry.get<rtype::EntityType>(entity)) {
+    case rtype::EntityType::Boss:
+        sounds.play(audio::SoundEvent::ExplosionBoss);
+        break;
+    case rtype::EntityType::PlayerShip:
+    case rtype::EntityType::EnemyMedium:
+    case rtype::EntityType::EnemyLarge:
+        sounds.play(audio::SoundEvent::ExplosionLarge);
+        break;
+    default:
+        sounds.play(audio::SoundEvent::Explosion);
+        break;
     }
 }
 
@@ -139,7 +195,7 @@ bool isTakenPowerUp(engine::Registry &registry, engine::Entity entity)
  * @param tick The tick of the snapshot.
  * @param state The sync state.
  * @param sheets The sprite sheets the new entities are drawn with.
- * @param sounds The sounds played for new entities and the charge.
+ * @param sounds The sounds played for new entities, hits and the charge.
  **/
 void applyEntity(engine::Registry &registry, const EntityState &entity,
                  std::uint32_t tick, SyncState &state,
@@ -165,6 +221,11 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
         }
         if (auto *history =
                 registry.tryGet<rtype::SnapshotHistory>(it->second)) {
+            if (history->count > 0) {
+                playHitSound(entity,
+                             history->samples.at(history->count - 1).health,
+                             sounds);
+            }
             rtype::pushSample(*history, sample);
             return;
         }
@@ -175,7 +236,9 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
             registry.get<rtype::Transform>(it->second).position =
                 sample.position;
         }
-        registry.get<rtype::Health>(it->second).current = sample.health;
+        auto &health = registry.get<rtype::Health>(it->second);
+        playHitSound(entity, health.current, sounds);
+        health.current = sample.health;
         return;
     }
     const engine::Entity created = registry.create();
@@ -226,7 +289,7 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
  * @param snapshot The snapshot part.
  * @param state The sync state.
  * @param sheets The sprite sheets the new entities are drawn with.
- * @param sounds The sounds played for new entities and the charge.
+ * @param sounds The sounds played for new entities, hits and the charge.
  **/
 void applySnapshot(engine::Registry &registry, const SnapshotPart &snapshot,
                    SyncState &state, const SpriteSheets &sheets,
@@ -284,9 +347,7 @@ void applyEvent(engine::Registry &registry, const GameEvent &event,
                 state.dying.emplace_back(it->second,
                                          state.lastTick - history->lead);
             } else {
-                if (spawnExplosion(registry, it->second, sheets)) {
-                    sounds.play(audio::SoundEvent::Explosion);
-                }
+                explode(registry, it->second, state, sheets, sounds);
                 registry.destroy(it->second);
             }
             state.entities.erase(it);
@@ -296,10 +357,12 @@ void applyEvent(engine::Registry &registry, const GameEvent &event,
     case GameEventKind::PlayerJoined:
         BB_INFO("Player " << static_cast<int>(event.slot) << " joined");
         addPlayerNotice(state.notices, event.slot, true);
+        sounds.play(audio::SoundEvent::PlayerJoined);
         break;
     case GameEventKind::PlayerLeft:
         BB_INFO("Player " << static_cast<int>(event.slot) << " left");
         addPlayerNotice(state.notices, event.slot, false);
+        sounds.play(audio::SoundEvent::PlayerLeft);
         break;
     case GameEventKind::PlayerHit:
         break;
@@ -311,6 +374,7 @@ void applyEvent(engine::Registry &registry, const GameEvent &event,
     case GameEventKind::GameStarted:
         BB_INFO("Game started");
         state.started = true;
+        sounds.play(audio::SoundEvent::GameStart);
         break;
     case GameEventKind::LevelStarted:
         state.level = event.level;
@@ -375,9 +439,7 @@ void smoothingSystem(engine::Registry &registry, SyncState &state,
         if (state.clock.tick < dying.second) {
             return false;
         }
-        if (spawnExplosion(registry, dying.first, sheets)) {
-            sounds.play(audio::SoundEvent::Explosion);
-        }
+        explode(registry, dying.first, state, sheets, sounds);
         registry.destroy(dying.first);
         return true;
     });
