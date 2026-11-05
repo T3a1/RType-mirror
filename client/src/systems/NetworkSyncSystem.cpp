@@ -189,8 +189,8 @@ void applySnapshot(engine::Registry &registry, const SnapshotPart &snapshot,
 
 /**
  * @brief Applies a game event: hands the entity of EntityDestroyed to the
- * dying list (or destroys it at once if it is not interpolated) and logs
- * the player events.
+ * dying list (or destroys it at once if it is not interpolated), and logs
+ * the player events and adds a notice for them.
  * @param registry The client's registry.
  * @param event The event.
  * @param state The sync state.
@@ -218,9 +218,11 @@ void applyEvent(engine::Registry &registry, const GameEvent &event,
     }
     case GameEventKind::PlayerJoined:
         BB_INFO("Player " << static_cast<int>(event.slot) << " joined");
+        addPlayerNotice(state.notices, event.slot, true);
         break;
     case GameEventKind::PlayerLeft:
         BB_INFO("Player " << static_cast<int>(event.slot) << " left");
+        addPlayerNotice(state.notices, event.slot, false);
         break;
     case GameEventKind::PlayerHit:
         break;
