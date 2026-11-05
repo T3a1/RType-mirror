@@ -360,12 +360,39 @@ struct LeaveRoom {
 };
 
 /**
+ * @enum Difficulty
+ * @brief How hard a game is: enemy health, fire rate and, in endless mode,
+ * how often they come.
+ **/
+enum class Difficulty : std::uint8_t { Easy, Normal, Hard };
+
+/**
+ * @enum BossChoice
+ * @brief Which boss ends the levels that have one.
+ * @param LevelBoss The boss written in each level file.
+ * @param Warship The warship, in every level that has a boss.
+ * @param Hive The hive, in every level that has a boss.
+ **/
+enum class BossChoice : std::uint8_t { LevelBoss, Warship, Hive };
+
+/** @brief StartGame::level to skip the levels and play the endless mode. */
+inline constexpr std::uint8_t EndlessLevel = 0;
+
+/**
  * @struct StartGame
- * @brief A player starts the game of its room (reliable). Empty.
+ * @brief A player starts the game of its room, with its settings
+ * (reliable).
  * @param Type The packet type that carries this payload.
+ * @param difficulty How hard the game is.
+ * @param level The level it starts at, from 1, or EndlessLevel; a level
+ * past the last one starts the last one.
+ * @param boss Which boss ends the levels.
  **/
 struct StartGame {
     static constexpr PacketType Type = PacketType::StartGame;
+    Difficulty difficulty = Difficulty::Normal;
+    std::uint8_t level = 1;
+    BossChoice boss = BossChoice::LevelBoss;
     bool operator==(const StartGame &) const = default;
 };
 
@@ -374,10 +401,13 @@ struct StartGame {
  * @brief The server put the client in a room (reliable).
  * @param Type The packet type that carries this payload.
  * @param room The room's number, at least 1.
+ * @param levels How many levels the server has, for the choice of the
+ * starting level; 0 if it only has the endless mode.
  **/
 struct RoomJoined {
     static constexpr PacketType Type = PacketType::RoomJoined;
     std::uint32_t room = 1;
+    std::uint8_t levels = 0;
     bool operator==(const RoomJoined &) const = default;
 };
 

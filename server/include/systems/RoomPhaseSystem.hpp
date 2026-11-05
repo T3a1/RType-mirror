@@ -11,6 +11,7 @@
 #include "common/protocol/Messages.hpp"
 #include "network/NetworkMessages.hpp"
 
+#include <optional>
 #include <vector>
 
 namespace server {
@@ -22,9 +23,12 @@ namespace server {
  * @param messages The inbound messages of this tick.
  * @param status Where the game stands, updated.
  * @param outbound The queue the events are pushed to.
+ * @return The settings of the game if it started this tick, chosen by the
+ * player who started it; nothing otherwise.
  **/
-void roomPhaseSystem(const std::vector<InboundMessage> &messages,
-                     rtype::protocol::RoomStatus &status, Outbound &outbound);
+[[nodiscard]] std::optional<rtype::protocol::StartGame>
+roomPhaseSystem(const std::vector<InboundMessage> &messages,
+                rtype::protocol::RoomStatus &status, Outbound &outbound);
 
 } // namespace server
 

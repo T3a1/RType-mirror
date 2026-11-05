@@ -5,10 +5,13 @@
 ** level_test
 */
 
+#include "Difficulty.hpp"
 #include "EntityFactory.hpp"
 #include "Level.hpp"
 #include "common/components/Enemy.hpp"
+#include "common/components/Health.hpp"
 #include "common/components/Spawner.hpp"
+#include "common/components/Weapon.hpp"
 #include "components/LevelProgress.hpp"
 #include "components/SpawnQueue.hpp"
 #include "engine/Entity.hpp"
@@ -309,4 +312,66 @@ TEST(LevelSystem, TheBossComesAfterTheWavesAndEndsTheLevel)
     destroyEnemies(registry);
     run(2);
     EXPECT_EQ(registry.get<server::LevelProgress>(world).level, 1U);
+}
+
+TEST(LevelSystem, TheChosenBossReplacesTheBossOfTheLevel)
+{
+    engine::Registry registry;
+    server::EntityFactory factory;
+    server::SpawnCommands commands;
+    server::Level level = oneEnemyAt(0.0F);
+    level.boss = rtype::EnemyType::Boss;
+    const engine::Entity world = registry.create();
+    registry.emplace<rtype::Spawner>(world);
+    registry.emplace<server::SpawnQueue>(world);
+    registry.emplace<server::LevelProgress>(
+        world, server::LevelProgress{
+                   .levels = std::make_shared<const std::vector<server::Level>>(
+                       std::vector{level}),
+                   .boss = rtype::EnemyType::Hive});
+    const auto run = [&](int ticks) {
+        for (int i = 0; i < ticks; ++i) {
+            static_cast<void>(server::levelSystem(registry, Tick));
+            server::spawnSystem(registry, commands, Tick);
+            server::spawnCommandSystem(registry, commands, factory);
+            registry.flush();
+        }
+    };
+
+    run(2);
+    destroyEnemies(registry);
+    run(2);
+    std::size_t hives = 0;
+    registry.each<rtype::Enemy>(
+        [&hives](engine::Entity, const rtype::Enemy &enemy) {
+            hives += enemy.type == rtype::EnemyType::Hive ? 1U : 0U;
+        });
+    EXPECT_EQ(hives, 1U);
+}
+
+TEST(Level, ReadsTheHiveBoss)
+{
+    const auto parsed = parse(R"({ "name": "x", "boss": "hive",
+        "waves": [ { "time": 1, "enemy": "basic" } ] })");
+
+    EXPECT_EQ(parsed.value_or(server::Level{}).boss, rtype::EnemyType::Hive);
+}
+
+TEST(Difficulty, ScalesTheEnemiesCreatedByTheFactory)
+{
+    EXPECT_FLOAT_EQ(server::difficultyStats(rtype::protocol::Difficulty::Normal)
+                        .enemyHealth,
+                    1.0F);
+    engine::Registry registry;
+    server::EntityFactory factory;
+    factory.setDifficulty(
+        server::difficultyStats(rtype::protocol::Difficulty::Hard));
+
+    const engine::Entity enemy = factory.create(
+        registry, server::SpawnEnemy{.type = rtype::EnemyType::Shooter});
+
+    const int base = server::enemyDef(rtype::EnemyType::Shooter).health;
+    EXPECT_GT(registry.get<rtype::Health>(enemy).current, base);
+    EXPECT_LT(registry.get<rtype::Weapon>(enemy).fireInterval,
+              server::enemyDef(rtype::EnemyType::Shooter).fireInterval);
 }

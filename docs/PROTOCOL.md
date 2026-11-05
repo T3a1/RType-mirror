@@ -1,4 +1,4 @@
-# R-Type network protocol (version 9)
+# R-Type network protocol (version 10)
 
 This document specifies the binary protocol spoken between the R-Type server
 and its clients. It is precise enough to write a compatible client or server
@@ -73,7 +73,7 @@ Every packet starts with this 12-byte header:
 | Offset | Size | Field | Value |
 |-------:|-----:|-------|-------|
 | 0 | 2 | magic | `52 54` (ASCII `"RT"`). Recognizes our packets: a random datagram almost never starts with these bytes |
-| 2 | 1 | version | `9`. See [Versioning](#12-versioning) |
+| 2 | 1 | version | `10`. See [Versioning](#12-versioning) |
 | 3 | 1 | type | Which payload follows. See [Packet types](#5-packet-types) |
 | 4 | 1 | flags | Bit 0: **Reliable**. Bits 1 to 7 are reserved and **MUST** be 0 |
 | 5 | 1 | reserved | **MUST** be 0 |
@@ -94,7 +94,7 @@ The names are the `DecodeError` values of the reference implementation.
 | 1 | At most 1200 bytes | `TooLarge` |
 | 2 | At least 12 bytes | `TooShort` |
 | 3 | Magic is `"RT"` | `BadMagic` |
-| 4 | Version is 9 | `BadVersion` |
+| 4 | Version is 10 | `BadVersion` |
 | 5 | Type is listed in section 5 | `UnknownType` |
 | 6 | No reserved flag bit, and Reliable set exactly on reliable types | `BadFlags` |
 | 7 | Reserved byte is 0 | `BadReserved` |
@@ -120,8 +120,8 @@ Check 8 catches truncated and padded datagrams before any payload decoding.
 | `0x30` | `RoomList` | Server | Unreliable, repeated | 1 + 6 per room |
 | `0x31` | `JoinRoom` | Client | Reliable | 4 |
 | `0x32` | `LeaveRoom` | Client | Reliable | 0 |
-| `0x33` | `StartGame` | Client | Reliable | 0 |
-| `0x34` | `RoomJoined` | Server | Reliable | 4 |
+| `0x33` | `StartGame` | Client | Reliable | 3 |
+| `0x34` | `RoomJoined` | Server | Reliable | 4 or 5 |
 | `0x35` | `RoomRefused` | Server | Reliable | 0 |
 | `0x36` | `RoomClosed` | Server | Reliable | 0 |
 
@@ -161,12 +161,24 @@ list replaces the previous one, so a lost one does not matter.
 | Offset | Size | Field | Values |
 |-------:|-----:|-------|--------|
 | 0 | 4 | room | `u32`. In `JoinRoom`: the room, created if it does not exist, `0` for the first room with a free slot (a new one if none), or `0xFFFFFFFF` for a new room. In `RoomJoined`: the room entered, at least `1` |
+| 4 | 1 | levels | `RoomJoined` only: how many levels the server has, `0` if it only plays the endless mode. The client offers them as the starting level |
 
-### `LeaveRoom` (0x32), `StartGame` (0x33), `RoomRefused` (0x35), `RoomClosed` (0x36)
+### `StartGame` (0x33)
+
+A player starts the game of its room (client, reliable), with the settings it
+chose in the waiting room. It is ignored if the game already started: the
+settings of the first `StartGame` are used.
+
+| Offset | Size | Field | Values |
+|-------:|-----:|-------|--------|
+| 0 | 1 | difficulty | `0` Easy, `1` Normal, `2` Hard: enemy health and fire rate, and how often the random waves of the endless mode come |
+| 1 | 1 | level | The level to start at, from `1` (a level past the last one starts the last one), or `0` for the endless mode only |
+| 2 | 1 | boss | `0` the boss of each level file, `1` Warship, `2` Hive: replaces the boss of every level that has one |
+
+### `LeaveRoom` (0x32), `RoomRefused` (0x35), `RoomClosed` (0x36)
 
 No payload, all reliable. `LeaveRoom` (client) goes back to the lobby.
-`StartGame` (client) starts the game of the room, and is ignored if it already
-started. `RoomRefused` (server) answers a `JoinRoom` for a full room or a room
+`RoomRefused` (server) answers a `JoinRoom` for a full room or a room
 whose game is over, or when 16 rooms already run. `RoomClosed` (server) tells a
 client that an administrator closed its room: it is back in the lobby.
 
@@ -267,6 +279,7 @@ right edge) but **MUST** be finite: NaN and infinities are invalid.
 | 9 | Boss (end-level boss; its full health is `BossMaxHealth`, 2500, for the client's health bar) |
 | 10 | ChargedShot (a player's charged shot, which goes through enemies) |
 | 11 | PowerUp (a bonus: the player who touches it gets one more weapon level) |
+| 12 | BossHive (the second end-level boss; its full health is the health of its first record) |
 
 ### `GameEvent` (0x22)
 
@@ -375,11 +388,11 @@ sequenceDiagram
         alt room full, game over or 16 rooms already
             S-->>C: RoomRefused (reliable)
         else
-            S-->>C: RoomJoined{room} (reliable)
+            S-->>C: RoomJoined{room, levels} (reliable)
             S-->>C: Welcome{slot, shipId, tick} (reliable)
             S-->>C: GameEvent{PlayerJoined} to the others of the room
             S-->>C: Snapshot... (20 per second)
-            C->>S: StartGame (reliable), from any player of the room
+            C->>S: StartGame{settings} (reliable), from any player of the room
             S-->>C: GameEvent{GameStarted} to the whole room
             C->>S: Input...
         end
@@ -515,7 +528,7 @@ All bytes in hexadecimal.
 Unreliable sequence 298, acknowledging reliable packet 17, input number 1000:
 
 ```text
-52 54 09 10 00 00 2A 01 11 00 05 00   header: "RT", v9, Input, no flags,
+52 54 0A 10 00 00 2A 01 11 00 05 00   header: "RT", v10, Input, no flags,
                                               sequence 298, ack 17, size 5
 E8 03 00 00                           sequence 1000
 11                                    actions 0x11 = Up | Fire
@@ -526,7 +539,7 @@ E8 03 00 00                           sequence 1000
 Reliable sequence 2, slot 2, ship 58, tick 1200:
 
 ```text
-52 54 09 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
+52 54 0A 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
                                               sequence 2, ack 0, size 9
 02                                    slot 2
 3A 00 00 00                           shipId 58
@@ -536,7 +549,7 @@ B0 04 00 00                           tick 1200
 ### `Snapshot` with one player and one entity
 
 ```text
-52 54 09 20 00 00 2B 01 11 00 26 00   header: Snapshot, size 38
+52 54 0A 20 00 00 2B 01 11 00 26 00   header: Snapshot, size 38
 2C 01 00 00                           tick 300
 00 01                                 part 0 of 1
 01 00                                 1 entity
@@ -571,3 +584,4 @@ B0 04 00 00                           tick 1200
 | 6 | New event `LevelStarted` (levels read from files, [LEVELS.md](LEVELS.md)). |
 | 7 | New entity type `Boss`. |
 | 9 | New entity types `ChargedShot` and `PowerUp`; the `Charging` flag is now sent ([WEAPONS.md](WEAPONS.md)). Version 8 is the administration console. |
+| 10 | `StartGame` carries the game settings (difficulty, starting level, boss), `RoomJoined` the number of levels; new entity type `BossHive`. |

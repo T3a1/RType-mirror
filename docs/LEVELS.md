@@ -60,13 +60,25 @@ crashes the server.
 |-----|:--------:|-------|
 | `name` | yes | The name of the level, 1 to 64 characters. |
 | `waves` | yes | The list of its waves, 1 to 1000. Their order in the file does not matter: they are sorted by `time`. |
-| `boss` | no | The boss that comes after the waves: `warship`. Without it, the level ends with its last wave. |
+| `boss` | no | The boss that comes after the waves: `warship` or `hive`. Without it, the level ends with its last wave. The game settings can replace it with another boss. |
 
 ### Bosses
 
 | Name | What it does |
 |------|--------------|
 | `warship` | Comes in from the right, stops, then moves up and down. 2500 health points, shown in a bar at the bottom of the screen. Three phases as it is damaged: aimed shots, then a spread of 3 shots plus an aimed one, then a faster fan of 5 shots while moving faster. |
+| `hive` | A larger, slower organic boss with the same three attack phases. |
+
+## Game settings
+
+The player who starts the game chooses, in the waiting room:
+
+- **Difficulty**: Easy (enemies have 60 % of their health and shoot 1.5 times
+  less often), Normal, or Hard (150 % of their health, shots 30 % more often,
+  random waves of the endless mode 30 % closer together).
+- **Start at**: a level, which skips the levels before it, or the endless mode.
+- **Boss**: the boss of each level file, or the warship or the hive for every
+  level that has a boss.
 
 ### Wave
 

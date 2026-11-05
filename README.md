@@ -15,6 +15,8 @@ of enemies.
   the others until the whole team is out and the final scores are shown.
 - **Fair play**: the server is the only judge of what happens in the game, so
   every player sees the same game.
+- **Your game, your rules**: before starting, choose the difficulty (easy,
+  normal, hard), the level to start at (or the endless mode) and the boss.
 
 ### Controls
 

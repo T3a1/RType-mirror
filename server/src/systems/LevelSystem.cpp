@@ -126,7 +126,7 @@ std::optional<std::uint8_t> levelSystem(engine::Registry &registry,
                 return;
             }
             if (level.boss && !progress.bossSpawned) {
-                queueBoss(*level.boss, queue);
+                queueBoss(progress.boss.value_or(*level.boss), queue);
                 progress.bossSpawned = true;
                 BB_INFO("Boss of level " << progress.level + 1);
                 return;
