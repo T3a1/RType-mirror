@@ -8,6 +8,9 @@
 #include "EntityFactory.hpp"
 #include "common/Playfield.hpp"
 
+#include <algorithm>
+#include <cmath>
+
 namespace server {
 
 namespace {
@@ -40,7 +43,10 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
         enemy, rtype::Transform{.position = request.position});
     registry.emplace<rtype::Velocity>(
         enemy, rtype::Velocity{.value = {.x = -stat.speed, .y = 0.0F}});
-    const bool boss = request.type == rtype::EnemyType::Boss;
+    const auto health = std::max(
+        1, static_cast<int>(std::lround(static_cast<float>(stat.health) *
+                                        m_difficulty.enemyHealth)));
+    const bool boss = rtype::isBoss(request.type);
     if (boss) {
         // bossSystem() moves it, and it never leaves the playfield.
         registry.emplace<Boss>(enemy);
@@ -49,7 +55,7 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
             enemy, request.pattern.value_or(stat.pattern));
     }
     registry.emplace<rtype::Health>(
-        enemy, rtype::Health{.current = stat.health, .max = stat.health});
+        enemy, rtype::Health{.current = health, .max = health});
     registry.emplace<rtype::Damage>(enemy);
     registry.emplace<rtype::Enemy>(enemy, rtype::Enemy{.type = request.type});
     registry.emplace<rtype::EntityType>(enemy, stat.entityType);
@@ -67,7 +73,9 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
     }
     if (stat.fireInterval.count() > 0.0F) {
         registry.emplace<rtype::Weapon>(
-            enemy, rtype::Weapon{.fireInterval = stat.fireInterval});
+            enemy,
+            rtype::Weapon{.fireInterval = stat.fireInterval *
+                                          m_difficulty.enemyFireInterval});
     }
 
     BB_DEBUG("Enemy " << static_cast<int>(request.type) << " spawned with id "

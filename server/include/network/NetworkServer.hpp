@@ -120,6 +120,13 @@ class NetworkServer {
     [[nodiscard]] engine::CommandConsole &commands() { return m_commands; }
 
     /**
+     * @brief Sets the number of levels sent in RoomJoined, for the clients'
+     * choice of the starting level. Call it before start().
+     * @param count The number of levels, 0 for the endless mode only.
+     **/
+    void setLevelCount(std::uint8_t count) { m_levelCount = count; }
+
+    /**
      * @brief Returns the queue that gives commands to the network thread.
      * @return The queue; see submitCommand().
      **/
@@ -143,6 +150,7 @@ class NetworkServer {
     std::map<engine::net::Endpoint, Session> m_sessions;
     std::uint32_t m_newCliendId = 1;
     AccessList m_access;
+    std::uint8_t m_levelCount = 0;
     engine::CommandConsole m_commands;
     std::shared_ptr<AdminQueue> m_adminQueue = std::make_shared<AdminQueue>();
     TimePoint m_startTime;

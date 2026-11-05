@@ -50,6 +50,7 @@ enum class InboundKind : std::uint8_t { Connected, Disconnected, Input, Start };
  * @param reason Why the client left, for Disconnected.
  * @param sequence The input sequence number, for Input.
  * @param actions The held actions as Action bits, for Input.
+ * @param settings The settings of the game, for Start.
  **/
 struct InboundMessage {
     std::uint32_t clientId = 0;
@@ -58,6 +59,7 @@ struct InboundMessage {
         rtype::protocol::DisconnectReason::Timeout;
     std::uint32_t sequence = 0;
     std::uint8_t actions = 0;
+    rtype::protocol::StartGame settings;
 };
 
 /**

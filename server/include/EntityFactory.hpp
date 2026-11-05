@@ -8,6 +8,7 @@
 #ifndef SERVER_ENTITYFACTORY_HPP
 #define SERVER_ENTITYFACTORY_HPP
 
+#include "Difficulty.hpp"
 #include "EnemyDefs.hpp"
 #include "SpawnRequests.hpp"
 #include "common/components/Collider.hpp"
@@ -46,6 +47,16 @@ namespace server {
  **/
 class EntityFactory {
   public:
+    /**
+     * @brief Sets the difficulty of the enemies created from now on: their
+     * health and the time between their shots are scaled.
+     * @param difficulty The factors of the difficulty.
+     **/
+    void setDifficulty(const DifficultyStats &difficulty)
+    {
+        m_difficulty = difficulty;
+    }
+
     /**
      * @brief Creates an enemy with the stats of its type in ENEMY_DEFS.
      *
@@ -98,6 +109,7 @@ class EntityFactory {
 
   private:
     std::uint32_t m_nextNetworkId = 1;
+    DifficultyStats m_difficulty;
 };
 
 } // namespace server

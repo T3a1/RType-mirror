@@ -29,6 +29,9 @@ namespace client {
  * @param refused Whether the server refused the last room asked for.
  * @param closed Whether an administrator closed the room of the player.
  * @param selected The item of the menu selected with the keyboard.
+ * @param levels How many levels the server has, from RoomJoined.
+ * @param settings The game settings chosen in the waiting room, sent if
+ * this player starts the game.
  **/
 struct LobbyState {
     /**
@@ -46,6 +49,8 @@ struct LobbyState {
     bool refused = false;
     bool closed = false;
     std::size_t selected = 0;
+    std::uint8_t levels = 0;
+    rtype::protocol::StartGame settings;
 };
 
 /**
@@ -76,8 +81,9 @@ enum class WaitingChoice : std::uint8_t { None, Start, Leave };
 lobbyScreen(LobbyState &state, gfx::IGraphics &graphics, const MenuKeys &keys);
 
 /**
- * @brief Draws the panel of a waiting room, in screen pixels: its players and
- * the Start and Leave buttons.
+ * @brief Draws the panel of a waiting room, in screen pixels: its players,
+ * the game settings (difficulty, starting level, boss; each button goes to
+ * the next value) and the Start and Leave buttons.
  * @param state The lobby state; the keyboard selection is updated.
  * @param sync The sync state, for the players of the room.
  * @param graphics The graphics backend.

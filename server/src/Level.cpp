@@ -55,9 +55,10 @@ constexpr std::array<std::pair<std::string_view, rtype::EnemyType>, 6>
     }};
 
 /** @brief The boss names a level may use. */
-constexpr std::array<std::pair<std::string_view, rtype::EnemyType>, 1>
+constexpr std::array<std::pair<std::string_view, rtype::EnemyType>, 2>
     BossNames{{
         {"warship", rtype::EnemyType::Boss},
+        {"hive", rtype::EnemyType::Hive},
     }};
 
 /** @brief The movement pattern names a wave may use. */

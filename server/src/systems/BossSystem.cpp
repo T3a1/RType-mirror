@@ -138,48 +138,48 @@ std::uint8_t bossPhase(int health, int maxHealth)
 void bossSystem(engine::Registry &registry, SpawnCommands &commands,
                 engine::Duration dt)
 {
-    const EnemyDef &stat = enemyDef(rtype::EnemyType::Boss);
     const float stopX = rtype::PlayfieldWidth - StopFromRight;
-    const float top = (stat.size.y / 2.0F) + VerticalMargin;
-    const float bottom = rtype::PlayfieldHeight - top;
 
-    registry.each<Boss, rtype::Transform, rtype::Velocity, rtype::Health>(
-        [&](engine::Entity entity, Boss &boss,
-            const rtype::Transform &transform, rtype::Velocity &velocity,
-            const rtype::Health &health) {
-            const std::uint8_t phase = bossPhase(health.current, health.max);
-            if (phase != boss.phase) {
-                BB_INFO("Boss phase " << static_cast<int>(phase));
-                boss.phase = phase;
-            }
-            const PhaseStats &stats = Phases.at(phase - 1U);
-            if (!boss.arrived) {
-                boss.arrived = transform.position.x <= stopX;
-                velocity.value = {.x = boss.arrived ? 0.0F : -stat.speed,
-                                  .y = 0.0F};
-                return;
-            }
-            if (transform.position.y <= top) {
-                boss.direction = 1.0F;
-            } else if (transform.position.y >= bottom) {
-                boss.direction = -1.0F;
-            }
-            velocity.value = {.x = 0.0F,
-                              .y = boss.direction * stats.verticalSpeed};
+    registry.each<Boss, rtype::Enemy, rtype::Transform, rtype::Velocity,
+                  rtype::Health>([&](engine::Entity entity, Boss &boss,
+                                     const rtype::Enemy &enemy,
+                                     const rtype::Transform &transform,
+                                     rtype::Velocity &velocity,
+                                     const rtype::Health &health) {
+        const EnemyDef &stat = enemyDef(enemy.type);
+        const float top = (stat.size.y / 2.0F) + VerticalMargin;
+        const float bottom = rtype::PlayfieldHeight - top;
+        const std::uint8_t phase = bossPhase(health.current, health.max);
+        if (phase != boss.phase) {
+            BB_INFO("Boss phase " << static_cast<int>(phase));
+            boss.phase = phase;
+        }
+        const PhaseStats &stats = Phases.at(phase - 1U);
+        if (!boss.arrived) {
+            boss.arrived = transform.position.x <= stopX;
+            velocity.value = {.x = boss.arrived ? 0.0F : -stat.speed,
+                              .y = 0.0F};
+            return;
+        }
+        if (transform.position.y <= top) {
+            boss.direction = 1.0F;
+        } else if (transform.position.y >= bottom) {
+            boss.direction = -1.0F;
+        }
+        velocity.value = {.x = 0.0F, .y = boss.direction * stats.verticalSpeed};
 
-            boss.cooldown -= dt;
-            if (boss.cooldown.count() > 0.0F) {
-                return;
-            }
-            boss.cooldown = stats.attackInterval;
-            const engine::Vec2f muzzle{.x = transform.position.x -
-                                            (stat.size.x / 2.0F),
-                                       .y = transform.position.y};
-            const auto attackShots = attack(
-                entity, muzzle, towardsNearestPlayer(registry, muzzle), phase);
-            commands.insert(commands.end(), attackShots.begin(),
-                            attackShots.end());
-        });
+        boss.cooldown -= dt;
+        if (boss.cooldown.count() > 0.0F) {
+            return;
+        }
+        boss.cooldown = stats.attackInterval;
+        const engine::Vec2f muzzle{.x = transform.position.x -
+                                        (stat.size.x / 2.0F),
+                                   .y = transform.position.y};
+        const auto attackShots = attack(
+            entity, muzzle, towardsNearestPlayer(registry, muzzle), phase);
+        commands.insert(commands.end(), attackShots.begin(), attackShots.end());
+    });
 }
 
 } // namespace server
