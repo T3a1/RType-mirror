@@ -87,6 +87,44 @@ jobs:
             | grep -E '/client/src/(graphics|audio)/' \
             | xargs -r -P "$(nproc)" -n 1 clang-tidy -p build -quiet --warnings-as-errors='*'
 
+  # Not in the gate yet: it does not block a merge until the Windows build is green.
+  windows:
+    name: Build and test on Windows (${{ matrix.graphics }})
+    timeout-minutes: 90
+    if: github.repository != 'EpitechPGE3-2026/G-ING-500-LIL-5-1-rtype-3'
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        graphics: [raylib, sfml]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Conan
+        run: |
+          pipx install conan
+          conan profile detect
+      - name: Cache the Conan packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.conan2/p
+          key: conan-${{ runner.os }}-${{ matrix.graphics }}-${{ hashFiles('conanfile.py') }}
+          restore-keys: conan-${{ runner.os }}-${{ matrix.graphics }}-
+      - name: Install the Conan packages
+        run: |
+          conan install . --output-folder=build --build=missing \
+            -s compiler.cppstd=20 -s build_type=Release -o "&:graphics=${{ matrix.graphics }}"
+      - name: Configure
+        run: |
+          cmake -B build -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DBUILD_TESTS=ON \
+            -DRTYPE_GRAPHICS_BACKEND=${{ matrix.graphics }}
+      - name: Build
+        run: cmake --build build --config Release --parallel
+      - name: Run tests
+        run: ctest --test-dir build -C Release --output-on-failure
+
   # Keeps the check name required by the "Protect main" ruleset.
   gate:
     name: Build, lint and test
