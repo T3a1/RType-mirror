@@ -22,6 +22,8 @@ runs:
       with:
         path: ~/.conan2/p
         key: conan-${{ runner.os }}-${{ inputs.graphics }}-${{ hashFiles('conanfile.py') }}
+        # After a change of conanfile.py, only build the packages that changed.
+        restore-keys: conan-${{ runner.os }}-${{ inputs.graphics }}-
     - name: Install the Conan packages
       # The graphics library needs the X11/OpenGL system headers: let Conan install them with apt.
       shell: bash

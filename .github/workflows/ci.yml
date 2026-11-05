@@ -6,6 +6,10 @@ on:
     tags: ['*']
   workflow_dispatch:
 
+# The forward job pushes with its own SSH key: the workflow token only reads.
+permissions:
+  contents: read
+
 env:
   EPITECH_REPO: git@github.com:EpitechPGE3-2026/G-ING-500-LIL-5-1-rtype-3.git
 
@@ -17,6 +21,7 @@ concurrency:
 jobs:
   format:
     name: Check formatting
+    timeout-minutes: 5
     if: github.repository != 'EpitechPGE3-2026/G-ING-500-LIL-5-1-rtype-3'
     runs-on: ubuntu-24.04
     steps:
@@ -27,6 +32,7 @@ jobs:
 
   build-and-test:
     name: Build and test
+    timeout-minutes: 45
     if: github.repository != 'EpitechPGE3-2026/G-ING-500-LIL-5-1-rtype-3'
     runs-on: ubuntu-24.04
     steps:
@@ -40,6 +46,7 @@ jobs:
   # clang-tidy only needs compile_commands.json, not the build: split it over 4 runners.
   lint:
     name: Lint (${{ matrix.shard }}/4)
+    timeout-minutes: 45
     if: github.repository != 'EpitechPGE3-2026/G-ING-500-LIL-5-1-rtype-3'
     runs-on: ubuntu-24.04
     strategy:
@@ -59,6 +66,7 @@ jobs:
   # The jobs above build the client with Raylib: build and lint the other backends too.
   backends:
     name: Build and lint the ${{ matrix.graphics }} client
+    timeout-minutes: 45
     if: github.repository != 'EpitechPGE3-2026/G-ING-500-LIL-5-1-rtype-3'
     runs-on: ubuntu-24.04
     strategy:
@@ -73,11 +81,16 @@ jobs:
       - name: Build the client
         run: cmake --build build --target r-type_client
       - name: Run clang-tidy on the backend
-        run: clang-tidy -p build -quiet --warnings-as-errors='*' client/src/graphics/${{ matrix.graphics }}/*.cpp
+        # The files of this backend are the graphics and audio ones in this build.
+        run: |
+          jq -r '.[].file' build/compile_commands.json \
+            | grep -E '/client/src/(graphics|audio)/' \
+            | xargs -r -P "$(nproc)" -n 1 clang-tidy -p build -quiet --warnings-as-errors='*'
 
   # Keeps the check name required by the "Protect main" ruleset.
   gate:
     name: Build, lint and test
+    timeout-minutes: 5
     needs: [build-and-test, lint, backends]
     if: ${{ !cancelled() && github.repository != 'EpitechPGE3-2026/G-ING-500-LIL-5-1-rtype-3' }}
     runs-on: ubuntu-24.04
@@ -90,6 +103,7 @@ jobs:
 
   docker:
     name: Build server image
+    timeout-minutes: 15
     if: github.repository != 'EpitechPGE3-2026/G-ING-500-LIL-5-1-rtype-3'
     runs-on: ubuntu-24.04
     steps:
@@ -99,6 +113,7 @@ jobs:
 
   forward:
     name: Push to the Epitech repo
+    timeout-minutes: 10
     needs: [format, gate, docker]
     # Only on pushes (not manual runs), and only when every job above passed (so never on the Epitech repo).
     if: github.event_name == 'push'
@@ -111,8 +126,15 @@ jobs:
         with:
           fetch-depth: 0
       - name: Load the SSH key
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@dc588b651fe13675774614f8e6a936a468676387 # v0.9.0
         with:
           ssh-private-key: ${{ secrets.EPITECH_DEPLOY_KEY }}
       - name: Push the ref
-        run: git push --force "$EPITECH_REPO" "$GITHUB_SHA:$GITHUB_REF"
+        # GitHub sometimes refuses a push for a moment: try again before failing.
+        run: |
+          for attempt in 1 2 3 4; do
+            git push --force "$EPITECH_REPO" "$GITHUB_SHA:$GITHUB_REF" && exit 0
+            echo "Push $attempt failed"
+            sleep 60
+          done
+          exit 1
