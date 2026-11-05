@@ -26,7 +26,9 @@ namespace engine {
  **/
 class CommandConsole {
   public:
+    /** @brief The arguments of a command, without its name. */
     using Args = std::vector<std::string>;
+    /** @brief Runs a command and returns its answer; may throw UsageError. */
     using Handler = std::function<std::string(const Args &)>;
 
     /**
@@ -36,6 +38,9 @@ class CommandConsole {
      **/
     class UsageError : public std::runtime_error {
       public:
+        /**
+         * @brief Creates the error.
+         **/
         UsageError() : std::runtime_error("wrong arguments") {}
     };
 

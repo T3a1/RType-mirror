@@ -11,8 +11,9 @@
 namespace server {
 
 /**
- * Tag: the entity cannot leave the playfield, its position is clamped to the
- * edges.
+ * @struct KeepInPlayfield
+ * @brief Tag: the entity cannot leave the playfield, its position is clamped to
+ *the edges.
  **/
 struct KeepInPlayfield {};
 

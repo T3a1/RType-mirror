@@ -45,8 +45,8 @@ struct EnemyDef {
 };
 
 /**
- * An array of all enemy definitions, in the order of rtype::EnemyType. The
- * colliders match the sizes the clients draw (client/src/SpriteSheets.cpp).
+ * @brief An array of all enemy definitions, in the order of rtype::EnemyType.
+ *The colliders match the sizes the clients draw (client/src/SpriteSheets.cpp).
  **/
 inline constexpr std::array<EnemyDef, 7> ENEMY_DEFS = {
     {

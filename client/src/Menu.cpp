@@ -11,12 +11,18 @@ namespace client {
 
 namespace {
 
-// Average glyph width of the default fonts, as a share of the font size.
+/** @brief The average glyph width of the default fonts, as a share of the font
+ * size. */
 constexpr float GlyphWidth = 0.55F;
+/** @brief The font size of a button, in pixels. */
 constexpr int ButtonFontSize = 28;
+/** @brief The color of a button. */
 constexpr gfx::Color ButtonColor = gfx::rgb(70, 70, 90);
+/** @brief The color of a selected or hovered button. */
 constexpr gfx::Color ButtonActiveColor = gfx::rgb(110, 110, 140);
+/** @brief The color of a disabled button. */
 constexpr gfx::Color ButtonDisabledColor = gfx::rgb(40, 40, 50);
+/** @brief The color of the label of a disabled button. */
 constexpr gfx::Color LabelDisabledColor = gfx::rgb(130, 130, 140);
 
 /**

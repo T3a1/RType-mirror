@@ -8,6 +8,7 @@
 #ifndef CLIENT_SYSTEMS_NETWORKSYNCSYSTEM_HPP
 #define CLIENT_SYSTEMS_NETWORKSYNCSYSTEM_HPP
 
+#include "PlayerNotices.hpp"
 #include "SpriteSheets.hpp"
 #include "common/components/Prediction.hpp"
 #include "common/protocol/Packet.hpp"
@@ -56,12 +57,15 @@ inline constexpr float LevelBannerTime = 3.0F;
  * @param shipPosition That position.
  * @param acknowledgedTick The tick last handed to the prediction, when
  * ackTick and shipTick matched.
+ * @param gameOver Whether the server announced the end of the game.
+ * @param started Whether the game of the room has started.
  * @param level The level announced last by GameEvent{LevelStarted}: from
  * 1, 0 for the endless mode or before any announce.
  * @param levelAnnounced Whether a level was announced since the game
  * started.
  * @param levelBanner How long the banner of that level is still shown, in
  * seconds.
+ * @param notices The players who just joined or left, oldest first.
  **/
 struct SyncState {
     std::unordered_map<std::uint32_t, engine::Entity> entities;
@@ -85,6 +89,7 @@ struct SyncState {
     std::uint8_t level = 0;
     bool levelAnnounced = false;
     float levelBanner = 0.0F;
+    std::vector<PlayerNotice> notices;
 };
 
 /**

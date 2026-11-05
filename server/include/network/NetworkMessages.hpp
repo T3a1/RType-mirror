@@ -16,7 +16,7 @@
 namespace server {
 
 /**
- * How many clients a server keeps, in the lobby or in a room.
+ * @brief How many clients a server keeps, in the lobby or in a room.
  **/
 inline constexpr std::size_t MaxSessions =
     std::size_t{rtype::protocol::MaxRooms} * rtype::protocol::MaxPlayers;
@@ -44,7 +44,7 @@ enum class InboundKind : std::uint8_t { Connected, Disconnected, Input, Start };
 /**
  * @struct InboundMessage
  * @brief A fact pushed by the network thread to the game thread. It never
- * contains an address: clients are named by their ClientId.
+ * contains an address: clients are named by their client id.
  * @param clientId The client concerned.
  * @param kind What happened.
  * @param reason Why the client left, for Disconnected.

@@ -29,19 +29,31 @@ namespace server {
 
 namespace {
 
-// Where the boss stops, from the right edge of the playfield.
+/** @brief Where the boss stops, from the right edge of the playfield, in
+ * playfield units. */
 constexpr float StopFromRight = 320.0F;
-// Space kept between the boss and the top and bottom edges.
+/** @brief The space kept between the boss and the top and bottom edges, in
+ * playfield units. */
 constexpr float VerticalMargin = 20.0F;
+/** @brief The speed of the boss's shots, in playfield units per second. */
 constexpr float ShotSpeed = 420.0F;
-constexpr float SpreadAngle = 0.25F; // radians between two shots
+/** @brief The angle between two shots of a fan, in radians. */
+constexpr float SpreadAngle = 0.25F;
 
+/**
+ * @struct PhaseStats
+ * @brief How the boss behaves in one phase.
+ * @param verticalSpeed Its speed up and down, in playfield units per second.
+ * @param attackInterval The time between two attacks, in seconds.
+ * @param spreadShots The number of shots of a fan; 1 is a single aimed shot.
+ **/
 struct PhaseStats {
     float verticalSpeed;
     engine::Duration attackInterval;
-    int spreadShots; // 1: a single aimed shot
+    int spreadShots;
 };
 
+/** @brief The stats of each phase, the last ones at low health. */
 constexpr std::array<PhaseStats, BossPhases> Phases{{
     {.verticalSpeed = 90.0F,
      .attackInterval = engine::Duration{1.1F},

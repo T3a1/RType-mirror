@@ -12,18 +12,28 @@
 
 namespace rtype {
 
-// Bits of InputState::actions.
+/** @brief The bits of InputState::actions. */
 namespace Action {
+/** @brief Moves the ship up. */
 inline constexpr std::uint8_t Up = 1U << 0U;
+/** @brief Moves the ship down. */
 inline constexpr std::uint8_t Down = 1U << 1U;
+/** @brief Moves the ship to the left. */
 inline constexpr std::uint8_t Left = 1U << 2U;
+/** @brief Moves the ship to the right. */
 inline constexpr std::uint8_t Right = 1U << 3U;
+/** @brief Holds the fire key. */
 inline constexpr std::uint8_t Fire = 1U << 4U;
-inline constexpr std::uint8_t All = 0x1F; // every bit above
+/** @brief Every bit above. */
+inline constexpr std::uint8_t All = 0x1F;
 } // namespace Action
 
-// Actions held by a player during this tick, written from the network
-// input. Test one with (actions & Action::Fire) != 0.
+/**
+ * @struct InputState
+ * @brief The actions a player holds during this tick, written from the network
+ * input. Test one with (actions & Action::Fire) != 0.
+ * @param actions The held actions, as Action bits.
+ **/
 struct InputState {
     std::uint8_t actions = 0;
 };

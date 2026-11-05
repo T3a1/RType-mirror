@@ -56,22 +56,31 @@ everything:
 ./rtype.py              # on Windows: python rtype.py
 ```
 
-See the [installation guide](docs/INSTALLATION.md) for the requirements and
-all the options.
+It needs Python 3, a C++20 compiler and Docker (or `--native` to do without
+Docker); it installs the rest, such as CMake and Conan, by itself. The game uses
+[Raylib](https://www.raylib.com/) and [Asio](https://think-async.com/Asio/), which
+Conan downloads. See the [installation guide](docs/INSTALLATION.md) for the
+requirements and all the options.
 
 ## Documentation
+
+The full documentation is online, with an outline and a search bar:
+**<https://t3a1.github.io/RType-mirror/>** (or `./rtype.py --docs` to build it
+locally).
 
 | Document | What you will find |
 |----------|--------------------|
 | [Installation guide](docs/INSTALLATION.md) | Requirements, building, running the server and the clients, troubleshooting. |
 | [Architecture](docs/ARCHITECTURE.md) | How the code is organized: game engine, subsystems, game loop, threads. |
 | [Network protocol](docs/PROTOCOL.md) | The messages exchanged between the server and the clients. |
+| [Technical study](docs/TECHNICAL_STUDY.md) | Why these technologies: comparisons, storage, security, accessibility, before and after. |
+| [How-to guides](docs/HOWTO.md) | Adding a component, a system, an enemy or a packet; building and debugging. |
 | [Levels](docs/LEVELS.md) | Writing a level: the JSON file of its enemy waves, and how the server plays the levels. |
 | [Weapons](docs/WEAPONS.md) | The charged shot, the power-ups and the weapon settings file. |
-| [Network testing](docs/NETWORK_TESTING.md) | Playing with added latency and packet loss on one machine, to test the networking. |
-| [Network performance comparison](docs/NETWORK_COMPARISON.md) | Measured effect of interpolation and prediction under latency and packet loss, compared with the Part 1 prototype. |
-| [Contributing](docs/CONTRIBUTORS.md) | How to work on the project: workflow, conventions, tools. |
-| Code documentation | Every class and function of the code, generated with Doxygen: <https://DOCS_URL_PLACEHOLDER> (or `./rtype.py --docs` to build it locally). |
+| [Network testing](docs/NETWORK_TESTING.md) | Playing with added latency, packet loss, duplication and low bandwidth on one machine. |
+| [Network performance comparison](docs/NETWORK_COMPARISON.md) | Measured effect of interpolation and prediction on a degraded network, compared with the Part 1 prototype. |
+| [Contributing](docs/CONTRIBUTING.md) | How to work on the project: workflow, conventions, tools. |
+| [Contributors](docs/CONTRIBUTORS.md) | Who made the project, and how to reach us. |
 
 ## Project status
 
@@ -79,3 +88,8 @@ all the options.
 |-----------|------|---------|
 | Part 1 | October 18, 2026 | Game engine, networking and a playable prototype. |
 | Part 2 | November 8, 2026 | Advanced features, built on top of the prototype. |
+
+## Authors
+
+Léandre Fouret, Romane Cauvez, Thomas Peze and David Caron: see the
+[contributors](docs/CONTRIBUTORS.md).

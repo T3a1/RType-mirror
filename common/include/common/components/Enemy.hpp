@@ -14,6 +14,17 @@
 
 namespace rtype {
 
+/**
+ * @enum EnemyType
+ * @brief The kinds of enemies, in the order of the server's ENEMY_DEFS.
+ * @param Basic An enemy flying straight, which does not shoot.
+ * @param Wave A fast enemy following a sine wave, which does not shoot.
+ * @param Shooter An enemy flying straight and shooting.
+ * @param Small The smallest and fastest enemy, following a sine wave.
+ * @param Medium A shooting enemy following a zigzag, drops a power-up.
+ * @param Large A slow, tough and shooting enemy, drops a power-up.
+ * @param Boss The enemy at the end of a level, moved by bossSystem().
+ **/
 enum class EnemyType : std::uint8_t {
     Basic,
     Wave,
@@ -24,13 +35,19 @@ enum class EnemyType : std::uint8_t {
     Boss,
 };
 
-// Health of the end-level boss; the clients draw its health bar from it.
+/** @brief Health of the end-level boss; the clients draw its health bar from
+ * it. */
 inline constexpr int BossMaxHealth = 2500;
 
-// Behavior of an enemy, read by the AI system.
+/**
+ * @struct Enemy
+ * @brief The behavior of an enemy, read by the AI system.
+ * @param type The kind of enemy.
+ * @param fireInterval The time between two shots, in seconds.
+ * @param fireCooldown The time left before the next shot, in seconds.
+ **/
 struct Enemy {
     EnemyType type = EnemyType::Basic;
-    // Time between two shots, and time left before the next one.
     engine::Duration fireInterval{2.0F};
     engine::Duration fireCooldown{0.0F};
 };

@@ -22,31 +22,67 @@ namespace client {
 
 namespace {
 
+/** @brief The font size of the label above a ship, in playfield units. */
 constexpr int LabelFontSize = 28;
-constexpr float LabelOffsetY = 24.0F; // above the ship's center
-// Average glyph width of the default fonts, as a share of the font size.
+/** @brief How far above the ship's center its label is, in playfield units. */
+constexpr float LabelOffsetY = 24.0F;
+/** @brief The average glyph width of the default fonts, as a share of the font
+ * size. */
 constexpr float GlyphWidth = 0.55F;
 
+/** @brief The left margin of the HUD and the right margin of the notices, in
+ * pixels. */
 constexpr float HudX = 20.0F;
+/** @brief The top margin of the HUD, in pixels. */
 constexpr float HudY = 20.0F;
+/** @brief The font size of the HUD, in pixels. */
 constexpr int HudFontSize = 28;
+/** @brief The height of a line of the HUD, in pixels. */
 constexpr float HudLineHeight = 34.0F;
 
+/** @brief The width of the game over panel, in pixels. */
 constexpr float PanelWidth = 520.0F;
+/** @brief The inner margin of the game over panel, in pixels. */
 constexpr float PanelPadding = 24.0F;
+/** @brief The font size of the titles, in pixels. */
 constexpr int TitleFontSize = 56;
+/** @brief The height of a title, in pixels. */
 constexpr float TitleHeight = 72.0F;
+/** @brief The width of the game over button, in pixels. */
 constexpr float ButtonWidth = 300.0F;
+/** @brief The height of the game over button, in pixels. */
 constexpr float ButtonHeight = 52.0F;
+/** @brief The background of the game over panel. */
 constexpr gfx::Color PanelColor = gfx::rgb(24, 24, 36);
 
+/** @brief How long a banner or a notice takes to fade out, in seconds. */
 constexpr float BannerFade = 0.5F;
 
-constexpr float BossBarShare = 0.6F; // of the window's width
+/** @brief The width of the boss's health bar, as a share of the window's width.
+ */
+constexpr float BossBarShare = 0.6F;
+/** @brief The height of the boss's health bar, in pixels. */
 constexpr float BossBarHeight = 16.0F;
+/** @brief The distance between the boss's health bar and the bottom, in pixels.
+ */
 constexpr float BossBarBottom = 40.0F;
+/** @brief The color of the boss's health bar. */
 constexpr gfx::Color BossBarColor = gfx::rgb(213, 94, 0);
+/** @brief The color of the level banner. */
 constexpr gfx::Color BannerColor = gfx::rgb(255, 214, 90);
+
+/**
+ * @brief Fades a color out during the last BannerFade seconds.
+ * @param color The color when fully visible.
+ * @param timeLeft How long it is still shown, in seconds.
+ * @return The color with its alpha reduced.
+ **/
+gfx::Color faded(gfx::Color color, float timeLeft)
+{
+    const float alpha = std::min(timeLeft / BannerFade, 1.0F);
+    color.a = static_cast<std::uint8_t>(static_cast<float>(color.a) * alpha);
+    return color;
+}
 
 } // namespace
 
@@ -129,23 +165,33 @@ void levelBannerScreen(const SyncState &state, gfx::IGraphics &graphics)
     if (state.levelBanner <= 0.0F) {
         return;
     }
-    // Fully visible, then fades out during its last BannerFade seconds.
-    const float alpha = std::min(state.levelBanner / BannerFade, 1.0F);
-    const auto fade = [alpha](gfx::Color color) {
-        color.a =
-            static_cast<std::uint8_t>(static_cast<float>(color.a) * alpha);
-        return color;
-    };
     float y = (screen.y - TitleHeight) / 2.0F;
     if (state.level != 1) {
         drawCentered(graphics, "Level cleared", centerX, y - HudLineHeight,
-                     HudFontSize, fade(gfx::colors::OffWhite));
+                     HudFontSize,
+                     faded(gfx::colors::OffWhite, state.levelBanner));
     }
     y += HudLineHeight / 2.0F;
     drawCentered(graphics,
                  state.level == 0 ? "ENDLESS MODE"
                                   : "LEVEL " + std::to_string(state.level),
-                 centerX, y, TitleFontSize, fade(BannerColor));
+                 centerX, y, TitleFontSize,
+                 faded(BannerColor, state.levelBanner));
+}
+
+void playerNoticeSystem(const SyncState &state, gfx::IGraphics &graphics)
+{
+    const float right = graphics.screenSize().x - HudX;
+    float y = HudY;
+    for (const PlayerNotice &notice : state.notices) {
+        const std::string text = "Player " + std::to_string(notice.slot) +
+                                 (notice.joined ? " joined" : " left");
+        const float width = static_cast<float>(text.size()) *
+                            static_cast<float>(HudFontSize) * GlyphWidth;
+        graphics.drawText(text, {.x = right - width, .y = y}, HudFontSize,
+                          faded(playerColor(notice.slot), notice.timeLeft));
+        y += HudLineHeight;
+    }
 }
 
 bool gameOverScreen(const SyncState &state, gfx::IGraphics &graphics,

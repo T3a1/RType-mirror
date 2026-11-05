@@ -17,11 +17,18 @@ namespace client {
 
 namespace {
 
+/**
+ * @struct ActionBinding
+ * @brief The action a control gives to the server.
+ * @param control The control.
+ * @param action Its Action bit.
+ **/
 struct ActionBinding {
     Control control;
     std::uint8_t action;
 };
 
+/** @brief The controls that are sent to the server. */
 constexpr std::array ActionBindings{
     ActionBinding{.control = Control::Up, .action = rtype::Action::Up},
     ActionBinding{.control = Control::Down, .action = rtype::Action::Down},
@@ -30,7 +37,13 @@ constexpr std::array ActionBindings{
     ActionBinding{.control = Control::Fire, .action = rtype::Action::Fire},
 };
 
-/** @brief Whether one of the keys of a control is held. */
+/**
+ * @brief Tells whether one of the keys of a control is held.
+ * @param graphics The backend reading the keyboard.
+ * @param controls The keys of each control.
+ * @param control The control.
+ * @return `true` if one of its keys is held.
+ **/
 bool isHeld(const gfx::IGraphics &graphics, const Controls &controls,
             Control control)
 {

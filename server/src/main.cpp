@@ -38,21 +38,34 @@
 
 namespace {
 
+/** @brief The exit code after an error. */
 inline constexpr std::uint8_t ExitError = 84;
+/** @brief The exit code of a normal stop. */
 inline constexpr std::uint8_t ExitStatus = 0;
+/** @brief How often the main thread checks whether it must stop. */
 inline constexpr std::chrono::milliseconds StopPollInterval{50};
+/** @brief How long the console waits for the answer to a command. */
 inline constexpr std::chrono::seconds CommandTimeout{2};
+/** @brief The longest port number, in digits. */
 inline constexpr std::size_t MaxPortDigits = 5;
+/** @brief What the program prints when its command line is wrong. */
 inline constexpr std::string_view Usage =
     "Usage: r-type_server [port] [--levels DIR] [--banlist FILE]\n"
     "                     [--whitelist FILE] [--no-console] [--invincible]\n";
+/** @brief What the console shows while it waits for a command. */
 inline constexpr std::string_view Prompt = "rtype> ";
-// Back to the start of the line, then erase it: removes the prompt or the ^C.
+/** @brief Goes back to the start of the line and erases it: removes the prompt
+ * or the ^C. */
 inline constexpr std::string_view ClearLine = "\r\033[K";
+/** @brief Set by the signal handler to ask the main thread to stop. */
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 volatile std::sig_atomic_t g_stopRequested = 0;
 
-// Only async-signal-safe work here: no logging, no allocation.
+/**
+ * @brief Asks the server to stop on SIGINT or SIGTERM. A second signal uses the
+ * default handler. Only async-signal-safe work here: no logging, no allocation.
+ * @param signal The signal received.
+ **/
 void onSignal(int signal)
 {
     static_cast<void>(std::signal(signal, SIG_DFL));
@@ -262,6 +275,13 @@ server::WeaponStats loadWeapons(std::span<char *> args)
 
 } // namespace
 
+/**
+ * @brief Starts the server, runs until a signal or the console stops it, then
+ * shuts it down.
+ * @param argc The number of command line arguments.
+ * @param argv The command line arguments, see Usage.
+ * @return ExitStatus after a normal stop, ExitError after an error.
+ **/
 int main(int argc, char *argv[])
 {
     const std::span args(argv, static_cast<std::size_t>(argc));

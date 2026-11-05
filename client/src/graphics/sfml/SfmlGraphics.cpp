@@ -27,10 +27,22 @@ namespace client::gfx {
 
 namespace {
 
+/** @brief The font file, relative to the executable: SFML has no default font.
+ */
 constexpr const char *fontPath = "assets/fonts/DejaVuSans.ttf";
 
+/**
+ * @brief Converts a color to SFML's type.
+ * @param color The color.
+ * @return The same color.
+ **/
 sf::Color toSfml(Color color) { return {color.r, color.g, color.b, color.a}; }
 
+/**
+ * @brief Converts a key to SFML's type.
+ * @param key The key.
+ * @return The same key.
+ **/
 sf::Keyboard::Key toSfml(Key key)
 {
     const auto index = static_cast<int>(key);

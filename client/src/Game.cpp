@@ -25,15 +25,20 @@ namespace client {
 
 namespace {
 
+/** @brief The image of the background, relative to the executable. */
 constexpr const char *backgroundPath = "assets/bg.jpg";
+/** @brief How fast the background scrolls, in pixels per second. */
 constexpr float backgroundSpeed = 120.0F;
 
-// Space also fires: it only leaves the game over screen after this delay, so
-// that a player still firing does not leave it by accident.
+/** @brief How long the keyboard is ignored on the game over screen, in seconds.
+ * Space also fires, so a player still firing does not leave it by accident. */
 constexpr float GameOverKeyDelay = 1.5F;
 
+/** @brief The left margin of the connection status, in pixels. */
 constexpr float statusX = 20.0F;
+/** @brief The distance between the status and the bottom, in pixels. */
 constexpr float statusBottomMargin = 50.0F;
+/** @brief The font size of the status, in pixels. */
 constexpr int statusFontSize = 30;
 
 /**
@@ -103,8 +108,8 @@ void Game::run()
 }
 
 /**
- * Registers the logic systems in the scheduler, stage by stage and in the
- * order they run within a stage.
+ * @brief Registers the logic systems in the scheduler, stage by stage and in
+ *the order they run within a stage.
  **/
 void Game::registerSystems()
 {
@@ -171,6 +176,10 @@ void Game::registerSystems()
                         m_sync.levelBanner =
                             std::max(m_sync.levelBanner - dt.count(), 0.0F);
                     });
+    m_scheduler.add(Stage::Simulation, "playerNotices",
+                    [this](Registry &, Duration dt) {
+                        updatePlayerNotices(m_sync.notices, dt.count());
+                    });
     m_scheduler.add(Stage::Simulation, "shipTilt", shipTiltSystem);
     m_scheduler.add(Stage::Simulation, "animation", animationSystem);
 
@@ -179,7 +188,7 @@ void Game::registerSystems()
 }
 
 /**
- * Adds a drawing system to a layer. Within a layer, systems draw in the
+ * @brief Adds a drawing system to a layer. Within a layer, systems draw in the
  * order they were added.
  * @param layer The layer the system draws in.
  * @param name The name of the system, for logs and debugging.
@@ -192,7 +201,7 @@ void Game::addRender(Layer layer, std::string name, engine::System system)
 }
 
 /**
- * Registers the drawing systems in their layer, from back to front.
+ * @brief Registers the drawing systems in their layer, from back to front.
  **/
 void Game::registerRenderSystems()
 {
@@ -299,6 +308,7 @@ void Game::drawScreens()
             leaveRoom();
         }
     }
+    playerNoticeSystem(m_sync, *m_graphics);
 }
 
 void Game::render(engine::Duration dt)

@@ -628,7 +628,8 @@ def install_hooks() -> None:
 def run_docs() -> int:
     """Generates the HTML documentation in BUILD_DIR/docs. Settings come from
     the Doxyfile; the diagrams are turned off when Graphviz is missing instead
-    of failing. Warnings go to a log file, not to the terminal."""
+    of failing. Warnings go to a log file, not to the terminal, but a warning
+    about a Markdown page, such as a broken link, is an error."""
     require("doxygen", install_hint("winget install DimitriVanHeesch.Doxygen",
                                     "brew install doxygen",
                                     "install doxygen with your package manager"))
@@ -644,9 +645,14 @@ def run_docs() -> int:
     log("Generating the documentation...")
     if call("doxygen", "-", input=config, text=True).returncode != 0:
         raise LauncherError(f"doxygen failed (warnings and errors: {warnings})")
-    count = warnings.read_text(errors="replace").count("warning:") if warnings.is_file() else 0
+    lines = warnings.read_text(errors="replace").splitlines() if warnings.is_file() else []
+    count = sum("warning:" in line for line in lines)
     if count:
         log(f"{count} Doxygen warnings, see {warnings}")
+    # In the code, a warning is a comment to complete. In a page, a broken link.
+    page_errors = [line for line in lines if ".md:" in line and "warning:" in line]
+    if page_errors:
+        raise LauncherError("broken documentation pages:\n" + "\n".join(page_errors))
     log(f"HTML documentation: {output / 'html' / 'index.html'}")
     return 0
 

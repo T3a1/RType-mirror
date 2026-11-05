@@ -31,7 +31,7 @@ struct ConnectedPlayer {
 };
 
 /**
- * @brief The connected players of the game, by ClientId.
+ * @brief The connected players of the game, by client id.
  **/
 using Players = std::map<std::uint32_t, ConnectedPlayer>;
 

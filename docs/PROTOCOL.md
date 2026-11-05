@@ -3,8 +3,8 @@
 This document specifies the binary protocol spoken between the R-Type server
 and its clients. It is precise enough to write a compatible client or server
 without reading our code. The reference implementation is in
-[`common/include/common/protocol/`](../common/include/common/protocol/) and
-[`common/src/protocol/`](../common/src/protocol/); the threads and queues that
+[`common/include/common/protocol/`](https://github.com/T3a1/RType-mirror/blob/dev/common/include/common/protocol/) and
+[`common/src/protocol/`](https://github.com/T3a1/RType-mirror/blob/dev/common/src/protocol/); the threads and queues that
 use it are described in [ARCHITECTURE.md](ARCHITECTURE.md), section 6.
 
 The key words **MUST**, **MUST NOT**, **SHOULD** and **MAY** are used as in
@@ -186,7 +186,9 @@ client that an administrator closed its room: it is back in the lobby.
 
 The complete input state of the player. Sending the full state each time
 means a lost packet is corrected by the next one, and a key release cannot be
-lost.
+lost. A client **SHOULD** send it when the actions change and otherwise about
+30 times per second, whatever its frame rate, so that it does not fill a slow
+link.
 
 | Offset | Size | Field | Values |
 |-------:|-----:|-------|--------|
@@ -292,7 +294,7 @@ this: each one carries a newer state (`Input::sequence`, `Snapshot::tick`)
 and the receiver ignores anything older than what it already has. Reliable
 packets use the header fields `sequence` and `ack` as follows. The reference
 implementation of this section is `ReliableChannel`
-([`ReliableChannel.hpp`](../common/include/common/protocol/ReliableChannel.hpp)).
+([`ReliableChannel.hpp`](https://github.com/T3a1/RType-mirror/blob/dev/common/include/common/protocol/ReliableChannel.hpp)).
 
 ### Two counters
 
@@ -326,7 +328,7 @@ earlier.
 ### Acknowledging
 
 Every packet, of any type, carries `ack = lastInOrder` in its header. Since
-clients send inputs about 60 times per second and the server sends snapshots
+clients send inputs about 30 times per second and the server sends snapshots
 20 times per second, acknowledgments cost no extra packets. A peer that has
 received a reliable packet and has nothing else to send **SHOULD** send an
 `Ack` packet within 50 ms.
@@ -502,7 +504,7 @@ in a later version.
 The reference decoder is covered by unit tests with valid, truncated, padded
 and out-of-range packets, and by randomized tests that feed it hundreds of
 thousands of mutated and random datagrams
-([`tests/src/packet_fuzz_test.cpp`](../tests/src/packet_fuzz_test.cpp)).
+([`tests/src/packet_fuzz_test.cpp`](https://github.com/T3a1/RType-mirror/blob/dev/tests/src/packet_fuzz_test.cpp)).
 
 ## 11. Examples
 

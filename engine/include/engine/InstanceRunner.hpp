@@ -26,6 +26,7 @@ namespace engine {
  **/
 class InstanceRunner {
   public:
+    /** @brief The type of the time step. */
     using Step = std::chrono::steady_clock::duration;
 
     /**

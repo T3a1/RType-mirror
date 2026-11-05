@@ -29,6 +29,7 @@ constexpr const char *Usage =
     "Usage: r-type_client [host] [port] [--controls FILE]\n"
     "                     [--no-interpolation] [--no-prediction]\n"
     "                     [--room N] [--bench SECONDS FILE.csv]\n";
+/** @brief The controls file read if --controls is not given. */
 constexpr const char *DefaultControlsPath = "controls.cfg";
 
 /**
@@ -166,6 +167,12 @@ client::Controls loadControls(const std::optional<std::string> &path)
 
 } // namespace
 
+/**
+ * @brief Starts the client and runs the game until its window is closed.
+ * @param argc The number of command line arguments.
+ * @param argv The command line arguments, see the usage text.
+ * @return 0 after a normal end, 84 after an error.
+ **/
 int main(int argc, char *argv[])
 {
     const std::span args(argv, static_cast<std::size_t>(argc));

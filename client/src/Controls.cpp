@@ -35,14 +35,22 @@ constexpr std::array<std::pair<std::string_view, Key>, 13> NamedKeys{{
     {"RightAlt", Key::RightAlt},
 }};
 
+/** @brief The name of each control in the file, in the order of Control. */
 constexpr std::array<std::string_view, ControlCount> ControlNames{
     "up", "down", "left", "right", "fire", "autofire",
 };
 
+/** @brief The number of letter keys, from Key::A. */
 constexpr int LetterCount = 26;
+/** @brief The number of digit keys, from Key::Num0. */
 constexpr int DigitCount = 10;
 
-/** @brief Whether two names are equal, ignoring case. */
+/**
+ * @brief Compares two names, ignoring case.
+ * @param a The first name.
+ * @param b The second name.
+ * @return `true` if they are equal.
+ **/
 bool sameName(std::string_view a, std::string_view b)
 {
     return std::ranges::equal(a, b, [](char x, char y) {
@@ -51,7 +59,11 @@ bool sameName(std::string_view a, std::string_view b)
     });
 }
 
-/** @brief The text without its leading and trailing blanks. */
+/**
+ * @brief Removes the blanks around a text.
+ * @param text The text.
+ * @return The text without its leading and trailing blanks.
+ **/
 std::string_view trim(std::string_view text)
 {
     const auto first = text.find_first_not_of(" \t\r");

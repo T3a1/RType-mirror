@@ -21,6 +21,7 @@
 namespace client::gfx {
 
 /**
+ * @class SfmlGraphics
  * @brief IGraphics backend using SFML.
  *
  * SFML has no default font: drawText() uses assets/fonts/DejaVuSans.ttf and
@@ -28,7 +29,11 @@ namespace client::gfx {
  */
 class SfmlGraphics final : public IGraphics {
   public:
-    // Throws if the window cannot be opened.
+    /**
+     * @brief Opens the window.
+     * @param config The settings of the window.
+     * @throws std::runtime_error If the window cannot be opened.
+     **/
     explicit SfmlGraphics(const WindowConfig &config);
     ~SfmlGraphics() override = default;
 

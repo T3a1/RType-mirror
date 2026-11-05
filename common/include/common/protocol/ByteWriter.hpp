@@ -15,6 +15,8 @@
 
 namespace rtype::protocol {
 
+/** @brief The largest packet, in bytes, small enough to avoid IP fragmentation.
+ */
 inline constexpr std::size_t MaxPacketSize = 1200;
 
 /**

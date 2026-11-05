@@ -19,9 +19,8 @@ namespace rtype {
 
 /**
  * @struct PendingInput
- * @brief An input sent to the server and not yet acknowledged by a
- * snapshot.
- * @param sequence The Input sequence number.
+ * @brief The input of one frame, not yet acknowledged by a snapshot.
+ * @param sequence The sequence number of the Input that carries this frame.
  * @param actions The held actions, as Action bits.
  * @param duration How long the client applied it, in seconds.
  **/
@@ -36,6 +35,7 @@ struct PendingInput {
  * @brief The client-side prediction of the local ship: the last position
  * the server sent, the inputs it has not applied yet, and the smoothing of
  * the corrections.
+ * @param MaxPending How many inputs are kept at most.
  * @param pending The unacknowledged inputs, oldest first, at most
  * MaxPending.
  * @param authoritative The ship's position in the newest snapshot, none

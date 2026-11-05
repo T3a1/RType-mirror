@@ -1,4 +1,5 @@
-# Doxygen configuration of the R-Type project.
+# Doxygen configuration of the R-Type project: the documentation website, with
+# the pages of docs/ and the code reference.
 # Only the settings that differ from Doxygen's defaults are listed here.
 # Run from the repository root: `doxygen` or `./rtype.py --docs`.
 
@@ -6,7 +7,7 @@
 # Project
 #---------------------------------------------------------------------------
 PROJECT_NAME           = "R-Type"
-PROJECT_NUMBER         = 1.0
+PROJECT_NUMBER         = 2.0
 PROJECT_BRIEF          = "Networked multiplayer shoot'em up (C++20, ECS, UDP)"
 OUTPUT_DIRECTORY       = build/docs
 NUM_PROC_THREADS       = 0
@@ -44,6 +45,7 @@ WARN_AS_ERROR          = NO
 #---------------------------------------------------------------------------
 GENERATE_HTML          = YES
 GENERATE_TREEVIEW      = YES
+HTML_COLORSTYLE        = AUTO_LIGHT
 GENERATE_LATEX         = NO
 
 #---------------------------------------------------------------------------

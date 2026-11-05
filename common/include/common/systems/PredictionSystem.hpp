@@ -18,13 +18,13 @@
 namespace rtype {
 
 /**
- * How fast a correction of the prediction fades out, per second: about 95 %
- * of it is absorbed in 0.3 s.
+ * @brief How fast a correction of the prediction fades out, per second: about
+ *95 % of it is absorbed in 0.3 s.
  **/
 inline constexpr float CorrectionFadeRate = 10.0F;
 
 /**
- * A correction larger than this, in playfield units, is applied at once
+ * @brief A correction larger than this, in playfield units, is applied at once
  * instead of being smoothed (the ship was teleported).
  **/
 inline constexpr float MaxSmoothedCorrection = 150.0F;
@@ -41,10 +41,11 @@ engine::Vec2f moveShip(engine::Vec2f position, std::uint8_t actions,
                        float duration);
 
 /**
- * @brief Records an input just sent to the server. When more than
+ * @brief Records the input of one frame. When more than
  * Prediction::MaxPending inputs are pending, the oldest is dropped.
  * @param prediction The prediction.
- * @param sequence The Input sequence number; 0 (not sent) is ignored.
+ * @param sequence The sequence number of the Input that carries this frame,
+ * sent now or later; 0 (not connected) is ignored.
  * @param actions The held actions.
  * @param dt How long the client applies it: the duration of the frame.
  **/

@@ -19,7 +19,14 @@ namespace {
 
 using namespace rtype::protocol;
 
+/** @brief How long an ack may wait for another packet to carry it. */
 constexpr std::chrono::milliseconds AckDelay{50};
+
+/**
+ * @brief How long the same actions are not sent again: about 30 Input packets
+ *per second at any frame rate, so that a fast client does not fill a slow link.
+ **/
+constexpr std::chrono::milliseconds InputInterval{30};
 
 } // namespace
 
@@ -76,7 +83,12 @@ std::uint32_t NetworkClient::sendInput(std::uint8_t actions, TimePoint now)
     if (m_state != State::Connected) {
         return 0;
     }
+    if (actions == m_lastActions && now < m_nextInput) {
+        return m_inputSequence + 1;
+    }
     send(Input{.sequence = ++m_inputSequence, .actions = actions}, now);
+    m_lastActions = actions;
+    m_nextInput = now + InputInterval;
     return m_inputSequence;
 }
 
