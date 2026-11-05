@@ -142,6 +142,36 @@ TEST_F(NetworkClientTest, SendsInputsOnceConnected)
               (Input{.sequence = 1, .actions = 0b11}));
 }
 
+TEST_F(NetworkClientTest, LimitsTheInputRateWhenTheActionsDoNotChange)
+{
+    connect();
+    constexpr int Frames = 240;
+
+    std::uint32_t sequence = 0;
+    for (int frame = 0; frame < Frames; ++frame) {
+        m_now += 4ms;
+        sequence = m_client.sendInput(0b1, m_now);
+    }
+
+    EXPECT_GE(sequence, 30U);
+    EXPECT_LE(sequence, 35U);
+}
+
+TEST_F(NetworkClientTest, SendsChangedActionsAtOnce)
+{
+    connect();
+    EXPECT_EQ(m_client.sendInput(0b1, m_now), 1U);
+    ASSERT_TRUE(m_server.waitFor<Input>().has_value());
+
+    m_now += 1ms;
+    EXPECT_EQ(m_client.sendInput(0b1, m_now), 2U);
+    m_now += 1ms;
+    EXPECT_EQ(m_client.sendInput(0b10, m_now), 2U);
+
+    EXPECT_EQ(m_server.waitFor<Input>(),
+              (Input{.sequence = 2, .actions = 0b10}));
+}
+
 TEST_F(NetworkClientTest, IgnoresMalformedAndForeignDatagrams)
 {
     static_cast<void>(update());

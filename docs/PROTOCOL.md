@@ -186,7 +186,9 @@ client that an administrator closed its room: it is back in the lobby.
 
 The complete input state of the player. Sending the full state each time
 means a lost packet is corrected by the next one, and a key release cannot be
-lost.
+lost. A client **SHOULD** send it when the actions change and otherwise about
+30 times per second, whatever its frame rate, so that it does not fill a slow
+link.
 
 | Offset | Size | Field | Values |
 |-------:|-----:|-------|--------|
@@ -326,7 +328,7 @@ earlier.
 ### Acknowledging
 
 Every packet, of any type, carries `ack = lastInOrder` in its header. Since
-clients send inputs about 60 times per second and the server sends snapshots
+clients send inputs about 30 times per second and the server sends snapshots
 20 times per second, acknowledgments cost no extra packets. A peer that has
 received a reliable packet and has nothing else to send **SHOULD** send an
 `Ack` packet within 50 ms.

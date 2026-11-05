@@ -1,10 +1,10 @@
 # Testing under a degraded network
 
 This guide shows how to play R-Type on one machine as if the players were far
-from the server: added latency, jitter and packet loss. It uses `tc netem`,
-the Linux network emulator, on the loopback interface, and only slows down the
-game's traffic (UDP port 4242). Everything else on the machine keeps its normal
-speed.
+from the server: added latency, jitter, packet loss, duplication and low
+bandwidth. It uses `tc netem`, the Linux network emulator, on the loopback
+interface, and only slows down the game's traffic (UDP port 4242). Everything
+else on the machine keeps its normal speed.
 
 ## Contents
 
@@ -70,14 +70,22 @@ trip time (RTT) of about 100 ms.
 | Latency (RTT ~100 ms) | `sudo tc qdisc change dev lo parent 1:3 handle 30: netem delay 50ms` |
 | High latency (RTT ~300 ms) | `sudo tc qdisc change dev lo parent 1:3 handle 30: netem delay 150ms` |
 | Jitter (50 ms ± 20 ms, packets reordered) | `sudo tc qdisc change dev lo parent 1:3 handle 30: netem delay 50ms 20ms` |
+| 2 % packet loss | `sudo tc qdisc change dev lo parent 1:3 handle 30: netem delay 50ms loss 2%` |
 | 5 % packet loss | `sudo tc qdisc change dev lo parent 1:3 handle 30: netem delay 50ms loss 5%` |
 | 20 % packet loss | `sudo tc qdisc change dev lo parent 1:3 handle 30: netem delay 50ms loss 20%` |
 | Loss in bursts | `sudo tc qdisc change dev lo parent 1:3 handle 30: netem delay 50ms loss gemodel 1% 30%` |
+| 2 % packet duplication | `sudo tc qdisc change dev lo parent 1:3 handle 30: netem delay 50ms duplicate 2%` |
+| Low bandwidth (5 kB/s) | `sudo tc qdisc change dev lo parent 1:3 handle 30: netem delay 50ms rate 40kbit` |
 | Connection cut | `sudo tc qdisc change dev lo parent 1:3 handle 30: netem loss 100%` |
 
 "Loss in bursts" uses the Gilbert-Elliott model: each packet has a 1 % chance
 of starting a burst of losses, and each lost packet a 30 % chance of ending it.
 It is closer to a real Wi-Fi or mobile network than random loss.
+
+"Low bandwidth" limits both directions together, because they share this one
+queue on `lo`: `rate` is in bits per second, so 40 kbit/s is 5 kB/s, packet
+headers included. What does not fit waits in the queue, up to 1000 packets, so
+an overload shows as a growing delay rather than as lost packets.
 
 For a connection cut, leave it a few seconds, then switch back to another
 scenario. After 5 seconds without any packet, the client and the server
@@ -97,6 +105,8 @@ tc qdisc show dev lo
 | Latency, jitter | The enemies, the missiles and the other player's ship move smoothly, without stutter or going backwards. Your own ship answers the keys at once. |
 | Packet loss | Entities keep moving through the gaps, without visible teleports. |
 | Loss in bursts | During a long gap an entity stops, then catches up smoothly. |
+| Packet duplication | No visible difference with the same latency without duplication: duplicates are ignored, and no event happens twice. |
+| Low bandwidth | See the limits measured in the [network performance comparison](NETWORK_COMPARISON.md#5-analysis). No crash, no disconnection. |
 | Connection cut (less than 5 s) | The game resumes and everything gets back in place. |
 | Connection cut (more than 5 s) | The client shows "Connection to the server lost", the server frees the slot and tells the other players. |
 
