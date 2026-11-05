@@ -6,6 +6,7 @@
 */
 
 #include "SfmlGraphics.hpp"
+#include "ExecutableDirectory.hpp"
 
 #include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/Graphics/Sprite.hpp>
@@ -17,13 +18,6 @@
 #include <SFML/Window/Mouse.hpp>
 #include <SFML/Window/VideoMode.hpp>
 
-#ifdef _WIN32
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#endif
-
-#include <array>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -34,30 +28,6 @@ namespace client::gfx {
 namespace {
 
 constexpr const char *fontPath = "assets/fonts/DejaVuSans.ttf";
-
-/**
- * @brief The directory holding the running executable, like Raylib's
- * GetApplicationDirectory().
- * @return The directory, or an empty path (the current directory) if it
- * cannot be found.
- */
-std::filesystem::path executableDirectory()
-{
-#ifdef _WIN32
-    std::array<wchar_t, MAX_PATH> buffer{};
-    const DWORD length = GetModuleFileNameW(nullptr, buffer.data(),
-                                            static_cast<DWORD>(buffer.size()));
-    if (length == 0 || length == buffer.size()) {
-        return {};
-    }
-    return std::filesystem::path{buffer.data()}.parent_path();
-#else
-    std::error_code error;
-    const std::filesystem::path executable =
-        std::filesystem::read_symlink("/proc/self/exe", error);
-    return error ? std::filesystem::path{} : executable.parent_path();
-#endif
-}
 
 sf::Color toSfml(Color color) { return {color.r, color.g, color.b, color.a}; }
 
