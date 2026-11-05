@@ -12,7 +12,12 @@
 
 namespace rtype {
 
-// Position of the entity's center in playfield units, rotation in radians.
+/**
+ * @struct Transform
+ * @brief Where an entity is.
+ * @param position The position of its center, in playfield units.
+ * @param rotation Its rotation, in radians.
+ **/
 struct Transform {
     engine::Vec2f position;
     float rotation = 0.0;

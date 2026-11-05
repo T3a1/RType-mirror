@@ -55,6 +55,7 @@ struct BenchConfig {
  **/
 class Bench {
   public:
+    /** @brief The clock of the measures. */
     using TimePoint = std::chrono::steady_clock::time_point;
 
     /**

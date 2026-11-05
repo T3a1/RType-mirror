@@ -23,7 +23,8 @@ namespace server {
 
 namespace {
 
-// How long a player holds the fire key before the clients see it charge.
+/** @brief How long a player holds the fire key before the clients see it
+ * charge, in seconds. */
 constexpr engine::Duration ChargingFlagDelay{0.3F};
 
 /**

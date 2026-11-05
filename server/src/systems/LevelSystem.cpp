@@ -24,7 +24,11 @@ namespace server {
 
 namespace {
 
-/** @brief Whether an enemy is still alive. */
+/**
+ * @brief Tells whether an enemy is still alive.
+ * @param registry The registry holding the enemies.
+ * @return `true` if at least one entity is an Enemy.
+ **/
 bool anyEnemy(engine::Registry &registry)
 {
     bool found = false;
@@ -73,7 +77,11 @@ void queueBoss(rtype::EnemyType type, SpawnQueue &queue)
     });
 }
 
-/** @brief The level number sent to the clients, from 1, capped at 255. */
+/**
+ * @brief Returns the level number sent to the clients.
+ * @param index The position of the level in the list, from 0.
+ * @return The number, from 1, capped at 255.
+ **/
 std::uint8_t levelNumber(std::size_t index)
 {
     return static_cast<std::uint8_t>(std::min<std::size_t>(

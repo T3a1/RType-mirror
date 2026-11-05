@@ -53,6 +53,7 @@ enum class PacketType : std::uint8_t {
     RoomClosed = 0x36,
 };
 
+/** @brief Every packet type, to check a byte read from the network. */
 inline constexpr std::array AllPacketTypes{
     PacketType::Connect,    PacketType::Accept,     PacketType::Reject,
     PacketType::Disconnect, PacketType::Ack,        PacketType::Input,

@@ -23,6 +23,7 @@ struct screen; // ncurses' SCREEN
 namespace client::gfx {
 
 /**
+ * @class NcursesGraphics
  * @brief IGraphics backend drawing in a terminal with ncurses (Linux only).
  *
  * The terminal is seen as a screen of CellWidth x CellHeight pixels per
@@ -42,10 +43,17 @@ namespace client::gfx {
  */
 class NcursesGraphics final : public IGraphics {
   public:
+    /** @brief The width of a character cell, in virtual pixels. */
     static constexpr float CellWidth = 8.0F;
+    /** @brief The height of a character cell, in virtual pixels. */
     static constexpr float CellHeight = 16.0F;
 
-    // Throws if the standard input or output is not a terminal.
+    /**
+     * @brief Takes over the terminal.
+     * @param config The settings of the window; only some apply to a terminal.
+     * @throws std::runtime_error If the standard input or output is not a
+     * terminal.
+     **/
     explicit NcursesGraphics(const WindowConfig &config);
     ~NcursesGraphics() override;
 

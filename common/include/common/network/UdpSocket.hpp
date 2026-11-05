@@ -19,7 +19,7 @@
  * @namespace rtype::network
  * @brief Entry points of the network backend chosen with
  * RTYPE_NETWORK_BACKEND. Each backend defines these functions in
- * common/src/network/<backend>/.
+ * `common/src/network/<backend>/`.
  **/
 namespace rtype::network {
 

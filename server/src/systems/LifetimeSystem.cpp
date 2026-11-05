@@ -9,12 +9,6 @@
 
 namespace server {
 
-/**
- * Destroys every entity whose lifetime has run out.
- * @param registry The registry holding the entities.
- * @param dt The time elapsed since the last tick.
- * @param outbound Where the destruction is announced to the clients.
- **/
 void lifetimeSystem(engine::Registry &registry, engine::Duration dt,
                     Outbound &outbound)
 {

@@ -22,30 +22,53 @@ namespace client {
 
 namespace {
 
+/** @brief The font size of the label above a ship, in playfield units. */
 constexpr int LabelFontSize = 28;
-constexpr float LabelOffsetY = 24.0F; // above the ship's center
-// Average glyph width of the default fonts, as a share of the font size.
+/** @brief How far above the ship's center its label is, in playfield units. */
+constexpr float LabelOffsetY = 24.0F;
+/** @brief The average glyph width of the default fonts, as a share of the font
+ * size. */
 constexpr float GlyphWidth = 0.55F;
 
+/** @brief The left margin of the HUD and the right margin of the notices, in
+ * pixels. */
 constexpr float HudX = 20.0F;
+/** @brief The top margin of the HUD, in pixels. */
 constexpr float HudY = 20.0F;
+/** @brief The font size of the HUD, in pixels. */
 constexpr int HudFontSize = 28;
+/** @brief The height of a line of the HUD, in pixels. */
 constexpr float HudLineHeight = 34.0F;
 
+/** @brief The width of the game over panel, in pixels. */
 constexpr float PanelWidth = 520.0F;
+/** @brief The inner margin of the game over panel, in pixels. */
 constexpr float PanelPadding = 24.0F;
+/** @brief The font size of the titles, in pixels. */
 constexpr int TitleFontSize = 56;
+/** @brief The height of a title, in pixels. */
 constexpr float TitleHeight = 72.0F;
+/** @brief The width of the game over button, in pixels. */
 constexpr float ButtonWidth = 300.0F;
+/** @brief The height of the game over button, in pixels. */
 constexpr float ButtonHeight = 52.0F;
+/** @brief The background of the game over panel. */
 constexpr gfx::Color PanelColor = gfx::rgb(24, 24, 36);
 
+/** @brief How long a banner or a notice takes to fade out, in seconds. */
 constexpr float BannerFade = 0.5F;
 
-constexpr float BossBarShare = 0.6F; // of the window's width
+/** @brief The width of the boss's health bar, as a share of the window's width.
+ */
+constexpr float BossBarShare = 0.6F;
+/** @brief The height of the boss's health bar, in pixels. */
 constexpr float BossBarHeight = 16.0F;
+/** @brief The distance between the boss's health bar and the bottom, in pixels.
+ */
 constexpr float BossBarBottom = 40.0F;
+/** @brief The color of the boss's health bar. */
 constexpr gfx::Color BossBarColor = gfx::rgb(213, 94, 0);
+/** @brief The color of the level banner. */
 constexpr gfx::Color BannerColor = gfx::rgb(255, 214, 90);
 
 /**

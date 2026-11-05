@@ -30,6 +30,7 @@ namespace rtype::protocol {
  **/
 class ReliableChannel {
   public:
+    /** @brief The clock of the resend timers. */
     using TimePoint = std::chrono::steady_clock::time_point;
 
     /**

@@ -26,25 +26,44 @@ namespace client::gfx {
 
 namespace {
 
+/** @brief The file the logs go to, as the terminal shows the game. */
 constexpr const char *logPath = "r-type_client.log";
+/** @brief The usual folders of the system's terminal descriptions. */
 constexpr const char *systemTerminfo =
     "/etc/terminfo:/lib/terminfo:/usr/share/terminfo";
 
-// Terminals send a key press, then repeat it after a delay (about 500 ms) at
-// about 30 Hz while it is held. A first press is held until the repeats
-// start; each repeat keeps it held a little longer.
+/**
+ * @brief How long a first press counts as held.
+ *
+ * Terminals send a key press, then repeat it after a delay (about 500 ms) at
+ * about 30 Hz while it is held. A first press is held until the repeats start;
+ * each repeat keeps it held a little longer.
+ **/
 constexpr auto FirstHold = std::chrono::milliseconds{550};
+/** @brief How long a repeat keeps a key held. */
 constexpr auto RepeatHold = std::chrono::milliseconds{100};
+/** @brief A press this soon after the last one of a key counts as a repeat. */
 constexpr auto RepeatWindow = std::chrono::milliseconds{700};
 
-constexpr auto FrameTime = std::chrono::microseconds{16'667}; // 60 Hz
+/** @brief The time between two frames: the terminal is refreshed at 60 Hz. */
+constexpr auto FrameTime = std::chrono::microseconds{16'667};
 
+/** @brief The character code of Ctrl+C. */
 constexpr int CtrlC = 3;
+/** @brief The character code of the Escape key. */
 constexpr int Escape = 27;
-// How long a lone Escape waits for the rest of an arrow key's sequence: too
-// short and a slow connection quits the game when an arrow is pressed.
+/** @brief How long a lone Escape waits for the rest of an arrow key's sequence,
+ * in milliseconds: too short and a slow connection quits the game when an arrow
+ * is pressed. */
 constexpr int EscapeDelayMs = 50;
 
+/**
+ * @struct Rgb
+ * @brief A color, to compare with the colors of the terminal.
+ * @param r The red component, 0 to 255.
+ * @param g The green component, 0 to 255.
+ * @param b The blue component, 0 to 255.
+ **/
 struct Rgb {
     int r;
     int g;
@@ -65,12 +84,23 @@ constexpr std::array<Rgb, 8> BasicColors{{
 
 /** @brief Levels of the 6x6x6 color cube of 256-color terminals. */
 constexpr std::array<int, 6> CubeLevels{0, 95, 135, 175, 215, 255};
+/** @brief The index of the first color of the color cube. */
 constexpr int CubeStart = 16;
+/** @brief The index of the first color of the gray ramp. */
 constexpr int GrayStart = 232;
+/** @brief The number of colors of the gray ramp. */
 constexpr int GrayCount = 24;
+/** @brief The level of the first color of the gray ramp. */
 constexpr int GrayFirst = 8;
+/** @brief The difference of level between two colors of the gray ramp. */
 constexpr int GrayStep = 10;
 
+/**
+ * @brief Measures how different two colors are.
+ * @param a The first color.
+ * @param b The second color.
+ * @return The squared distance between them, 0 if they are equal.
+ **/
 int distance(Rgb a, Rgb b)
 {
     const int dr = a.r - b.r;
@@ -79,6 +109,11 @@ int distance(Rgb a, Rgb b)
     return (dr * dr) + (dg * dg) + (db * db);
 }
 
+/**
+ * @brief Finds the closest level of the color cube to a component.
+ * @param value The component, 0 to 255.
+ * @return The index of the level in CubeLevels.
+ **/
 int nearestCubeLevel(int value)
 {
     int best = 0;
@@ -91,7 +126,11 @@ int nearestCubeLevel(int value)
     return best;
 }
 
-/** @brief The xterm 256-color index closest to color. */
+/**
+ * @brief Finds the closest color of a 256-color terminal.
+ * @param color The color.
+ * @return Its xterm 256-color index.
+ **/
 short color256(Rgb color)
 {
     const int r = nearestCubeLevel(color.r);
@@ -112,7 +151,11 @@ short color256(Rgb color)
     return static_cast<short>(CubeStart + (36 * r) + (6 * g) + b);
 }
 
-/** @brief The basic terminal color closest to color. */
+/**
+ * @brief Finds the closest of the 8 basic terminal colors.
+ * @param color The color.
+ * @return Its index, from COLOR_BLACK to COLOR_WHITE.
+ **/
 short color8(Rgb color)
 {
     std::size_t best = 0;
@@ -125,13 +168,22 @@ short color8(Rgb color)
     return static_cast<short>(best);
 }
 
-/** @brief The terminal color closest to color. */
+/**
+ * @brief Finds the closest color the terminal can show.
+ * @param color The color.
+ * @return The index of the terminal color.
+ **/
 short terminalColor(Color color)
 {
     const Rgb rgb{.r = color.r, .g = color.g, .b = color.b};
     return COLORS >= 256 ? color256(rgb) : color8(rgb);
 }
 
+/**
+ * @brief Converts a character read from ncurses to a key.
+ * @param character The value of getch().
+ * @return The key, none if the client does not use it.
+ **/
 std::optional<Key> toKey(int character)
 {
     if (character >= 'a' && character <= 'z') {
@@ -165,12 +217,25 @@ std::optional<Key> toKey(int character)
     }
 }
 
-/** @brief The cells covered by [start, start + size) along one axis. */
+/**
+ * @struct CellSpan
+ * @brief The cells covered by [start, start + size) along one axis.
+ * @param first The first cell.
+ * @param count The number of cells.
+ **/
 struct CellSpan {
     int first = 0;
     int count = 0;
 };
 
+/**
+ * @brief Finds the cells a segment covers, clipped to the terminal.
+ * @param start The start of the segment, in virtual pixels.
+ * @param size The length of the segment, in virtual pixels.
+ * @param cell The size of a cell, in virtual pixels.
+ * @param limit The number of cells of the terminal along this axis.
+ * @return The covered cells; anything visible covers at least one.
+ **/
 CellSpan cellSpan(float start, float size, float cell, int limit)
 {
     auto first = static_cast<int>(std::floor(start / cell));

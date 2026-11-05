@@ -118,14 +118,14 @@ Example: a burst, which fires 3 shots one after the other.
 
 ## Code
 
-- [`server/include/Weapons.hpp`](../server/include/Weapons.hpp):
+- [`server/include/Weapons.hpp`](https://github.com/T3a1/RType-mirror/blob/dev/server/include/Weapons.hpp):
   `WeaponStats`, `parseWeapons()` and `loadWeapons()`.
-- [`server/include/systems/ShootSystem.hpp`](../server/include/systems/ShootSystem.hpp):
+- [`server/include/systems/ShootSystem.hpp`](https://github.com/T3a1/RType-mirror/blob/dev/server/include/systems/ShootSystem.hpp):
   the fire rate, the charge and the charged shot (`Piercing` projectile).
-- [`server/include/components/ShotStyles.hpp`](../server/include/components/ShotStyles.hpp)
-  and [`server/include/systems/ShotStyleSystems.hpp`](../server/include/systems/ShotStyleSystems.hpp):
+- [`server/include/components/ShotStyles.hpp`](https://github.com/T3a1/RType-mirror/blob/dev/server/include/components/ShotStyles.hpp)
+  and [`server/include/systems/ShotStyleSystems.hpp`](https://github.com/T3a1/RType-mirror/blob/dev/server/include/systems/ShotStyleSystems.hpp):
   the shot styles and their systems.
-- [`server/include/systems/PowerUpSystem.hpp`](../server/include/systems/PowerUpSystem.hpp):
+- [`server/include/systems/PowerUpSystem.hpp`](https://github.com/T3a1/RType-mirror/blob/dev/server/include/systems/PowerUpSystem.hpp):
   dropping power-ups (`EnemyDef::dropsPowerUp`) and picking them up
   (`applyPowerUp()`).
 - The `Charging` flag of a player ship's snapshot record makes the clients

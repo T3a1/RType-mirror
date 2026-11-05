@@ -33,6 +33,7 @@ struct SnapshotSample {
  * @struct SnapshotHistory
  * @brief The last states the server sent for an entity, oldest first,
  * that the client interpolates between.
+ * @param Capacity How many samples are kept at most.
  * @param samples The samples; only the first count are used.
  * @param count The number of samples, at most Capacity.
  * @param lead How many ticks ahead of the render clock the entity is drawn:

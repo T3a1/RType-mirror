@@ -12,9 +12,14 @@ namespace server {
 
 namespace {
 
+/** @brief The collider of a normal shot, in playfield units. */
 constexpr engine::Vec2f ShotSize{.x = 16.0F, .y = 8.0F};
+/** @brief The collider of a charged shot, in playfield units. */
 constexpr engine::Vec2f ChargedShotSize{.x = 200.0F, .y = 40.0F};
+/** @brief The collider of a power-up, in playfield units. */
 constexpr engine::Vec2f PowerUpSize{.x = 51.0F, .y = 54.0F};
+/** @brief How fast a power-up flies to the left, in playfield units per second.
+ */
 constexpr float PowerUpSpeed = 120.0F;
 
 } // namespace

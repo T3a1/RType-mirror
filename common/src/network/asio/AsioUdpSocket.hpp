@@ -40,7 +40,17 @@ class AsioUdpSocket final : public engine::net::IUdpSocket {
             std::chrono::milliseconds timeout) override;
     [[nodiscard]] engine::net::Endpoint localEndpoint() const override;
 
+    /**
+     * @brief Converts an address from Asio's type to ours.
+     * @param e The Asio endpoint.
+     * @return The same IPv4 address and port.
+     **/
     static engine::net::Endpoint toEndpoint(const asio::ip::udp::endpoint &e);
+    /**
+     * @brief Converts an address from our type to Asio's.
+     * @param e The endpoint.
+     * @return The same IPv4 address and port.
+     **/
     static asio::ip::udp::endpoint fromEndpoint(const engine::net::Endpoint &e);
 
   private:

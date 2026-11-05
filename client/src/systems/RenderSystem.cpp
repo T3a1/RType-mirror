@@ -17,6 +17,12 @@ namespace client {
 
 namespace {
 
+/**
+ * @struct DrawCommand
+ * @brief An entity to draw, kept to sort the entities by layer.
+ * @param transform Its position.
+ * @param sprite Its sprite.
+ **/
 struct DrawCommand {
     const rtype::Transform *transform;
     const Sprite *sprite;

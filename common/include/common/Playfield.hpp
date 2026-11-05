@@ -15,17 +15,17 @@
 namespace rtype {
 
 /**
- * The width of the playfield in units.
+ * @brief The width of the playfield in units.
  */
 inline constexpr float PlayfieldWidth = 1920.0F;
 
 /**
- * The height of the playfield in units.
+ * @brief The height of the playfield in units.
  */
 inline constexpr float PlayfieldHeight = 1080.0F;
 
 /**
- * The collision size of a player ship, which also keeps it inside the
+ * @brief The collision size of a player ship, which also keeps it inside the
  * playfield, in units.
  */
 inline constexpr engine::Vec2f PlayerShipSize{.x = 64.0F, .y = 64.0F};

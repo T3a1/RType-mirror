@@ -18,16 +18,25 @@ namespace {
 using rtype::protocol::RoomInfo;
 using rtype::protocol::RoomStatus;
 
+/** @brief The width of a row of the screens, in pixels. */
 constexpr float RowWidth = 520.0F;
+/** @brief The space between two columns, in pixels. */
 constexpr float ColumnGap = 12.0F;
+/** @brief The height of a row, in pixels. */
 constexpr float RowHeight = 40.0F;
+/** @brief The space between two rows, in pixels. */
 constexpr float RowGap = 6.0F;
+/** @brief The space above the title, in pixels. */
 constexpr float TopMargin = 24.0F;
+/** @brief The height of the title, in pixels. */
 constexpr float TitleHeight = 64.0F;
+/** @brief The height of a line of text, in pixels. */
 constexpr float LineHeight = 34.0F;
+/** @brief The font size of the title, in pixels. */
 constexpr int TitleFontSize = 48;
+/** @brief The font size of the text, in pixels. */
 constexpr int TextFontSize = 24;
-// Quick match and New room, before the rooms of the list.
+/** @brief The items before the rooms of the list: Quick match and New room. */
 constexpr std::size_t FixedItems = 2;
 
 /**

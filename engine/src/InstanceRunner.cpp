@@ -16,6 +16,7 @@ namespace engine {
 
 namespace {
 
+/** @brief How far behind an instance may fall: older time is dropped. */
 constexpr std::chrono::milliseconds MaxCatchUp{250};
 
 } // namespace

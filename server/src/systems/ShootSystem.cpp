@@ -12,7 +12,7 @@ namespace server {
 namespace {
 
 /**
- * Builds the shot of an enemy, straight to the left.
+ * @brief Builds the shot of an enemy, straight to the left.
  * @param shooter The entity that fires.
  * @param transform The position of the shooter.
  * @param stats The weapon stats.
@@ -32,7 +32,7 @@ SpawnProjectile enemyShot(engine::Entity shooter,
 }
 
 /**
- * Builds the charged shot of a player.
+ * @brief Builds the charged shot of a player.
  * @param shooter The player's ship.
  * @param transform Its position.
  * @param stats The weapon stats.

@@ -12,7 +12,7 @@
 
 namespace engine {
 
-// A duration in seconds, as a float.
+/** @brief A duration in seconds, as a float. */
 using Duration = std::chrono::duration<float>;
 
 } // namespace engine

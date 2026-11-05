@@ -50,8 +50,7 @@ through `lo`, so the rules may not apply):
 sudo tc qdisc del dev lo root
 ```
 
-> [!WARNING]
-> The rules stay active until you remove them or reboot. Do not forget step 4.
+> **Warning:** the rules stay active until you remove them or reboot. Do not forget step 4.
 
 ## 3. Scenarios
 

@@ -26,12 +26,13 @@
 namespace engine {
 
 /**
- * The identifier of an instance, from 1.
+ * @brief The identifier of an instance, from 1.
  **/
 using InstanceId = std::uint32_t;
 
 /**
- * Asks InstanceManager::join() for any instance with room, a new one if none.
+ * @brief Asks InstanceManager::join() for any instance with room, a new one if
+ *none.
  **/
 inline constexpr InstanceId AnyInstance = 0;
 
@@ -83,13 +84,17 @@ template <typename In, typename Out> class InstanceManager {
      * @param outbound The messages from the instance.
      **/
     struct Link {
+        /**
+         * @brief Creates the two queues.
+         * @param inboundCapacity The capacity of the inbound queue.
+         **/
         explicit Link(std::size_t inboundCapacity) : inbound(inboundCapacity) {}
         MessageQueue<In> inbound;
         MessageQueue<Out> outbound;
     };
 
     /**
-     * Builds the instance of a game connected to its queues.
+     * @brief Builds the instance of a game connected to its queues.
      **/
     using Factory = std::function<std::unique_ptr<IInstance>(Link &)>;
 

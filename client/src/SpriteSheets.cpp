@@ -23,6 +23,7 @@ namespace {
 using gfx::Rect;
 using gfx::rgb;
 
+/** @brief The number of sheets. */
 constexpr std::size_t SheetCount = static_cast<std::size_t>(Sheet::Count);
 
 /** @brief The file of each Sheet, relative to the executable. */
@@ -62,9 +63,11 @@ constexpr std::array<Rect, N> row(const std::array<float, N> &xs, float y,
 }
 
 /**
- * @brief The left edges of N frames evenly spaced on a row.
- * @param first The left edge of the first frame.
- * @param step The distance between two frames.
+ * @brief Computes the left edges of N frames evenly spaced on a row.
+ * @tparam N The number of frames.
+ * @param first The left edge of the first frame, in texture pixels.
+ * @param step The distance between two frames, in texture pixels.
+ * @return The left edges.
  **/
 template <std::size_t N>
 constexpr std::array<float, N> evenly(float first, float step)
@@ -76,12 +79,19 @@ constexpr std::array<float, N> evenly(float first, float step)
     return xs;
 }
 
-// The ship sheet has one row per color (cyan, magenta, green, red, blue)
-// and five tilts per row, from fully tilted down to fully tilted up.
+/**
+ * @brief The number of ship colors. The ship sheet has one row per color (cyan,
+ * magenta, green, red, blue) and five tilts per row, from fully tilted down to
+ * fully tilted up.
+ **/
 constexpr std::size_t ShipColors = 5;
+/** @brief The number of tilts of a ship, on each row of its sheet. */
 constexpr std::size_t ShipTilts = 5;
+/** @brief The distance between two rows of the ship sheet, in texture pixels.
+ */
 constexpr float ShipRowStep = 17.0F;
 
+/** @brief The frame of each tilt of a ship, for each color. */
 constexpr auto ShipFrames = [] {
     std::array<std::array<Rect, ShipTilts>, ShipColors> frames{};
     for (std::size_t color = 0; color < ShipColors; ++color) {
@@ -92,63 +102,94 @@ constexpr auto ShipFrames = [] {
     return frames;
 }();
 
+/** @brief The only frame of a player's normal shot. */
 constexpr std::array<Rect, 1> PlayerMissileFrames{
     {{.x = 249.0F, .y = 105.0F, .width = 16.0F, .height = 8.0F}}};
-// The second half of the sheet plays the same turn backwards: not used.
+/** @brief The frames of a basic enemy. The second half of the sheet plays the
+ * same turn backwards: not used. */
 constexpr auto EnemyBasicFrames =
     row(evenly<8>(5.0F, 33.0F), 6.0F, 21.0F, 24.0F);
+/** @brief The frames of a wave enemy. */
 constexpr auto EnemyWaveFrames =
     row(evenly<8>(4.0F, 33.0F), 5.0F, 31.0F, 26.0F);
-// The second row plays the same turn backwards: not used.
+/** @brief The frames of a shooter enemy. The second row plays the same turn
+ * backwards: not used. */
 constexpr auto EnemyShooterFrames =
     row(evenly<8>(1.0F, 33.0F), 5.0F, 32.0F, 24.0F);
+/** @brief The frames of an enemy shot. */
 constexpr auto EnemyMissileFrames =
     row<8>({136.0F, 153.0F, 170.0F, 188.0F, 205.0F, 223.0F, 240.0F, 257.0F},
            6.0F, 7.0F, 6.0F);
+/** @brief The frames of a small enemy. */
 constexpr auto EnemySmallFrames =
     row(evenly<6>(1.0F, 17.0F), 1.0F, 17.0F, 17.0F);
+/** @brief The frames of a medium enemy. */
 constexpr auto EnemyMediumFrames =
     row(evenly<2>(1.0F, 34.0F), 4.0F, 32.0F, 21.0F);
+/** @brief The frames of a large enemy. */
 constexpr auto EnemyLargeFrames =
     row<6>({1.0F, 66.0F, 131.0F, 198.0F, 263.0F, 328.0F}, 1.0F, 63.0F, 48.0F);
+/** @brief The frames of the boss. */
 constexpr auto BossFrames = row<2>({2.0F, 191.0F}, 2.0F, 176.0F, 108.0F);
-// Largest charged shots of the shot sheet, facing right.
+/** @brief The frames of a charged shot: the largest ones of the shot sheet,
+ * facing right. */
 constexpr auto ChargedShotFrames =
     row<2>({105.0F, 185.0F}, 170.0F, 80.0F, 16.0F);
-// Glow in front of a ship that charges, on the shot sheet.
+/** @brief The frames of the glow in front of a ship that charges, on the shot
+ * sheet. */
 constexpr auto ChargeGlowFrames =
     row(evenly<4>(134.0F, 33.0F), 18.0F, 32.0F, 32.0F);
+/** @brief The frames of a power-up. */
 constexpr auto PowerUpFrames = row(evenly<12>(0.0F, 17.0F), 0.0F, 17.0F, 18.0F);
+/** @brief The frames of an explosion. */
 constexpr auto ExplosionFrames =
     row(evenly<6>(128.0F, 33.0F), 0.0F, 33.0F, 34.0F);
 
+/** @brief The animation of a basic enemy. */
 constexpr AnimationClip EnemyBasicClip{.frames = EnemyBasicFrames,
                                        .frameTime = 0.08F};
+/** @brief The animation of a wave enemy. */
 constexpr AnimationClip EnemyWaveClip{.frames = EnemyWaveFrames,
                                       .frameTime = 0.08F};
+/** @brief The animation of a shooter enemy. */
 constexpr AnimationClip EnemyShooterClip{.frames = EnemyShooterFrames,
                                          .frameTime = 0.08F};
+/** @brief The animation of an enemy shot. */
 constexpr AnimationClip EnemyMissileClip{.frames = EnemyMissileFrames,
                                          .frameTime = 0.06F};
+/** @brief The animation of a small enemy. */
 constexpr AnimationClip EnemySmallClip{.frames = EnemySmallFrames,
                                        .frameTime = 0.1F};
+/** @brief The animation of a medium enemy. */
 constexpr AnimationClip EnemyMediumClip{.frames = EnemyMediumFrames,
                                         .frameTime = 0.2F};
+/** @brief The animation of a large enemy. */
 constexpr AnimationClip EnemyLargeClip{.frames = EnemyLargeFrames,
                                        .frameTime = 0.1F};
+/** @brief The animation of the boss. */
 constexpr AnimationClip BossClip{.frames = BossFrames, .frameTime = 0.3F};
+/** @brief The animation of a charged shot. */
 constexpr AnimationClip ChargedShotClip{.frames = ChargedShotFrames,
                                         .frameTime = 0.08F};
+/** @brief The animation of a power-up. */
 constexpr AnimationClip PowerUpClip{.frames = PowerUpFrames,
                                     .frameTime = 0.08F};
+/** @brief The time between two frames of the charge glow, in seconds. */
 constexpr float ChargeGlowFrameTime = 0.06F;
+/** @brief How much the charge glow is enlarged. */
 constexpr float ChargeGlowScale = 2.0F;
-constexpr float ChargeGlowOffset = 70.0F; // ahead of the ship's center
+/** @brief How far ahead of the ship's center the glow is drawn, in playfield
+ * units. */
+constexpr float ChargeGlowOffset = 70.0F;
+/** @brief The animation of an explosion. */
 constexpr AnimationClip ExplosionClip{
     .frames = ExplosionFrames, .frameTime = 0.07F, .loop = false};
 
+/** @brief How much the explosion of a ship or an enemy is enlarged. */
 constexpr float ExplosionScale = 2.5F;
+/** @brief How much the boss's explosion is enlarged. */
 constexpr float BossExplosionScale = 10.0F;
+/** @brief The drawing layer of the explosions, above the other entities. */
 constexpr int EffectLayer = 3;
 
 /**

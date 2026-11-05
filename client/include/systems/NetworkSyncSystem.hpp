@@ -57,6 +57,8 @@ inline constexpr float LevelBannerTime = 3.0F;
  * @param shipPosition That position.
  * @param acknowledgedTick The tick last handed to the prediction, when
  * ackTick and shipTick matched.
+ * @param gameOver Whether the server announced the end of the game.
+ * @param started Whether the game of the room has started.
  * @param level The level announced last by GameEvent{LevelStarted}: from
  * 1, 0 for the endless mode or before any announce.
  * @param levelAnnounced Whether a level was announced since the game

@@ -22,7 +22,8 @@
 namespace server {
 
 /**
- * A request to spawn an enemy.
+ * @struct SpawnEnemy
+ * @brief A request to spawn an enemy.
  * @param type The type of the enemy to spawn.
  * @param position The position to spawn the enemy at.
  * @param pattern The path it follows, or nothing for the one of its type.
@@ -34,7 +35,8 @@ struct SpawnEnemy {
 };
 
 /**
- * A request to spawn a player.
+ * @struct SpawnPlayer
+ * @brief A request to spawn a player.
  * @param slot The slot of the player to spawn.
  * @param position The position to spawn the player at.
  **/
@@ -44,7 +46,8 @@ struct SpawnPlayer {
 };
 
 /**
- * A request to spawn a projectile.
+ * @struct SpawnProjectile
+ * @brief A request to spawn a projectile.
  * @param owner The entity that owns the projectile.
  * @param position The position to spawn the projectile at.
  * @param velocity The velocity of the projectile.
@@ -63,7 +66,8 @@ struct SpawnProjectile {
 };
 
 /**
- * A request to spawn a power-up, dropped by a destroyed enemy.
+ * @struct SpawnPowerUp
+ * @brief A request to spawn a power-up, dropped by a destroyed enemy.
  * @param position Where it appears.
  * @param kind The shot style it gives.
  **/
@@ -72,13 +76,14 @@ struct SpawnPowerUp {
     PowerUpKind kind = PowerUpKind::Spread;
 };
 
-/// A deferred entity creation.
+/** @brief A deferred entity creation. */
 using SpawnCommand = std::variant<SpawnEnemy, SpawnProjectile, SpawnPowerUp>;
 
-/// The creations requested during a tick, applied in the Cleanup stage.
+/** @brief The creations requested during a tick, applied in the Cleanup stage.
+ */
 using SpawnCommands = std::vector<SpawnCommand>;
 
-/** Distance between the center of a ship and the start of its shots. */
+/** @brief Distance between the center of a ship and the start of its shots. */
 inline constexpr float MuzzleOffset = 40.0F;
 
 } // namespace server

@@ -18,20 +18,20 @@
 namespace rtype {
 
 /**
- * The number of server ticks per second.
+ * @brief The number of server ticks per second.
  **/
 inline constexpr double TickRate = 60.0;
 
 /**
- * How far in the past, in ticks, the client draws the synced entities: two
- * snapshots at 20 Hz, so that one lost snapshot still leaves two to
+ * @brief How far in the past, in ticks, the client draws the synced entities:
+ *two snapshots at 20 Hz, so that one lost snapshot still leaves two to
  * interpolate between.
  **/
 inline constexpr double InterpolationDelay = 6.0;
 
 /**
- * How long, in ticks, an entity keeps moving past its last snapshot before
- * it stops.
+ * @brief How long, in ticks, an entity keeps moving past its last snapshot
+ *before it stops.
  **/
 inline constexpr double MaxExtrapolation = 12.0;
 

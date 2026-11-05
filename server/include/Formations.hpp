@@ -43,7 +43,7 @@ struct Formation {
 };
 
 /**
- * Every formation the server can send, all equally likely.
+ * @brief Every formation the server can send, all equally likely.
  **/
 inline constexpr std::array<Formation, 7> FORMATIONS = {
     {

@@ -22,7 +22,8 @@
 namespace server {
 
 /**
- * Two entities whose colliders overlap during this tick.
+ * @struct Collision
+ * @brief Two entities whose colliders overlap during this tick.
  * @param a The first entity.
  * @param b The second entity.
  **/
@@ -31,6 +32,11 @@ struct Collision {
     engine::Entity b{};
 };
 
+/**
+ * @brief Finds every pair of entities that touch during this tick.
+ * @param registry The registry to read.
+ * @return The colliding pairs, each pair once.
+ **/
 std::vector<Collision> collisionSystem(engine::Registry &registry);
 
 } // namespace server

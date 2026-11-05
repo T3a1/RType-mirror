@@ -22,15 +22,19 @@ namespace engine {
 /**
  * @enum Stage
  * @brief A step of the tick. Every tick runs the stages in STAGE_ORDER.
+ * @param Input Reads what comes from outside and decides.
+ * @param Simulation Moves the world forward.
+ * @param Cleanup Applies the deferred changes; the registry is flushed after.
+ * @param Output Sends the finished world.
  **/
 enum class Stage : std::uint8_t {
-    Input,      ///< Read what comes from outside and decide.
-    Simulation, ///< Move the world forward.
-    Cleanup,    ///< Apply the deferred changes; the registry is flushed after.
-    Output,     ///< Send the finished world.
+    Input,
+    Simulation,
+    Cleanup,
+    Output,
 };
 
-/// The order in which the stages run every tick.
+/** @brief The order in which the stages run every tick. */
 inline constexpr std::array<Stage, 4> STAGE_ORDER = {
     Stage::Input,
     Stage::Simulation,
@@ -38,10 +42,11 @@ inline constexpr std::array<Stage, 4> STAGE_ORDER = {
     Stage::Output,
 };
 
-/// A system as the scheduler sees it. Extra dependencies are captured.
+/** @brief A system as the scheduler sees it. Extra dependencies are captured.
+ */
 using System = std::function<void(Registry &, Duration)>;
 
-/// Tells whether a system runs on this tick.
+/** @brief Tells whether a system runs on this tick. */
 using Condition = std::function<bool()>;
 
 /**

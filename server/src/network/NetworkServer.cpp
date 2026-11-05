@@ -12,7 +12,9 @@ namespace server {
 
 namespace {
 
+/** @brief How often the network thread sends and checks what is due. */
 constexpr std::chrono::milliseconds UpdateInterval{10};
+/** @brief How often the clients in the lobby receive the list of rooms. */
 constexpr std::chrono::milliseconds RoomListInterval{500};
 
 } // namespace

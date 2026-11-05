@@ -18,13 +18,13 @@
 namespace rtype {
 
 /**
- * How fast a correction of the prediction fades out, per second: about 95 %
- * of it is absorbed in 0.3 s.
+ * @brief How fast a correction of the prediction fades out, per second: about
+ *95 % of it is absorbed in 0.3 s.
  **/
 inline constexpr float CorrectionFadeRate = 10.0F;
 
 /**
- * A correction larger than this, in playfield units, is applied at once
+ * @brief A correction larger than this, in playfield units, is applied at once
  * instead of being smoothed (the ship was teleported).
  **/
 inline constexpr float MaxSmoothedCorrection = 150.0F;

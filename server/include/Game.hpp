@@ -63,7 +63,7 @@ namespace server {
 class Game final : public engine::IInstance {
   public:
     /**
-     * The time between two ticks.
+     * @brief The time between two ticks.
      **/
     static constexpr std::chrono::steady_clock::duration TickStep =
         std::chrono::duration_cast<std::chrono::steady_clock::duration>(
@@ -109,6 +109,11 @@ class Game final : public engine::IInstance {
          WeaponStats weapons = {});
 
   private:
+    /**
+     * @brief Registers every system of the game in the scheduler, stage by
+     *stage and in the order they run within a stage. The world only moves once
+     *the room has left its waiting phase.
+     **/
     void registerSystems();
 
     Inbound &m_inbound;
