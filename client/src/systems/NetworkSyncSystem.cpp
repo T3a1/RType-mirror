@@ -7,6 +7,7 @@
 
 #include "systems/NetworkSyncSystem.hpp"
 #include "SpriteSheets.hpp"
+#include "common/Playfield.hpp"
 #include "common/components/Enemy.hpp"
 #include "common/components/EntityType.hpp"
 #include "common/components/Health.hpp"
@@ -20,6 +21,7 @@
 #include "engine/Logger.hpp"
 
 #include <algorithm>
+#include <optional>
 #include <variant>
 
 namespace client {
@@ -70,6 +72,44 @@ void setShipOwner(engine::Registry &registry, engine::Entity ship,
 }
 
 /**
+ * @brief Returns the sound of an entity that just appeared.
+ * @param type What the entity is.
+ * @return The sound, if it has one.
+ **/
+std::optional<audio::SoundEvent> spawnSound(rtype::EntityType type)
+{
+    switch (type) {
+    case rtype::EntityType::PlayerMissile:
+        return audio::SoundEvent::PlayerShot;
+    case rtype::EntityType::ChargedShot:
+        return audio::SoundEvent::ChargedShot;
+    case rtype::EntityType::EnemyMissile:
+        return audio::SoundEvent::EnemyShot;
+    default:
+        return std::nullopt;
+    }
+}
+
+/**
+ * @brief Tells whether a destroyed entity is a power-up taken by a player: a
+ * power-up only disappears inside the playfield when it is taken.
+ * @param registry The client's registry.
+ * @param entity The destroyed entity.
+ * @return True if a player took it.
+ **/
+bool isTakenPowerUp(engine::Registry &registry, engine::Entity entity)
+{
+    const auto *type = registry.tryGet<rtype::EntityType>(entity);
+    const auto *transform = registry.tryGet<rtype::Transform>(entity);
+    return type != nullptr && transform != nullptr &&
+           *type == rtype::EntityType::PowerUp &&
+           transform->position.x >= 0.0F &&
+           transform->position.x <= rtype::PlayfieldWidth &&
+           transform->position.y >= 0.0F &&
+           transform->position.y <= rtype::PlayfieldHeight;
+}
+
+/**
  * @brief Creates or updates the local copy of one snapshot entity, unless
  * it was destroyed recently. The position and health go to the entity's
  * history, or straight to the Transform and Health of the local ship. The
@@ -79,10 +119,11 @@ void setShipOwner(engine::Registry &registry, engine::Entity ship,
  * @param tick The tick of the snapshot.
  * @param state The sync state.
  * @param sheets The sprite sheets the new entities are drawn with.
+ * @param sounds The sounds played for new entities.
  **/
 void applyEntity(engine::Registry &registry, const EntityState &entity,
                  std::uint32_t tick, SyncState &state,
-                 const SpriteSheets &sheets)
+                 const SpriteSheets &sheets, audio::SoundBoard &sounds)
 {
     if (state.destroyed.contains(entity.networkId)) {
         return;
@@ -148,6 +189,9 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
         rtype::pushSample(history, sample);
         registry.emplace<rtype::SnapshotHistory>(created, history);
     }
+    if (const auto sound = spawnSound(entity.type)) {
+        sounds.play(*sound);
+    }
     state.entities.emplace(entity.networkId, created);
 }
 
@@ -159,9 +203,11 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
  * @param snapshot The snapshot part.
  * @param state The sync state.
  * @param sheets The sprite sheets the new entities are drawn with.
+ * @param sounds The sounds played for new entities.
  **/
 void applySnapshot(engine::Registry &registry, const SnapshotPart &snapshot,
-                   SyncState &state, const SpriteSheets &sheets)
+                   SyncState &state, const SpriteSheets &sheets,
+                   audio::SoundBoard &sounds)
 {
     if (snapshot.tick < state.lastTick) {
         return;
@@ -181,7 +227,7 @@ void applySnapshot(engine::Registry &registry, const SnapshotPart &snapshot,
         }
     }
     for (const EntityState &entity : snapshot.entities) {
-        applyEntity(registry, entity, snapshot.tick, state, sheets);
+        applyEntity(registry, entity, snapshot.tick, state, sheets, sounds);
     }
     std::erase_if(state.destroyed, [&state](const auto &entry) {
         return state.lastTick - entry.second > DestroyedMemory;
@@ -196,21 +242,28 @@ void applySnapshot(engine::Registry &registry, const SnapshotPart &snapshot,
  * @param event The event.
  * @param state The sync state.
  * @param sheets The sprite sheets explosions are drawn with.
+ * @param sounds The sounds played for the event.
  **/
 void applyEvent(engine::Registry &registry, const GameEvent &event,
-                SyncState &state, const SpriteSheets &sheets)
+                SyncState &state, const SpriteSheets &sheets,
+                audio::SoundBoard &sounds)
 {
     switch (event.kind) {
     case GameEventKind::EntityDestroyed: {
         state.destroyed[event.networkId] = state.lastTick;
         const auto it = state.entities.find(event.networkId);
         if (it != state.entities.end()) {
+            if (isTakenPowerUp(registry, it->second)) {
+                sounds.play(audio::SoundEvent::PowerUp);
+            }
             if (const auto *history =
                     registry.tryGet<rtype::SnapshotHistory>(it->second)) {
                 state.dying.emplace_back(it->second,
                                          state.lastTick - history->lead);
             } else {
-                spawnExplosion(registry, it->second, sheets);
+                if (spawnExplosion(registry, it->second, sheets)) {
+                    sounds.play(audio::SoundEvent::Explosion);
+                }
                 registry.destroy(it->second);
             }
             state.entities.erase(it);
@@ -230,6 +283,7 @@ void applyEvent(engine::Registry &registry, const GameEvent &event,
     case GameEventKind::GameOver:
         BB_INFO("Game over");
         state.gameOver = true;
+        sounds.play(audio::SoundEvent::GameOver);
         break;
     case GameEventKind::GameStarted:
         BB_INFO("Game started");
@@ -239,6 +293,7 @@ void applyEvent(engine::Registry &registry, const GameEvent &event,
         state.level = event.level;
         state.levelAnnounced = true;
         state.levelBanner = LevelBannerTime;
+        sounds.play(audio::SoundEvent::LevelStart);
         break;
     }
 }
@@ -268,13 +323,13 @@ void applyWelcome(engine::Registry &registry, const Welcome &welcome,
 
 void networkSyncSystem(engine::Registry &registry,
                        const std::vector<Payload> &payloads, SyncState &state,
-                       const SpriteSheets &sheets)
+                       const SpriteSheets &sheets, audio::SoundBoard &sounds)
 {
     for (const Payload &payload : payloads) {
         if (const auto *snapshot = std::get_if<SnapshotPart>(&payload)) {
-            applySnapshot(registry, *snapshot, state, sheets);
+            applySnapshot(registry, *snapshot, state, sheets, sounds);
         } else if (const auto *event = std::get_if<GameEvent>(&payload)) {
-            applyEvent(registry, *event, state, sheets);
+            applyEvent(registry, *event, state, sheets, sounds);
         } else if (const auto *welcome = std::get_if<Welcome>(&payload)) {
             applyWelcome(registry, *welcome, state, sheets);
         }
@@ -288,7 +343,8 @@ void networkSyncSystem(engine::Registry &registry,
 }
 
 void smoothingSystem(engine::Registry &registry, SyncState &state,
-                     engine::Duration dt, const SpriteSheets &sheets)
+                     engine::Duration dt, const SpriteSheets &sheets,
+                     audio::SoundBoard &sounds)
 {
     rtype::advanceRenderClock(state.clock, state.lastTick, dt);
     rtype::interpolationSystem(registry, state.clock.tick);
@@ -296,7 +352,9 @@ void smoothingSystem(engine::Registry &registry, SyncState &state,
         if (state.clock.tick < dying.second) {
             return false;
         }
-        spawnExplosion(registry, dying.first, sheets);
+        if (spawnExplosion(registry, dying.first, sheets)) {
+            sounds.play(audio::SoundEvent::Explosion);
+        }
         registry.destroy(dying.first);
         return true;
     });

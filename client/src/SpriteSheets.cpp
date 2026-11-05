@@ -398,7 +398,7 @@ void chargeGlowSystem(engine::Registry &registry, const SpriteSheets &sheets,
         });
 }
 
-void spawnExplosion(engine::Registry &registry, engine::Entity entity,
+bool spawnExplosion(engine::Registry &registry, engine::Entity entity,
                     const SpriteSheets &sheets)
 {
     const auto *type = registry.tryGet<rtype::EntityType>(entity);
@@ -408,12 +408,12 @@ void spawnExplosion(engine::Registry &registry, engine::Entity entity,
         *type == rtype::EntityType::EnemyMissile ||
         *type == rtype::EntityType::ChargedShot ||
         *type == rtype::EntityType::PowerUp) {
-        return;
+        return false;
     }
     const engine::Vec2f position = transform->position;
     if (position.x < 0.0F || position.x > rtype::PlayfieldWidth ||
         position.y < 0.0F || position.y > rtype::PlayfieldHeight) {
-        return;
+        return false;
     }
     const Look look{.sheet = Sheet::Explosion,
                     .frames = ExplosionFrames,
@@ -428,6 +428,7 @@ void spawnExplosion(engine::Registry &registry, engine::Entity entity,
     registry.emplace<Sprite>(explosion,
                              makeSprite(sheets, look, ExplosionFrames.front()));
     registry.emplace<Animation>(explosion, Animation{.clip = &ExplosionClip});
+    return true;
 }
 
 } // namespace client

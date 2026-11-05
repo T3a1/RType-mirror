@@ -10,6 +10,7 @@
 
 #include "PlayerNotices.hpp"
 #include "SpriteSheets.hpp"
+#include "audio/SoundBoard.hpp"
 #include "common/components/Prediction.hpp"
 #include "common/protocol/Packet.hpp"
 #include "common/systems/InterpolationSystem.hpp"
@@ -109,10 +110,12 @@ struct SyncState {
  * @param state The sync state, updated.
  * @param sheets The sprite sheets the entities and explosions are drawn
  * with.
+ * @param sounds The sounds played for what the server sent.
  **/
 void networkSyncSystem(engine::Registry &registry,
                        const std::vector<rtype::protocol::Payload> &payloads,
-                       SyncState &state, const SpriteSheets &sheets);
+                       SyncState &state, const SpriteSheets &sheets,
+                       audio::SoundBoard &sounds);
 
 /**
  * @brief Advances the render clock, moves the synced entities to their
@@ -123,9 +126,11 @@ void networkSyncSystem(engine::Registry &registry,
  * @param state The sync state.
  * @param dt The time elapsed since the last frame.
  * @param sheets The sprite sheets explosions are drawn with.
+ * @param sounds The sounds played when an explosion appears.
  **/
 void smoothingSystem(engine::Registry &registry, SyncState &state,
-                     engine::Duration dt, const SpriteSheets &sheets);
+                     engine::Duration dt, const SpriteSheets &sheets,
+                     audio::SoundBoard &sounds);
 
 /**
  * @brief Predicts the local ship: records the input just sent, replays the

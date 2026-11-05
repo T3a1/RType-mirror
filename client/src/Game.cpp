@@ -10,6 +10,7 @@
 #include "common/Playfield.hpp"
 #include "components/Background.hpp"
 #include "systems/AnimationSystem.hpp"
+#include "systems/AudioSystem.hpp"
 #include "systems/BackgroundRenderSystem.hpp"
 #include "systems/BackgroundScrollSystem.hpp"
 #include "systems/HudSystem.hpp"
@@ -33,6 +34,10 @@ constexpr float backgroundSpeed = 120.0F;
 /** @brief How long the keyboard is ignored on the game over screen, in seconds.
  * Space also fires, so a player still firing does not leave it by accident. */
 constexpr float GameOverKeyDelay = 1.5F;
+
+/** @brief The volume of the music, until the settings let the player choose
+ * it. */
+constexpr float DefaultMusicVolume = 0.4F;
 
 /** @brief The left margin of the connection status, in pixels. */
 constexpr float statusX = 20.0F;
@@ -70,7 +75,7 @@ Game::Game(const std::string &host, std::uint16_t port,
                                  .height = windowHeight,
                                  .title = "R-Type",
                              })),
-      m_audio(audio::createAudio()), m_sheets(*m_graphics),
+      m_audio(audio::createAudio()), m_sounds(*m_audio), m_sheets(*m_graphics),
       m_autoJoin(options.bench && !options.room
                      ? std::optional<std::uint32_t>{rtype::protocol::AnyRoom}
                      : options.room),
@@ -78,8 +83,11 @@ Game::Game(const std::string &host, std::uint16_t port,
 {
     m_sync.interpolate = options.interpolate;
     m_sync.predict = options.predict;
+    m_audio->setMusicVolume(DefaultMusicVolume);
     if (options.bench) {
         m_bench.emplace(*options.bench);
+        m_audio->setSoundVolume(0.0F);
+        m_audio->setMusicVolume(0.0F);
     }
     spawnBackground();
     registerSystems();
@@ -134,7 +142,7 @@ void Game::registerSystems()
     m_scheduler.add(
         Stage::Input, "networkSync",
         [this](Registry &r, Duration) {
-            networkSyncSystem(r, m_payloads, m_sync, m_sheets);
+            networkSyncSystem(r, m_payloads, m_sync, m_sheets, m_sounds);
         },
         playing);
     m_scheduler.add(Stage::Input, "sendInput", [this](Registry &, Duration dt) {
@@ -152,7 +160,7 @@ void Game::registerSystems()
     m_scheduler.add(
         Stage::Simulation, "smoothing",
         [this](Registry &r, Duration dt) {
-            smoothingSystem(r, m_sync, dt, m_sheets);
+            smoothingSystem(r, m_sync, dt, m_sheets, m_sounds);
         },
         playing);
     m_scheduler.add(
@@ -183,8 +191,9 @@ void Game::registerSystems()
     m_scheduler.add(Stage::Simulation, "shipTilt", shipTiltSystem);
     m_scheduler.add(Stage::Simulation, "animation", animationSystem);
 
-    m_scheduler.add(Stage::Output, "audio",
-                    [this](Registry &, Duration) { m_audio->update(); });
+    m_scheduler.add(Stage::Output, "audio", [this](Registry &, Duration) {
+        audioSystem(inRoom() && m_sync.started && !m_sync.gameOver, m_sounds);
+    });
 }
 
 /**

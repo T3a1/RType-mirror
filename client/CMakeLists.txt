@@ -12,6 +12,7 @@ set(SOURCE_FILES
     src/Menu.cpp
     src/SpriteSheets.cpp
     src/systems/AnimationSystem.cpp
+    src/systems/AudioSystem.cpp
     src/Bench.cpp
     src/systems/BackgroundRenderSystem.cpp
     src/systems/BackgroundScrollSystem.cpp
@@ -65,6 +66,14 @@ target_include_directories(r-type_client_controls
     PUBLIC include
 )
 
+# The sounds of the game are a library so the tests can run them on a fake
+# backend.
+add_library(r-type_client_audio STATIC src/audio/SoundBoard.cpp)
+
+target_include_directories(r-type_client_audio
+    PUBLIC include
+)
+
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 target_include_directories(${PROJECT_NAME}
@@ -72,7 +81,8 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
-    PRIVATE r-type_client_network r-type_client_controls ${GRAPHICS_LIBRARIES}
+    PRIVATE r-type_client_network r-type_client_controls r-type_client_audio
+    ${GRAPHICS_LIBRARIES}
 )
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
