@@ -86,6 +86,7 @@ std::optional<audio::SoundEvent> spawnSound(rtype::EntityType type)
     case rtype::EntityType::EnemyMissile:
         return audio::SoundEvent::EnemyShot;
     case rtype::EntityType::Boss:
+    case rtype::EntityType::BossHive:
         return audio::SoundEvent::BossAlert;
     case rtype::EntityType::PowerUp:
         return audio::SoundEvent::PowerUpSpawn;
@@ -133,6 +134,7 @@ void explode(engine::Registry &registry, engine::Entity entity,
     }
     switch (registry.get<rtype::EntityType>(entity)) {
     case rtype::EntityType::Boss:
+    case rtype::EntityType::BossHive:
         sounds.play(audio::SoundEvent::ExplosionBoss);
         break;
     case rtype::EntityType::PlayerShip:

@@ -27,7 +27,7 @@ audio::MusicTrack pickMusic(engine::Registry &registry, bool inGame)
     bool bossAlive = false;
     registry.each<rtype::EntityType>(
         [&bossAlive](engine::Entity, const rtype::EntityType &type) {
-            bossAlive = bossAlive || type == rtype::EntityType::Boss;
+            bossAlive = bossAlive || rtype::isBossEntity(type);
         });
     return bossAlive ? audio::MusicTrack::Boss : audio::MusicTrack::Game;
 }
