@@ -14,12 +14,20 @@
 
 namespace client::audio {
 
-/** @brief A loaded sound effect, id 0 if loading failed. */
+/**
+ * @struct Sound
+ * @brief A loaded sound effect.
+ * @param id The number of the sound, 0 if loading failed.
+ **/
 struct Sound {
     std::uint32_t id = 0;
 };
 
-/** @brief A loaded music track, id 0 if loading failed. */
+/**
+ * @struct Music
+ * @brief A loaded music track.
+ * @param id The number of the music, 0 if loading failed.
+ **/
 struct Music {
     std::uint32_t id = 0;
 };
@@ -28,9 +36,9 @@ struct Music {
  * @brief Sound effects and music, independent of the audio library.
  *
  * The client only talks to this interface. Each backend implements it in
- * client/src/audio/<backend>/, the only place that includes the library's
- * headers. Nothing here throws: a missing file or audio device only means
- * silence.
+ * its own directory of client/src/audio/, the only place that includes the
+ * library's headers. Nothing here throws: a missing file or audio device only
+ * means silence.
  */
 class IAudio {
   public:
@@ -55,18 +63,35 @@ class IAudio {
      */
     [[nodiscard]] virtual Music loadMusic(const std::string &path) = 0;
 
-    /** @brief Plays a sound once, does nothing for id 0. */
+    /**
+     * @brief Plays a sound once, does nothing for id 0.
+     * @param sound The sound.
+     **/
     virtual void playSound(Sound sound) = 0;
-    /** @brief Stops a sound, does nothing for id 0 or if it is not playing. */
+    /**
+     * @brief Stops a sound, does nothing for id 0 or if it is not playing.
+     * @param sound The sound.
+     **/
     virtual void stopSound(Sound sound) = 0;
-    /** @brief Loops a music instead of the current one, does nothing for
-     * id 0. */
+    /**
+     * @brief Loops a music instead of the current one, does nothing for id 0.
+     * @param music The music.
+     **/
     virtual void playMusic(Music music) = 0;
+    /**
+     * @brief Stops the current music, does nothing if there is none.
+     **/
     virtual void stopMusic() = 0;
 
-    /** @brief Sets the volume of the sound effects, from 0 to 1. */
+    /**
+     * @brief Sets the volume of the sound effects.
+     * @param volume The volume, from 0 to 1.
+     **/
     virtual void setSoundVolume(float volume) = 0;
-    /** @brief Sets the volume of the music, from 0 to 1. */
+    /**
+     * @brief Sets the volume of the music.
+     * @param volume The volume, from 0 to 1.
+     **/
     virtual void setMusicVolume(float volume) = 0;
 
     /** @brief Keeps the music playing: call it once per frame. */

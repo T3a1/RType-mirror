@@ -52,7 +52,7 @@ flowchart BT
 | `engine/` | `r-type_engine` | Generic ECS (entities, components, registry, systems), scheduler, clock, math types, the UDP socket interface (`engine::net`). Knows nothing about R-Type. | Standard library only |
 | `common/` | `r-type_common` | R-Type components shared by both programs (`Transform`, `Velocity`, `Health`...), protocol messages and their serialization, the socket backend. | `r-type_engine`; Asio as a **private** dependency (Conan, or the Alpine package `asio-dev` in the `Dockerfile`) |
 | `server/` | `r-type_server` (and `r-type_server_network`, `r-type_server_spawn`) | Server game loop, gameplay systems (movement, collisions, spawning, levels, weapons, AI), client sessions, network thread. | `r-type_common`; nlohmann-json for the level and weapon files (Conan, or the Alpine package `nlohmann-json` in the `Dockerfile`) |
-| `client/` | `r-type_client` (and `r-type_client_network`) | Rendering, input, audio, interpolation, connection to the server. | `r-type_common`, graphics library (Conan) |
+| `client/` | `r-type_client` (and `r-type_client_network`, `r-type_client_audio`) | Rendering, input, audio, interpolation, connection to the server. | `r-type_common`, graphics library (Conan) |
 
 Rules:
 
@@ -67,6 +67,10 @@ Rules:
   Conan option `graphics` and the CMake option `RTYPE_GRAPHICS_BACKEND`.
   Three backends exist: Raylib (default), SFML, and ncurses, which draws in a
   terminal (character cells of 8x16 virtual pixels, no textures).
+- Only `client/src/audio/<backend>/` may include an audio library. The rest of
+  the client plays sounds through `client::audio::SoundBoard`, over
+  `client::audio::IAudio` (see [4.4](#44-audio)). The audio backend follows the
+  graphics one, so there is no separate option to choose.
 - Only `common/src/network/<backend>/` may include the network library. The
   server and the client send and receive datagrams through
   `engine::net::IUdpSocket` (see [2.1](#21-network-abstraction)), so no
@@ -118,9 +122,10 @@ directly:
 |-----------|-------------------------------------|-------------------------------------|
 | Networking (sockets, addresses, OS error codes) | `common/src/network/<backend>/` | `engine::net::IUdpSocket`, `rtype::network::openUdpSocket()` |
 | Graphics, windows, keyboard | `client/src/graphics/<backend>/` | `client::gfx::IGraphics` |
+| Sound effects and music | `client/src/audio/<backend>/` | `client::audio::IAudio`, `client::audio::createAudio()` |
 
-New platform-specific code (for example Windows sockets, or an audio
-library) goes into a new backend directory behind an interface, never into
+New platform-specific code (for example Windows sockets) goes into a new
+backend directory behind an interface, never into
 gameplay, protocol or engine code. The only other OS-dependent code is the
 signal handling in `server/src/main.cpp` (standard `<csignal>`) and the
 launcher `rtype.py`.
@@ -328,6 +333,57 @@ flowchart LR
 
     CNet <-->|UDP| SNet
 ```
+
+### 4.4 Audio
+
+The audio only exists on the client, and the protocol knows nothing about it: the
+client deduces its sounds from the snapshots and game events it already receives.
+Three layers each answer one question, so a change only touches one of them.
+
+```mermaid
+flowchart TB
+    Sync["networkSyncSystem, smoothingSystem<br/>when?"] -->|"play(SoundEvent)"| Board
+    Music["audioSystem<br/>when?"] -->|"setMusic(MusicTrack)"| Board
+    Board["SoundBoard<br/>what? the file of each sound"] --> Audio["IAudio<br/>how?"]
+    Audio --> Raylib[RaylibAudio]
+    Audio --> Sfml[SfmlAudio]
+    Audio --> Null[NullAudio]
+```
+
+In this diagram, the systems at the top decide when something must be heard and
+call the `SoundBoard`, which turns the name of a sound into a call to `IAudio`,
+implemented by one of the three backends.
+
+| Sound | Played when | Where |
+|-------|-------------|-------|
+| `PlayerShot`, `ChargedShot`, `EnemyShot` | A new `PlayerMissile`, `ChargedShot` or `EnemyMissile` appears in a snapshot | `applyEntity()` |
+| `Charge` | The `Charging` flag of the local ship turns on; it stops when the flag turns off | `applyEntity()` |
+| `Explosion` | `spawnExplosion()` created an explosion, so inside the playfield only | `applyEvent()`, `smoothingSystem()` |
+| `PowerUp` | `EntityDestroyed` for a power-up inside the playfield, the only place it disappears when it is taken | `applyEvent()` |
+| `LevelStart`, `GameOver` | `GameEvent{LevelStarted}`, `GameEvent{GameOver}` | `applyEvent()` |
+
+`audioSystem` runs in the `Output` stage of every frame. It picks the music from the
+state of the game, and `SoundBoard::setMusic()` only restarts it when the track
+changes. It also calls `update()`, which feeds the music stream with Raylib and does
+nothing with SFML, which streams on its own thread.
+
+Sounds play directly, with no queue: `playSound()` returns at once and the library
+mixes the sound on its own thread. A sound asked again while it plays restarts
+instead of adding a second copy, which keeps a spread shot from getting louder.
+
+`createAudio()` is defined once per build, by the file CMake compiles for the backend.
+Audio never stops the game:
+
+| Situation | Backend | Result |
+|-----------|---------|--------|
+| Raylib or SFML client | `RaylibAudio`, `SfmlAudio` | Sound plays |
+| ncurses client | `NullAudio` | Silence |
+| No audio device | `NullAudio`, with a warning | Silence |
+| Missing or unreadable file | Any, with a warning | That sound or music stays silent |
+
+A benchmark (`--bench`) sets both volumes to 0. The sound effects and musics are
+generated by `tools/generate_sounds.py`; to add one, see
+[Add a sound](HOWTO.md#5-add-a-sound).
 
 ## 5. Time and the game loop
 

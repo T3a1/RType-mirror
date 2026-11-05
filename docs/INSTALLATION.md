@@ -25,6 +25,7 @@ and CMake.
 | Docker | Running the server in a container (default mode) | Optional: use `--native` to run it without Docker. |
 | clang-tidy | `--tidy`, `--fix` | Optional. |
 | Doxygen, Graphviz | Generating the documentation website | Optional. |
+| ffmpeg | `tools/generate_sounds.py`, to generate the sounds again | Optional: the generated files are in the repository. |
 
 What to install by hand on each OS (everything else is installed by
 `rtype.py`):
@@ -235,6 +236,9 @@ The image contains a single static binary and runs as an unprivileged user.
 another machine, pass its IP address and make sure UDP port 4242 is open on
 that machine's firewall.
 
+The Raylib and SFML clients play sound effects and music. The ncurses client has no
+sound.
+
 ### Terminal client (ncurses)
 
 Built with `--graphics ncurses`, the client draws the game in the terminal it
@@ -268,6 +272,7 @@ library, but the game is degraded:
 | `./rtype.py --fix` | clang-tidy fixes, then clang-format. |
 | `./rtype.py --format` | clang-format only. |
 | `./rtype.py --docs` | Documentation website in `build/docs/html/index.html`. A broken link between pages is an error. |
+| `./tools/generate_sounds.py` | Generates the sound effects and musics again, in `client/assets/`. |
 
 Every clang-format version formats a little differently, so the launcher, the
 pre-commit hook and the CI all use clang-format 18.1.3, installed from PyPI
@@ -324,6 +329,12 @@ checks for the Xcode Command Line Tools.
 **The client does not connect.** Check that the server is running
 (`docker logs rtype-server` in Docker mode), that the host and port match,
 and that no firewall blocks UDP port 4242.
+
+**No sound.** Without an audio device, the client prints `No audio device: the game
+runs without sound` and plays normally. If a file cannot be read, it prints `Cannot
+load the sound` or `Cannot load the music` with its name: build the client again to
+copy `client/assets/` next to it. The ncurses client never plays sound, and
+`--bench` mutes the game.
 
 **Windows: MSVC still not found.** Open the Visual Studio Installer and add the
 "Desktop development with C++" workload to Build Tools 2022.

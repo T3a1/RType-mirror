@@ -11,6 +11,7 @@ content that needs no C++, see [writing levels](LEVELS.md) and
 2. [Add an enemy type](#2-add-an-enemy-type)
 3. [Add a packet type](#3-add-a-packet-type)
 4. [Build and debug](#4-build-and-debug)
+5. [Add a sound](#5-add-a-sound)
 
 ## 1. Add a component and a system
 
@@ -256,3 +257,40 @@ To run only some of them, after a first build:
 
 The CI also runs clang-tidy with warnings as errors, so run `./rtype.py --tidy`
 before a pull request that changes a lot of code.
+
+## 5. Add a sound
+
+The example adds an alert when the boss arrives. See the
+[audio architecture](ARCHITECTURE.md#44-audio) for how sounds are played.
+
+**1. Name it** in `client/include/audio/SoundEvent.hpp`, in the `SoundEvent` enum and
+its Doxygen comment:
+
+```cpp
+BossAlert,
+```
+
+**2. Give it a file** in the `SoundFiles` table of `client/src/audio/SoundBoard.cpp`.
+The order does not matter, and the build fails if a sound has no file or two:
+
+```cpp
+SoundFile{SoundEvent::BossAlert, "assets/sounds/boss_alert.wav"},
+```
+
+**3. Add the file** to `client/assets/sounds/`, in WAV. Either describe it in
+`effects()` in `tools/generate_sounds.py` and run the script, or add your own file
+and write where it comes from and its license in `client/assets/AUDIO_SOURCES.txt`.
+CMake copies the assets next to the client when it builds.
+
+**4. Play it** where it happens, with the `SoundBoard` the system received:
+
+```cpp
+sounds.play(audio::SoundEvent::BossAlert);
+```
+
+Everything the server tells the client can trigger a sound, so a new sound does not
+need a new packet. A music works the same way, with `MusicTrack` and `MusicFiles`,
+and `sounds.setMusic()` to play it.
+
+**5. Do not rely on it alone**: a player who cannot hear must still get the
+information, so make sure something on screen shows the same thing.
