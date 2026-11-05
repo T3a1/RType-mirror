@@ -171,6 +171,10 @@ void Game::registerSystems()
                         m_sync.levelBanner =
                             std::max(m_sync.levelBanner - dt.count(), 0.0F);
                     });
+    m_scheduler.add(Stage::Simulation, "playerNotices",
+                    [this](Registry &, Duration dt) {
+                        updatePlayerNotices(m_sync.notices, dt.count());
+                    });
     m_scheduler.add(Stage::Simulation, "shipTilt", shipTiltSystem);
     m_scheduler.add(Stage::Simulation, "animation", animationSystem);
 }
@@ -296,6 +300,7 @@ void Game::drawScreens()
             leaveRoom();
         }
     }
+    playerNoticeSystem(m_sync, *m_graphics);
 }
 
 void Game::render(engine::Duration dt)

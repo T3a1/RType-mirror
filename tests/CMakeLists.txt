@@ -39,7 +39,8 @@ set(SOURCE_FILES
 # The client's network code and controls only exist when the client is
 # built.
 if(TARGET r-type_client_network)
-    list(APPEND SOURCE_FILES src/network_client_test.cpp src/controls_test.cpp)
+    list(APPEND SOURCE_FILES src/network_client_test.cpp src/controls_test.cpp
+        src/player_notices_test.cpp)
     set(CLIENT_NETWORK_LIBRARY r-type_client_network r-type_client_controls)
 endif()
 

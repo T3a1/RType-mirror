@@ -57,6 +57,16 @@ void bossHealthBar(engine::Registry &registry, gfx::IGraphics &graphics);
 void levelBannerScreen(const SyncState &state, gfx::IGraphics &graphics);
 
 /**
+ * @brief Draws the notices of the players who just joined or left, in the
+ * top right corner of the window, in the player's color and fading out at the
+ * end. The text names the player, so it does not rely on the color. It is
+ * drawn in screen pixels: call it after endWorld().
+ * @param state The sync state, for the notices.
+ * @param graphics The graphics backend to draw with.
+ **/
+void playerNoticeSystem(const SyncState &state, gfx::IGraphics &graphics);
+
+/**
  * @brief Draws the end of the game in the middle of the window: "GAME OVER",
  * the score of every player, the team's total and a button back to the lobby.
  * It is drawn in screen pixels: call it after endWorld().
