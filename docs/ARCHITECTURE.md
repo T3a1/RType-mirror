@@ -1,12 +1,13 @@
-# Architecture (v1)
+# Architecture
 
 This document describes how the R-Type code is organized: the shared engine, the
 Entity Component System (ECS), the subsystems and how they communicate, the game
 loop and the threading model. The network protocol itself is described in
 [PROTOCOL.md](PROTOCOL.md).
 
-> Status: **v1 draft**. Nothing here is implemented yet. Open points are listed
-> at the end of the document.
+Why these choices were made, compared with the alternatives, is explained in
+the [technical study](TECHNICAL_STUDY.md). The [how-to guides](HOWTO.md) show how
+to add a component, a system, an enemy or a packet.
 
 ## 1. Goals
 
@@ -35,7 +36,7 @@ flowchart BT
     server["r-type_server<br/>(executable)"]
     client["r-type_client<br/>(executable)"]
     tests["r-type_tests<br/>(executable)"]
-    gfx["Graphics library<br/>(SFML / SDL / Raylib)"]
+    gfx["Graphics library<br/>(Raylib / SFML / ncurses)"]
     net["Network library<br/>(Asio, private)"]
 
     common --> engine
@@ -58,8 +59,7 @@ Rules:
 - `engine/` and `common/` must never include anything from `server/`, `client/`
   or a graphics library. The server is built alone in Docker
   (`-DBUILD_CLIENT=OFF`), so it can only use these two libraries.
-- Keeping `engine/` game-agnostic makes it reusable for another game, which is
-  one of the Part 2 tracks.
+- Keeping `engine/` game-agnostic makes it reusable for another game.
 - Only `client/src/graphics/<backend>/` may include the graphics library. The
   rest of the client draws, loads textures and reads the keyboard through
   `client::gfx::IGraphics` (`client/include/graphics/IGraphics.hpp`), so
@@ -159,7 +159,7 @@ struct Entity {
 Each component type has its own storage, a **sparse set**:
 
 ```
-sparse : entity index -> position in dense   (paged array, holes allowed)
+sparse : entity index -> position in dense   (one array, holes allowed)
 dense  : [ e7, e2, e9, ... ]                  (packed entity indexes)
 data   : [ C7, C2, C9, ... ]                  (packed components, same order)
 ```
@@ -168,15 +168,15 @@ data   : [ C7, C2, C9, ... ]                  (packed components, same order)
   so the arrays stay packed.
 - Iterating over a component type walks a contiguous array, which is
   cache-friendly.
-- A query over several components (`view<Transform, Velocity>`) iterates the
-  smallest storage and checks whether each entity is in the others.
+- A query over several components (`each<Transform, Velocity>`) iterates the
+  storage of the first one and checks whether each entity is in the others.
 
 Why sparse sets rather than archetypes: they are much simpler to implement and
 debug, adding or removing a component is cheap (no moving the entity between
 tables), and R-Type has at most a few thousand entities, where the difference in
 iteration speed does not matter.
 
-### 3.4 Registry API (sketch)
+### 3.4 Registry API
 
 ```cpp
 namespace engine {
@@ -190,11 +190,12 @@ public:
     template <typename C, typename... Args>
     C &emplace(Entity entity, Args &&...args);
     template <typename C> void remove(Entity entity);
-    template <typename C> [[nodiscard]] bool has(Entity entity) const;
+    template <typename C> [[nodiscard]] bool has(Entity entity);
     template <typename C> C &get(Entity entity);
     template <typename C> C *tryGet(Entity entity);
 
-    template <typename... Cs> View<Cs...> view();
+    template <typename First, typename... Others, typename Func>
+    void each(Func func);                 // func(entity, first, others...)
 
     void flush();                         // applies deferred destructions
 };
@@ -207,9 +208,10 @@ Usage in a system:
 ```cpp
 void movementSystem(engine::Registry &registry, engine::Duration dt)
 {
-    for (auto [entity, transform, velocity] : registry.view<Transform, Velocity>()) {
-        transform.position += velocity.value * dt.count();
-    }
+    registry.each<Transform, Velocity>(
+        [dt](engine::Entity, Transform &transform, Velocity &velocity) {
+            transform.position += velocity.value * dt.count();
+        });
 }
 ```
 
@@ -254,9 +256,10 @@ Subsystems never call each other. They communicate only through:
 
 1. **Components.** The collision system writes `Health`, the rendering system
    reads `Transform` and `Sprite`. Neither knows the other exists.
-2. **Events.** One-off facts (`EntityDestroyed`, `PlayerHit`, `PlayerJoined`)
-   are pushed to a per-tick event queue. Interested systems read them during
-   the same tick, and the queue is cleared at the end of the tick.
+2. **Values kept by the game for one tick.** A result one system needs from
+   another, such as the collisions found by the collision system, is a member
+   of the game, read by the next system. One-off facts for the clients
+   (`EntityDestroyed`, `PlayerJoined`...) go straight to the outbound queue.
 3. **Thread-safe message queues**, only between the network thread and the
    game loop (see section 6).
 
@@ -307,11 +310,10 @@ a single `screens` system of the `Overlay` layer.
 flowchart LR
     subgraph Client
         direction TB
-        CIn[Input system] --> CNet[Client network thread]
+        CIn[Input system] --> CNet[NetworkClient]
         CNet --> CSync[Snapshot / interpolation system]
         CSync --> CReg[(Client registry)]
         CReg --> CRender[Render system]
-        CReg --> CAudio[Audio system]
     end
 
     subgraph Server
@@ -334,7 +336,7 @@ All time values use `std::chrono::steady_clock`, which never goes backwards.
 
 ### 5.1 Server: fixed time step
 
-The server simulates at a fixed tick rate (v1: **60 ticks per second**) with an
+The server simulates at a fixed tick rate (**60 ticks per second**) with an
 accumulator:
 
 ```cpp
@@ -357,10 +359,10 @@ while (running) {
 
 - Every tick advances the game by exactly `tickDuration`, so the simulation
   gives the same result on a fast or a slow machine.
-- Snapshots are sent at a lower rate (v1: **20 per second**, every 3rd tick) to
+- Snapshots are sent at a lower rate (**20 per second**, every 3rd tick) to
   save bandwidth.
-- If the server falls far behind, the accumulator is capped so it does not try
-  to catch up forever.
+- If a game falls far behind, the accumulator is capped at 250 ms so it does not
+  try to catch up forever.
 
 ### 5.2 Client: variable frame rate
 
@@ -381,17 +383,23 @@ content.
 
 ### 6.1 Threads and ownership
 
-The server runs two threads. Each piece of data has exactly one owner:
+The server runs one network thread, and one game thread per running room
+([section 6.10](#610-parallel-games)). Each piece of data has exactly one owner:
 
 | Thread | Owns | Never touches |
 |--------|------|---------------|
-| Network thread | The UDP socket, the session table (one entry per connected client), encoding and decoding, reliability, timeouts | The registry |
+| Network thread | The UDP socket, the session table (one entry per connected client), encoding and decoding, reliability, timeouts | The registries |
+| Game thread (one per room) | The registry of its game, its systems, the players of its room | The socket, the sessions |
 
-The two threads share only:
+The network thread and a game thread share only:
 
 - two **message queues**: inbound (network to game) and outbound (game to
   network);
-- an atomic `running` flag, used to stop the server (section 6.10).
+- an atomic `running` flag, used to stop them ([section 6.12](#612-shutdown)).
+
+Two helper threads complete the picture: the logger's writer, so that logging
+never blocks a game, and the administration console
+([section 6.11](#611-administration-console)).
 
 Because nothing else is shared, there are no locks in the game code and the
 systems are written as single-threaded code.
@@ -427,9 +435,9 @@ library only):
 - `drain()` locks, **swaps** the vector with an empty one and unlocks, then
   returns all the messages at once. The lock is held for a swap only, so the
   game thread never waits for the network thread in any meaningful way.
-- The queue has a **capacity**. When it is full, new messages are dropped and
-  counted. A flood of packets can therefore never make the server allocate
-  unbounded memory.
+- The queue has a **capacity**. When it is full, new messages are refused and
+  the failure is logged. A flood of packets can therefore never make the server
+  allocate unbounded memory.
 
 The queues carry **decoded messages** (C++ structs), not raw bytes:
 
@@ -489,8 +497,9 @@ The network thread keeps one **session** per connected client:
 
 - Only a known address can send game packets. A datagram from an unknown
   address is accepted only if it is a connection request.
-- The server accepts at most **4 sessions**. A fifth client receives a
-  rejection and no session is created.
+- The server accepts at most **64 sessions** (16 rooms of 4 players). One more
+  client receives a rejection and no session is created. A room accepts at most
+  4 players.
 
 ### 6.4 Receiving: from datagram to component
 
@@ -514,8 +523,7 @@ sequenceDiagram
 1. The network thread reads one datagram into a fixed-size buffer (the maximum
    packet size). A larger datagram is truncated by the system and rejected.
 2. It validates the packet: size, header (protocol id, version), message type,
-   payload length. Any failure drops the packet and increments a counter. A
-   client that sends too many invalid packets is disconnected.
+   payload length. Any failure drops the packet and writes a debug log line.
 3. It decodes the payload field by field (explicit little-endian, never a
    `memcpy` of a struct) and pushes the message to the inbound queue.
 4. At the start of each tick, the game thread drains the queue. If the queue is
@@ -603,9 +611,8 @@ server tick.
 - For each entity with a `NetworkId`, it contains the id, the entity type
   (which sprite to use), the position and the few values the HUD needs
   (health, score).
-- A datagram should stay under about **1200 bytes** to avoid IP fragmentation.
-  With about 20 bytes per entity, that is about 60 entities per datagram. A
-  larger snapshot is split into several **parts**; each part is
+- A datagram stays under **1200 bytes** to avoid IP fragmentation. With 16 bytes
+  per entity, that is about 70 entities per datagram. A larger snapshot is split into several **parts**; each part is
   self-contained (tick + list of entities), so losing one part only delays the
   update of those entities.
 
@@ -635,12 +642,13 @@ sequenceDiagram
     participant O as Other clients
 
     C->>N: connection request
-    alt 4 sessions already
+    alt 64 sessions already
         N-->>C: rejected (server full)
     else
         N->>N: create session, ClientId 7
         N-->>C: accepted
-        N->>G: ClientConnected{7}
+        C->>N: JoinRoom (from the lobby)
+        N->>G: ClientConnected{7}, to the game of that room
         G->>G: create the ship entity,<br/>map ClientId 7 -> entity
         G->>N: Welcome{slot, ship NetworkId} to One(7)
         G->>N: PlayerJoined{slot} to AllExcept(7)
@@ -658,7 +666,8 @@ All three cases end the same way:
 |------|-------------|
 | The player quits | The client sends a disconnect message (best effort, not reliable) |
 | The client crashes or the network drops | No packet from that client for **5 seconds** (inputs are sent continuously, so silence means a problem) |
-| The client breaks the protocol | Too many invalid packets, or too many unacknowledged reliable messages |
+| The client never acknowledges | More than 256 unacknowledged reliable messages |
+| The operator removes it | The `kick` and `ban` commands of the console |
 
 Then:
 
@@ -666,18 +675,17 @@ Then:
    `ClientDisconnected{id, reason}`.
 2. The game thread destroys the player's ship and pushes `PlayerLeft{slot}` to
    `All`, reliable.
-3. The remaining clients remove the ship and can show a message.
+3. The remaining clients remove the ship and show a notice ("Player 2 left").
 
 The game keeps running for the other players during all of this.
 
 ### 6.9 Client side
 
-The client uses the same pattern with roles reversed:
-
-| Thread | Job |
-|--------|-----|
-| Main thread | Input, client registry and systems, rendering (graphics libraries require rendering on the main thread) |
-| Network thread | Socket, handshake, validation and decoding, reliable events and acks, server timeout |
+The client has no network thread: `NetworkClient` polls a non-blocking socket
+once per frame, on the main thread that also runs the client's registry, systems
+and rendering (graphics libraries require rendering on the main thread). Polling
+never waits, so a slow network cannot slow the frame. The client's own
+logic is therefore simple, single-threaded code; only the logger has a thread.
 
 - **Outbound:** the input system pushes the **complete** input state (a bitmask
   of pressed actions) as soon as it changes, and otherwise about 30 times per
@@ -775,8 +783,7 @@ and `help`.
   sends a best-effort `Disconnect{ServerClosing}` to every client.
 - The network thread sends what is left in the outbound queue, then stops; the
   game thread joins it.
-- A client closing its window does the same on its side: it sends a disconnect
-  message, stops its network thread and exits.
+- A client closing its window sends a disconnect message and exits.
 
 ### 6.13 Summary of network-related systems
 
@@ -785,10 +792,10 @@ and `help`.
 | Server | Input | `SessionSystem` | `ClientConnected` / `ClientDisconnected`: create or destroy ships, push `Welcome`, `PlayerJoined`, `PlayerLeft` |
 | Server | Input | `NetworkInputSystem` | `PlayerInput`: write `InputState` on the right ship |
 | Server | Output | `SnapshotSystem` | Every 3rd tick, push a `Snapshot` to `All` |
-| Server | Output | `EventBroadcastSystem` | Turn the tick's game events into reliable `GameEvent` messages |
-| Client | Input | `InputSystem` | Read the keyboard and gamepad, push the input state |
-| Client | Simulation | `SnapshotApplySystem` | Create and update entities from snapshots, remove them on `EntityDestroyed` |
-| Client | Simulation | `InterpolationSystem` | Place remote entities between two snapshots |
+| Client | Input | `networkSyncSystem` | Create and update entities from snapshots, remove them on `EntityDestroyed`, note who joined or left |
+| Client | Input | `inputSystem`, `sendInput` | Read the keyboard, send the input state |
+| Client | Simulation | `smoothingSystem` | Place remote entities between two snapshots |
+| Client | Simulation | `predictionSystem` | Predict the local ship and fade out the corrections |
 
 ## 7. Coordinate system and units
 
@@ -813,20 +820,14 @@ and `help`.
   running the system for N ticks and checking the components. No window or
   socket is needed.
 - Packet decoding is unit tested with valid, truncated and oversized packets,
-  and later fuzzed with libFuzzer.
+  and randomized tests feed it mutated and random datagrams.
 - The message queue (capacity, drain order) and the reliability logic (acks,
   resends, duplicates, reordering) are tested without a socket, by feeding
   them packets directly.
 
-## 9. Open questions
+## 9. Values open to tuning
 
-- **Graphics library**: SFML, SDL or Raylib (the client architecture does not
-  depend on the choice).
-- **Network library**: Asio, behind `engine::net::IUdpSocket` (see
-  [2.1](#21-network-abstraction)); raw sockets would be a new backend.
-- **Tick and snapshot rates**: 60 and 20 per second are starting values, to be
-  tuned once the prototype runs. The same goes for the network values of
-  section 6: 5 s timeout, 100 ms resend interval, 100 ms interpolation delay,
-  1200-byte datagrams, queue capacities.
-- **Windows support** (issue #6): the design above has no Linux-only parts
-  except the sockets, which are hidden behind `engine::net::IUdpSocket`.
+The network values are constants that can still be tuned, with the
+[benchmark](NETWORK_COMPARISON.md) to measure the effect: 60 ticks and 20
+snapshots per second, 5 s timeout, 100 ms resend interval, 100 ms interpolation
+delay, 1200-byte datagrams, queue capacities.

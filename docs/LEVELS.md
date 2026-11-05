@@ -1,7 +1,7 @@
 # Levels
 
 The levels of R-Type are data, not code: each level is a JSON file in
-[`server/levels/`](../server/levels/). Adding or changing a level needs no
+[`server/levels/`](https://github.com/T3a1/RType-mirror/blob/dev/server/levels/). Adding or changing a level needs no
 rebuild of the code, only a restart of the server.
 
 ## How the server plays them
@@ -105,10 +105,10 @@ checked when the file is loaded.
 
 ## Code
 
-- [`server/include/Level.hpp`](../server/include/Level.hpp): the `Level` and
+- [`server/include/Level.hpp`](https://github.com/T3a1/RType-mirror/blob/dev/server/include/Level.hpp): the `Level` and
   `Wave` structures, `parseLevel()` and `loadLevels()` (JSON read with
   nlohmann-json).
-- [`server/include/systems/LevelSystem.hpp`](../server/include/systems/LevelSystem.hpp):
+- [`server/include/systems/LevelSystem.hpp`](https://github.com/T3a1/RType-mirror/blob/dev/server/include/systems/LevelSystem.hpp):
   `levelSystem()`, which plays the levels, and the `LevelProgress` component
   on the spawner entity. While it is there, `spawnSystem()` sends no random
   waves.

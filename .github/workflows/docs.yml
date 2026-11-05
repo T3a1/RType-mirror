@@ -1,0 +1,53 @@
+name: Documentation
+
+# Every push checks the pages and their links. dev and main also publish the
+# website on GitHub Pages. Skipped on the Epitech repo, which gets this file
+# through the forward job of the CI.
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build the documentation
+    if: github.repository == 'T3a1/RType-mirror'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Graphviz
+        run: sudo apt-get install --yes --no-install-recommends graphviz
+      # Ubuntu's package is too old to draw the Mermaid diagrams of the pages.
+      - name: Install Doxygen
+        run: |
+          curl --fail --silent --show-error --location "https://github.com/doxygen/doxygen/releases/download/Release_1_18_0/doxygen-1.18.0.linux.bin.tar.gz" | tar --extract --gzip --directory "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/doxygen-1.18.0/bin" >> "$GITHUB_PATH"
+      - name: Build the website
+        run: python3 rtype.py --docs
+      - name: Keep the website for the deployment
+        if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/docs/html
+
+  deploy:
+    name: Publish the documentation
+    needs: build
+    if: github.repository == 'T3a1/RType-mirror' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

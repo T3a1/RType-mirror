@@ -24,7 +24,7 @@ and CMake.
 | CMake 3.15+ and Conan 2 | Building | Installed automatically by `rtype.py` if missing. |
 | Docker | Running the server in a container (default mode) | Optional: use `--native` to run it without Docker. |
 | clang-tidy | `--tidy`, `--fix` | Optional. |
-| Doxygen, Graphviz | Generating the code documentation | Optional. |
+| Doxygen, Graphviz | Generating the documentation website | Optional. |
 
 What to install by hand on each OS (everything else is installed by
 `rtype.py`):
@@ -112,7 +112,7 @@ the options. Before building, it sets up everything that is missing:
 | `-f`, `--fix` | Applies the clang-tidy fixes, then runs clang-format. |
 | `-F`, `--format` | Runs clang-format on the project (same version as the CI). |
 | `--check-format [FILE...]` | Checks the formatting like the CI, without changing anything. |
-| `-d`, `--docs` | Generates the HTML code documentation with Doxygen. |
+| `-d`, `--docs` | Generates the documentation website with Doxygen: the pages of `docs/` and the code reference. |
 
 > In Docker mode, `--port` changes the port published on your machine; inside the
 > container, the server stays on 4242.
@@ -267,7 +267,7 @@ library, but the game is degraded:
 | `./rtype.py --tidy` | clang-tidy, with the same rules as the CI. |
 | `./rtype.py --fix` | clang-tidy fixes, then clang-format. |
 | `./rtype.py --format` | clang-format only. |
-| `./rtype.py --docs` | Code documentation in `build/docs/html/index.html`. |
+| `./rtype.py --docs` | Documentation website in `build/docs/html/index.html`. A broken link between pages is an error. |
 
 Every clang-format version formats a little differently, so the launcher, the
 pre-commit hook and the CI all use clang-format 18.1.3, installed from PyPI
@@ -290,8 +290,9 @@ which the Visual Studio generator does not write: on Windows, configure
 `build/` with Ninja to use it. `--coverage` needs GCC or Clang (gcov), so it
 does not work with MSVC.
 
-`--docs` needs Doxygen. Install Graphviz too to get the class diagrams;
-without it the documentation is generated without diagrams.
+`--docs` needs Doxygen, version 1.18 to draw the Mermaid diagrams of the pages
+(the CI uses this version). Install Graphviz too to get the class diagrams;
+without it the documentation is generated without them.
 
 ## 7. Troubleshooting
 
