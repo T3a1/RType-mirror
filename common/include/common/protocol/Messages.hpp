@@ -21,19 +21,24 @@ namespace rtype::protocol {
 class ByteReader;
 class ByteWriter;
 
+/** @brief How many players a room holds, at most. */
 inline constexpr std::uint8_t MaxPlayers = 4;
-/** How many rooms a server runs at the same time, at most. */
+/** @brief How many rooms a server runs at the same time, at most. */
 inline constexpr std::uint8_t MaxRooms = 16;
-/** Asks for the first room with a free slot, or a new one if none. */
+/** @brief Asks for the first room with a free slot, or a new one if none. */
 inline constexpr std::uint32_t AnyRoom = 0;
-/** Asks for a new room. */
+/** @brief Asks for a new room. */
 inline constexpr std::uint32_t NewRoom = 0xFFFFFFFF;
 
-// Sizes on the wire, used to split snapshots.
+/** @brief The size of the fixed part of a snapshot on the wire, in bytes. */
 inline constexpr std::size_t SnapshotHeaderSize = 8;
+/** @brief The size of the number of players on the wire, in bytes. */
 inline constexpr std::size_t PlayerCountSize = 1;
+/** @brief The size of one player on the wire, in bytes. */
 inline constexpr std::size_t PlayerRecordSize = 13;
+/** @brief The size of one entity on the wire, in bytes. */
 inline constexpr std::size_t EntityRecordSize = 16;
+/** @brief How many parts one snapshot can be split into, at most. */
 inline constexpr std::size_t MaxSnapshotParts = 255;
 
 /**
@@ -173,11 +178,17 @@ struct PlayerInfo {
     bool operator==(const PlayerInfo &) const = default;
 };
 
+/** @brief The bits of the flags of an entity in a snapshot. */
 namespace EntityFlag {
+/** @brief The entity cannot be hurt. */
 inline constexpr std::uint8_t Invincible = 1U << 0U;
+/** @brief The player's ship is charging a shot. */
 inline constexpr std::uint8_t Charging = 1U << 1U;
+/** @brief The position of the Owner bits. */
 inline constexpr unsigned OwnerShift = 2U;
+/** @brief The bits holding the slot of the player who owns the entity. */
 inline constexpr std::uint8_t Owner = 0x7U << OwnerShift;
+/** @brief Every known bit. */
 inline constexpr std::uint8_t All =
     unsigned{Invincible} | unsigned{Charging} | unsigned{Owner};
 

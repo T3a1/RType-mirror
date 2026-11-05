@@ -19,7 +19,23 @@
 
 namespace client {
 
-/** @brief The sprite sheets of client/assets/sprites/ the game draws. */
+/**
+ * @enum Sheet
+ * @brief The sprite sheets of client/assets/sprites/ the game draws.
+ * @param Ships The ships of the players.
+ * @param Shots The shots of the players and the charge effects.
+ * @param EnemyBasic The enemy of type Basic.
+ * @param EnemyWave The enemy of type Wave.
+ * @param EnemyShooter The enemy of type Shooter.
+ * @param EnemyMissile The shots of the enemies.
+ * @param EnemySmall The enemy of type Small.
+ * @param EnemyMedium The enemy of type Medium.
+ * @param EnemyLarge The enemy of type Large.
+ * @param Explosion The explosions.
+ * @param Boss The end-level boss.
+ * @param PowerUp The power-ups.
+ * @param Count The number of sheets, not a sheet.
+ **/
 enum class Sheet : std::uint8_t {
     Ships,
     Shots,
@@ -37,6 +53,7 @@ enum class Sheet : std::uint8_t {
 };
 
 /**
+ * @class SpriteSheets
  * @brief Loads every sprite sheet once, and unloads them when destroyed.
  *
  * A sheet that cannot be loaded, or a backend without textures (ncurses),
@@ -45,9 +62,15 @@ enum class Sheet : std::uint8_t {
  */
 class SpriteSheets {
   public:
-    /** @param graphics The backend loading the textures; it must outlive
-     * the SpriteSheets. */
+    /**
+     * @brief Loads the texture of every sheet.
+     * @param graphics The backend loading the textures; it must outlive the
+     * SpriteSheets.
+     **/
     explicit SpriteSheets(gfx::IGraphics &graphics);
+    /**
+     * @brief Frees the textures.
+     **/
     ~SpriteSheets();
 
     SpriteSheets(const SpriteSheets &) = delete;
@@ -55,7 +78,11 @@ class SpriteSheets {
     SpriteSheets(SpriteSheets &&) = delete;
     SpriteSheets &operator=(SpriteSheets &&) = delete;
 
-    /** @brief The texture of a sheet, id 0 if it could not be loaded. */
+    /**
+     * @brief Returns the texture of a sheet.
+     * @param sheet The sheet.
+     * @return Its texture, with id 0 if it could not be loaded.
+     **/
     [[nodiscard]] gfx::Texture texture(Sheet sheet) const;
 
   private:

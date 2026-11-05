@@ -17,7 +17,14 @@ namespace rtype {
 
 namespace {
 
-// -1, 0 or 1 along one axis. Both keys held cancel each other out.
+/**
+ * @brief Returns the direction along one axis. Both keys held cancel each other
+ * out.
+ * @param actions The held actions, as Action bits.
+ * @param negative The action moving towards the negative side.
+ * @param positive The action moving towards the positive side.
+ * @return -1, 0 or 1.
+ **/
 float axis(std::uint8_t actions, std::uint8_t negative, std::uint8_t positive)
 {
     float value = 0.0F;
@@ -54,9 +61,6 @@ void playerControlSystem(engine::Registry &registry)
         });
 }
 
-/**
- * Arms the weapon of each player holding the Fire action.
- **/
 void playerFireSystem(engine::Registry &registry)
 {
     registry.each<Weapon, rtype::InputState>(

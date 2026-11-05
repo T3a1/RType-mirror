@@ -23,6 +23,7 @@ namespace server {
 
 namespace {
 
+/** @brief The JSON library's document type. */
 using Json = nlohmann::json;
 
 /** @brief Weapon files larger than this are not read, in bytes. */
@@ -64,7 +65,16 @@ void read(const Json &root, const char *key, double min, double max, T &value)
     value = static_cast<T>(number);
 }
 
-/** @brief Same as read(), for a duration in seconds. */
+/**
+ * @brief Overwrites a duration with a number of seconds of the file, if it is
+ * there.
+ * @param root The object of the file.
+ * @param key The name of the value.
+ * @param min The lowest value allowed, in seconds.
+ * @param max The highest value allowed, in seconds.
+ * @param value The duration to overwrite.
+ * @throws WeaponsError If the value is not a number or is out of range.
+ **/
 void readSeconds(const Json &root, const char *key, double min, double max,
                  engine::Duration &value)
 {

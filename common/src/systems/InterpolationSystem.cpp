@@ -18,7 +18,9 @@ namespace rtype {
 
 namespace {
 
+/** @brief Beyond this error, in ticks, the render clock jumps to its target. */
 constexpr double ResyncThreshold = TickRate;
+/** @brief The share of its error the render clock catches up per second. */
 constexpr double CatchUpRate = 2.0;
 
 /**

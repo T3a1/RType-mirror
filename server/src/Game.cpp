@@ -32,11 +32,6 @@ Game::Game(Inbound &inbound, Outbound &outbound, bool invinciblePlayers,
     registerSystems();
 }
 
-/**
- * Registers every system of the game in the scheduler, stage by stage and
- * in the order they run within a stage. The world only moves once the room
- * has left its waiting phase.
- **/
 void Game::registerSystems()
 {
     using engine::Duration;

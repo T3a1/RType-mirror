@@ -13,6 +13,7 @@
 namespace client {
 
 /**
+ * @struct Background
  * @brief A horizontally tileable image that fills the window and scrolls
  * forever.
  *

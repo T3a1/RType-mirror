@@ -19,13 +19,13 @@ namespace client {
 
 namespace {
 
-// A ship counts as moving while its position changed in the last
-// MoveMemory seconds: the local ship only moves when a snapshot arrives
-// (20 per second), not every frame.
+/** @brief A ship counts as moving while its position changed in the last
+ * MoveMemory seconds: the local ship only moves when a snapshot arrives (20 per
+ * second), not every frame. */
 constexpr float MoveMemory = 0.12F;
-// Vertical moves smaller than this (in playfield units) are ignored.
+/** @brief Vertical moves smaller than this, in playfield units, are ignored. */
 constexpr float MoveThreshold = 0.5F;
-// How fast the tilt follows the movement, in full tilts per second.
+/** @brief How fast the tilt follows the movement, in full tilts per second. */
 constexpr float TiltSpeed = 6.0F;
 
 } // namespace

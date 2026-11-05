@@ -21,19 +21,28 @@
 
 namespace client {
 
-/** @brief What the player can do with the keyboard. */
+/**
+ * @enum Control
+ * @brief What the player can do with the keyboard.
+ * @param Up Moves the ship up.
+ * @param Down Moves the ship down.
+ * @param Left Moves the ship to the left.
+ * @param Right Moves the ship to the right.
+ * @param Fire Fires, or charges a shot while held.
+ * @param AutoFire Turns auto-fire on or off: the ship fires without a key held.
+ * @param Count The number of controls, not a control.
+ **/
 enum class Control : std::uint8_t {
     Up,
     Down,
     Left,
     Right,
     Fire,
-    /** @brief Turns auto-fire on or off: the ship fires without a key held. */
     AutoFire,
-    /** @brief The number of controls, not a control. */
     Count,
 };
 
+/** @brief The number of controls. */
 inline constexpr std::size_t ControlCount =
     static_cast<std::size_t>(Control::Count);
 

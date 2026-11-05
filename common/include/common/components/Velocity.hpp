@@ -12,7 +12,11 @@
 
 namespace rtype {
 
-// Speed in playfield units per second.
+/**
+ * @struct Velocity
+ * @brief How an entity moves.
+ * @param value Its speed, in playfield units per second.
+ **/
 struct Velocity {
     engine::Vec2f value;
 };

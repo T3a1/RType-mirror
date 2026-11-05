@@ -11,8 +11,9 @@
 namespace server {
 
 /**
- * Tag: the entity is destroyed once it leaves the playfield by more than a
- * margin.
+ * @struct DestroyOffScreen
+ * @brief Tag: the entity is destroyed once it leaves the playfield by more than
+ *a margin.
  **/
 struct DestroyOffScreen {};
 

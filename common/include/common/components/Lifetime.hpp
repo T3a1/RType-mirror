@@ -13,6 +13,7 @@
 namespace rtype {
 
 /**
+ * @struct Lifetime
  * @brief Component that represents the remaining lifetime of an entity.
  * @param remaining The remaining time before the entity is destroyed.
  */

@@ -33,6 +33,7 @@ namespace client {
  **/
 class NetworkClient {
   public:
+    /** @brief The clock of the connection's timers. */
     using TimePoint = std::chrono::steady_clock::time_point;
 
     /**

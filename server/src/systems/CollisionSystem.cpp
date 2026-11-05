@@ -12,7 +12,8 @@ namespace server {
 namespace {
 
 /**
- * What the collision system needs to know about an entity.
+ * @struct Body
+ * @brief What the collision system needs to know about an entity.
  * @param entity The entity itself.
  * @param position The position of the entity.
  * @param collider The collider of the entity.
@@ -24,7 +25,7 @@ struct Body {
 };
 
 /**
- * Get every entity that can collide.
+ * @brief Get every entity that can collide.
  * @param registry The registry to read.
  * @return One body per entity with a Collider and a Transform.
  **/
@@ -45,10 +46,11 @@ std::vector<Body> collect(engine::Registry &registry)
 }
 
 /**
- * Whether the layers of two bodies let them touch: one of them must have
- * the other's layer in its mask.
+ * @brief Tells whether the layers of two bodies let them touch: one of them
+ *must have the other's layer in its mask.
  * @param a The first body.
  * @param b The second body.
+ * @return `true` if they may touch.
  **/
 bool canCollide(const Body &a, const Body &b)
 {
@@ -57,9 +59,10 @@ bool canCollide(const Body &a, const Body &b)
 }
 
 /**
- * Whether the boxes of two bodies overlap (AABB)
+ * @brief Tells whether the axis-aligned boxes of two bodies overlap.
  * @param a The first body.
  * @param b The second body.
+ * @return `true` if they overlap.
  **/
 bool overlaps(const Body &a, const Body &b)
 {
@@ -72,11 +75,6 @@ bool overlaps(const Body &a, const Body &b)
 
 } // namespace
 
-/**
- * Finds every pair of entities that touch during this tick.
- * @param registry The registry to read.
- * @return The colliding pairs, each pair once.
- **/
 std::vector<Collision> collisionSystem(engine::Registry &registry)
 {
     const std::vector<Body> bodies = collect(registry);

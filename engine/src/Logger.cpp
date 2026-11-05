@@ -22,6 +22,11 @@ namespace engine {
 
 namespace {
 
+/**
+ * @brief Tells whether a stream is a terminal that can show colors.
+ * @param console The stream.
+ * @return `true` for the standard streams connected to a terminal on Unix.
+ **/
 bool supportsColors(const std::ostream &console)
 {
 #if defined(__unix__) || defined(__APPLE__)
@@ -36,6 +41,11 @@ bool supportsColors(const std::ostream &console)
     return false;
 }
 
+/**
+ * @brief Returns the color of a level in the console.
+ * @param level The level.
+ * @return The ANSI escape sequence of its color.
+ **/
 std::string_view colorFor(LogLevel level)
 {
     switch (level) {
@@ -55,8 +65,14 @@ std::string_view colorFor(LogLevel level)
     return "";
 }
 
+/** @brief The ANSI escape sequence that restores the default color. */
 constexpr std::string_view resetColor = "\033[0m";
 
+/**
+ * @brief Removes the directories from a path.
+ * @param path The path, with `/` or `\\` separators.
+ * @return What follows the last separator.
+ **/
 std::string_view fileName(std::string_view path)
 {
     const std::size_t slash = path.find_last_of("/\\");

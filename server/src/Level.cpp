@@ -25,6 +25,7 @@ namespace server {
 
 namespace {
 
+/** @brief The JSON library's document type. */
 using Json = nlohmann::json;
 
 /** @brief What is wrong in a level file, caught by parseLevel(). */
@@ -33,11 +34,16 @@ class LevelError : public std::runtime_error {
     using std::runtime_error::runtime_error;
 };
 
+/** @brief The largest time between two enemies of a wave, in seconds. */
 constexpr float MaxSpacing = 10.0F;
+/** @brief The largest frequency of a movement pattern, in hertz. */
 constexpr float MaxFrequency = 10.0F;
+/** @brief The longest delay before an enemy dives, in seconds. */
 constexpr float MaxDiveDelay = 60.0F;
+/** @brief The largest speed of a dive, in playfield units per second. */
 constexpr float MaxDiveSpeed = 5000.0F;
 
+/** @brief The enemy names a wave may use. */
 constexpr std::array<std::pair<std::string_view, rtype::EnemyType>, 6>
     EnemyNames{{
         {"basic", rtype::EnemyType::Basic},
@@ -48,11 +54,13 @@ constexpr std::array<std::pair<std::string_view, rtype::EnemyType>, 6>
         {"large", rtype::EnemyType::Large},
     }};
 
+/** @brief The boss names a level may use. */
 constexpr std::array<std::pair<std::string_view, rtype::EnemyType>, 1>
     BossNames{{
         {"warship", rtype::EnemyType::Boss},
     }};
 
+/** @brief The movement pattern names a wave may use. */
 constexpr std::array<std::pair<std::string_view, rtype::MovementKind>, 4>
     PatternNames{{
         {"straight", rtype::MovementKind::Straight},

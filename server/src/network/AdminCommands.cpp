@@ -20,11 +20,16 @@ namespace server {
 
 namespace {
 
+/** @brief The arguments of a command. */
 using Args = engine::CommandConsole::Args;
 
+/** @brief The width of the id column in the answers, in characters. */
 constexpr int IdWidth = 6;
+/** @brief The width of the address column in the answers, in characters. */
 constexpr int AddressWidth = 24;
+/** @brief The width of the room column in the answers, in characters. */
 constexpr int RoomWidth = 8;
+/** @brief The width of the status column in the answers, in characters. */
 constexpr int StatusWidth = 10;
 
 /**

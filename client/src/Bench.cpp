@@ -19,13 +19,22 @@ namespace client {
 
 namespace {
 
+/** @brief How long the input sequence lasts before it repeats, in seconds. */
 constexpr double CycleSeconds = 2.0;
+/** @brief When the Up key is pressed in the sequence, in seconds. */
 constexpr double UpStart = 0.7;
+/** @brief When the Down key is pressed in the sequence, in seconds. */
 constexpr double DownStart = 1.7;
+/** @brief How long a key stays pressed, in seconds. */
 constexpr double PressSeconds = 0.3;
+/** @brief The time between two measures of the traffic, in seconds. */
 constexpr double TrafficInterval = 1.0;
+/** @brief The ship counts as moved after this distance, in playfield units. */
 constexpr float MovedThreshold = 1.0F;
+/** @brief Smaller prediction corrections are not recorded, in playfield units.
+ */
 constexpr float MinCorrection = 0.01F;
+/** @brief The significant digits of the numbers in the CSV file. */
 constexpr int CsvPrecision = 9;
 
 } // namespace

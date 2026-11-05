@@ -28,6 +28,7 @@ namespace {
 
 using namespace rtype::protocol;
 
+/** @brief How long a destroyed id is remembered, in server ticks. */
 constexpr std::uint32_t DestroyedMemory = 300;
 
 /**

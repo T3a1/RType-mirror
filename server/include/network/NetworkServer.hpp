@@ -30,12 +30,13 @@
 
 namespace server {
 
+/** @brief The clock of the sessions' timers. */
 using TimePoint = rtype::protocol::ReliableChannel::TimePoint;
 
 /**
  * @struct Session
  * @brief The network thread's state for one connected client.
- * @param id The ClientId shared with the game thread.
+ * @param id The client id shared with the game thread.
  * @param room The room of the client, AnyInstance in the lobby.
  * @param link The queues of that room, null in the lobby.
  * @param channel The reliability state of the connection.
@@ -52,6 +53,7 @@ struct Session {
     bool kicked = false;
 };
 
+/** @brief A position in the table of sessions. */
 using SessionIterator = std::map<engine::net::Endpoint, Session>::iterator;
 
 /**

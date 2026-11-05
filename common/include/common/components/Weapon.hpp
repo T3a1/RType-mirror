@@ -13,6 +13,7 @@
 namespace rtype {
 
 /**
+ * @struct Weapon
  * @brief The entity can shoot projectiles.
  * @param fireInterval The time between two shots.
  * @param cooldown The time left before the next shot.

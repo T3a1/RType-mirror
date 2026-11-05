@@ -14,17 +14,32 @@ namespace client::gfx {
 
 namespace {
 
+/**
+ * @brief Converts a color to Raylib's type.
+ * @param color The color.
+ * @return The same color.
+ **/
 ::Color toRaylib(Color color)
 {
     return {.r = color.r, .g = color.g, .b = color.b, .a = color.a};
 }
 
+/**
+ * @brief Converts a rectangle to Raylib's type.
+ * @param rect The rectangle.
+ * @return The same rectangle.
+ **/
 Rectangle toRaylib(Rect rect)
 {
     return {
         .x = rect.x, .y = rect.y, .width = rect.width, .height = rect.height};
 }
 
+/**
+ * @brief Converts a key to Raylib's type.
+ * @param key The key.
+ * @return The same key.
+ **/
 KeyboardKey toRaylib(Key key)
 {
     const auto index = static_cast<int>(key);

@@ -13,6 +13,7 @@
 namespace rtype {
 
 /**
+ * @struct Projectile
  * @brief Component that represents a projectile entity.
  * @param owner The entity that owns the projectile.
  */

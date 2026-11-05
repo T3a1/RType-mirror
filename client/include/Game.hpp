@@ -53,23 +53,39 @@ struct GameOptions {
 /**
  * @enum Layer
  * @brief A drawing layer of a frame. Layers are drawn in this order.
+ * @param Background Screen coordinates, under the world.
+ * @param World Playfield coordinates, scaled to fit the window.
+ * @param Overlay Screen coordinates, over the world (HUD, menus, status).
+ * @param Count Number of layers, not a layer.
  **/
 enum class Layer : std::uint8_t {
-    Background, ///< Screen coordinates, under the world.
-    World,      ///< Playfield coordinates, scaled to fit the window.
-    Overlay,    ///< Screen coordinates, over the world (HUD, menus, status).
-    Count,      ///< Number of layers, not a layer.
+    Background,
+    World,
+    Overlay,
+    Count,
 };
 
-// The client game: its own registry (a mirror of the server's world plus
-// local-only entities such as the background), and a loop that runs once
-// per displayed frame with a variable time step.
+/**
+ * @class Game
+ * @brief The client game: its own registry (a mirror of the server's world plus
+ * local-only entities such as the background), and a loop that runs once per
+ * displayed frame with a variable time step.
+ **/
 class Game {
   public:
-    // Throws if the server address cannot be resolved or the window cannot
-    // be opened.
+    /**
+     * @brief Opens the window and starts connecting to the server.
+     * @param host The server's host name or IP address.
+     * @param port The server's UDP port.
+     * @param options The options of the command line.
+     * @throws engine::net::NetworkError If the address cannot be resolved.
+     * @throws std::runtime_error If the window cannot be opened.
+     **/
     Game(const std::string &host, std::uint16_t port,
          const GameOptions &options = {});
+    /**
+     * @brief Tells the server the client leaves and closes the window.
+     **/
     ~Game();
 
     Game(const Game &) = delete;
@@ -77,7 +93,9 @@ class Game {
     Game(Game &&) = delete;
     Game &operator=(Game &&) = delete;
 
-    // Runs until the window is closed or the benchmark is over.
+    /**
+     * @brief Runs the game until the window is closed or the benchmark is over.
+     **/
     void run();
 
   private:

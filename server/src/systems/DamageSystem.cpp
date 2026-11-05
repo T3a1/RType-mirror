@@ -12,7 +12,7 @@ namespace server {
 namespace {
 
 /**
- * Gives the points of a destroyed enemy to the player who fired the
+ * @brief Gives the points of a destroyed enemy to the player who fired the
  * projectile that destroyed it.
  * @param registry The registry holding both entities.
  * @param projectile The projectile that dealt the last hit.
@@ -32,7 +32,7 @@ void awardKill(engine::Registry &registry, engine::Entity projectile,
 }
 
 /**
- * Applies the Damage of an attacker to the Health of a target.
+ * @brief Applies the Damage of an attacker to the Health of a target.
  * @param registry The registry holding both entities.
  * @param attacker The entity that deals the damage.
  * @param target The entity that takes it.

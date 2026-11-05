@@ -9,13 +9,6 @@
 
 namespace engine {
 
-/**
- * Adds a system to a stage.
- * @param stage The stage the system runs in.
- * @param name The name of the system, for logs and debugging.
- * @param system The system to run.
- * @param options When the system runs.
- **/
 void Scheduler::add(Stage stage, std::string name, System system,
                     SystemOptions options)
 {
@@ -28,12 +21,6 @@ void Scheduler::add(Stage stage, std::string name, System system,
     });
 }
 
-/**
- * Runs one tick: every stage in order, then flushes the registry after
- * the Cleanup stage.
- * @param registry The registry the systems work on.
- * @param dt The time elapsed since the last tick.
- **/
 void Scheduler::run(Registry &registry, Duration dt)
 {
     for (const Stage stage : STAGE_ORDER) {
