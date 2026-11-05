@@ -16,6 +16,7 @@ namespace client::audio {
  * @enum SoundEvent
  * @brief A sound of the game. Its file is set in SoundBoard.cpp.
  * @param PlayerShot A player fired a missile.
+ * @param Charge The local player is charging a shot.
  * @param ChargedShot A player fired a charged shot.
  * @param EnemyShot An enemy fired a missile.
  * @param Explosion A ship or an enemy exploded.
@@ -26,6 +27,7 @@ namespace client::audio {
  **/
 enum class SoundEvent : std::uint8_t {
     PlayerShot,
+    Charge,
     ChargedShot,
     EnemyShot,
     Explosion,

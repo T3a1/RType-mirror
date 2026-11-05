@@ -54,6 +54,14 @@ void SfmlAudio::playSound(Sound sound)
     }
 }
 
+void SfmlAudio::stopSound(Sound sound)
+{
+    const auto it = m_sounds.find(sound.id);
+    if (it != m_sounds.end()) {
+        it->second->sound.stop();
+    }
+}
+
 void SfmlAudio::playMusic(Music music)
 {
     const auto it = m_musics.find(music.id);

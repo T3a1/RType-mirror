@@ -36,6 +36,7 @@ struct MusicFile {
 /** @brief The file of each sound, in any order. */
 constexpr std::array SoundFiles = {
     SoundFile{SoundEvent::PlayerShot, "assets/sounds/player_shot.wav"},
+    SoundFile{SoundEvent::Charge, "assets/sounds/charge.wav"},
     SoundFile{SoundEvent::ChargedShot, "assets/sounds/charged_shot.wav"},
     SoundFile{SoundEvent::EnemyShot, "assets/sounds/enemy_shot.wav"},
     SoundFile{SoundEvent::Explosion, "assets/sounds/explosion.wav"},
@@ -95,6 +96,11 @@ SoundBoard::SoundBoard(IAudio &device) : m_device(&device)
 void SoundBoard::play(SoundEvent event)
 {
     m_device->playSound(m_sounds.at(static_cast<std::size_t>(event)));
+}
+
+void SoundBoard::stop(SoundEvent event)
+{
+    m_device->stopSound(m_sounds.at(static_cast<std::size_t>(event)));
 }
 
 void SoundBoard::setMusic(MusicTrack track)

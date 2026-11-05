@@ -114,6 +114,9 @@ def effects():
         "player_shot.wav": normalized(
             sweep(0.13, 1500.0, 420.0, lambda p: square(p, 0.25), 3.5), 0.45
         ),
+        "charge.wav": normalized(
+            sweep(0.7, 170.0, 950.0, lambda p: square(p, 0.35), 0.4), 0.32
+        ),
         "charged_shot.wav": normalized(
             mixed(
                 sweep(0.5, 180.0, 1100.0, lambda p: square(p, 0.4), 2.5),

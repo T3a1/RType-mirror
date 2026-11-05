@@ -57,6 +57,8 @@ class IAudio {
 
     /** @brief Plays a sound once, does nothing for id 0. */
     virtual void playSound(Sound sound) = 0;
+    /** @brief Stops a sound, does nothing for id 0 or if it is not playing. */
+    virtual void stopSound(Sound sound) = 0;
     /** @brief Loops a music instead of the current one, does nothing for
      * id 0. */
     virtual void playMusic(Music music) = 0;

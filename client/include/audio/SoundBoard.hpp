@@ -37,6 +37,12 @@ class SoundBoard {
     void play(SoundEvent event);
 
     /**
+     * @brief Stops a sound, does nothing if it is not playing.
+     * @param event The sound.
+     **/
+    void stop(SoundEvent event);
+
+    /**
      * @brief Loops a music, does nothing if it is already playing.
      * @param track The music.
      **/

@@ -20,6 +20,7 @@ class NullAudio final : public IAudio {
     [[nodiscard]] Sound loadSound(const std::string &) override { return {}; }
     [[nodiscard]] Music loadMusic(const std::string &) override { return {}; }
     void playSound(Sound) override {}
+    void stopSound(Sound) override {}
     void playMusic(Music) override {}
     void stopMusic() override {}
     void setSoundVolume(float) override {}

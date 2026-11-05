@@ -69,6 +69,14 @@ void RaylibAudio::playSound(Sound sound)
     }
 }
 
+void RaylibAudio::stopSound(Sound sound)
+{
+    const auto it = m_sounds.find(sound.id);
+    if (it != m_sounds.end()) {
+        StopSound(it->second);
+    }
+}
+
 void RaylibAudio::playMusic(Music music)
 {
     const auto it = m_musics.find(music.id);

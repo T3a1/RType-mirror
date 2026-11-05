@@ -91,6 +91,26 @@ std::optional<audio::SoundEvent> spawnSound(rtype::EntityType type)
 }
 
 /**
+ * @brief Starts the charge sound when the local ship starts charging, and
+ * stops it when the ship stops. Call it before updating the ChargeState.
+ * @param registry The client's registry.
+ * @param ship The local ship.
+ * @param charge The new charge state of the ship.
+ * @param sounds The sounds of the game.
+ **/
+void updateChargeSound(engine::Registry &registry, engine::Entity ship,
+                       const ChargeState &charge, audio::SoundBoard &sounds)
+{
+    const auto *previous = registry.tryGet<ChargeState>(ship);
+    const bool wasCharging = previous != nullptr && previous->charging;
+    if (charge.charging && !wasCharging) {
+        sounds.play(audio::SoundEvent::Charge);
+    } else if (!charge.charging && wasCharging) {
+        sounds.stop(audio::SoundEvent::Charge);
+    }
+}
+
+/**
  * @brief Tells whether a destroyed entity is a power-up taken by a player: a
  * power-up only disappears inside the playfield when it is taken.
  * @param registry The client's registry.
@@ -119,7 +139,7 @@ bool isTakenPowerUp(engine::Registry &registry, engine::Entity entity)
  * @param tick The tick of the snapshot.
  * @param state The sync state.
  * @param sheets The sprite sheets the new entities are drawn with.
- * @param sounds The sounds played for new entities.
+ * @param sounds The sounds played for new entities and the charge.
  **/
 void applyEntity(engine::Registry &registry, const EntityState &entity,
                  std::uint32_t tick, SyncState &state,
@@ -138,6 +158,9 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
                                  (entity.flags & EntityFlag::Charging) != 0};
     if (it != state.entities.end()) {
         if (entity.type == rtype::EntityType::PlayerShip) {
+            if (entity.networkId == state.localShip) {
+                updateChargeSound(registry, it->second, charge, sounds);
+            }
             registry.emplace<ChargeState>(it->second, charge);
         }
         if (auto *history =
@@ -203,7 +226,7 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
  * @param snapshot The snapshot part.
  * @param state The sync state.
  * @param sheets The sprite sheets the new entities are drawn with.
- * @param sounds The sounds played for new entities.
+ * @param sounds The sounds played for new entities and the charge.
  **/
 void applySnapshot(engine::Registry &registry, const SnapshotPart &snapshot,
                    SyncState &state, const SpriteSheets &sheets,

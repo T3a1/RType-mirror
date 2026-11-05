@@ -36,6 +36,7 @@ class RaylibAudio final : public IAudio {
     [[nodiscard]] Sound loadSound(const std::string &path) override;
     [[nodiscard]] Music loadMusic(const std::string &path) override;
     void playSound(Sound sound) override;
+    void stopSound(Sound sound) override;
     void playMusic(Music music) override;
     void stopMusic() override;
     void setSoundVolume(float volume) override;

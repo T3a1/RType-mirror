@@ -25,6 +25,7 @@ class FakeAudio final : public client::audio::IAudio {
   public:
     std::vector<std::string> paths;
     std::vector<std::uint32_t> playedSounds;
+    std::vector<std::uint32_t> stoppedSounds;
     std::vector<std::uint32_t> playedMusics;
     std::string missing;
     int updates = 0;
@@ -46,6 +47,10 @@ class FakeAudio final : public client::audio::IAudio {
     void playSound(client::audio::Sound sound) override
     {
         playedSounds.push_back(sound.id);
+    }
+    void stopSound(client::audio::Sound sound) override
+    {
+        stoppedSounds.push_back(sound.id);
     }
     void playMusic(client::audio::Music music) override
     {
@@ -82,6 +87,20 @@ TEST(SoundBoard, PlaysTheFileOfEachSound)
               "assets/sounds/explosion.wav");
     EXPECT_EQ(audio.paths.at(audio.playedSounds.at(1) - 1),
               "assets/sounds/player_shot.wav");
+}
+
+TEST(SoundBoard, StopsTheSoundItPlayed)
+{
+    FakeAudio audio;
+    SoundBoard board{audio};
+
+    board.play(SoundEvent::Charge);
+    board.stop(SoundEvent::Charge);
+
+    EXPECT_EQ(audio.stoppedSounds, audio.playedSounds);
+    ASSERT_EQ(audio.stoppedSounds.size(), 1U);
+    EXPECT_EQ(audio.paths.at(audio.stoppedSounds.at(0) - 1),
+              "assets/sounds/charge.wav");
 }
 
 TEST(SoundBoard, PlaysAMissingSoundWithIdZero)
