@@ -129,7 +129,7 @@ void bossHealthBar(engine::Registry &registry, gfx::IGraphics &graphics)
     registry.each<rtype::EntityType, rtype::Health>(
         [&graphics](engine::Entity, const rtype::EntityType &type,
                     const rtype::Health &health) {
-            if (type != rtype::EntityType::Boss || health.max <= 0) {
+            if (!rtype::isBossEntity(type) || health.max <= 0) {
                 return;
             }
             const engine::Vec2f screen = graphics.screenSize();
@@ -141,8 +141,10 @@ void bossHealthBar(engine::Registry &registry, gfx::IGraphics &graphics)
                           .y = screen.y - BossBarBottom,
                           .width = width,
                           .height = BossBarHeight};
-            drawCentered(graphics, "WARSHIP", screen.x / 2.0F,
-                         bar.y - HudLineHeight, HudFontSize,
+            drawCentered(graphics,
+                         type == rtype::EntityType::BossHive ? "HIVE"
+                                                             : "WARSHIP",
+                         screen.x / 2.0F, bar.y - HudLineHeight, HudFontSize,
                          gfx::colors::OffWhite);
             graphics.drawRectangle(bar, gfx::colors::DarkGray);
             bar.width = width * ratio;

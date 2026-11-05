@@ -54,7 +54,10 @@ void Game::registerSystems()
                         server::networkInputSystem(r, m_messages, m_players);
                     });
     m_scheduler.add(Stage::Input, "roomPhase", [this](Registry &, Duration) {
-        server::roomPhaseSystem(m_messages, m_status, m_outbound);
+        if (const auto settings =
+                server::roomPhaseSystem(m_messages, m_status, m_outbound)) {
+            applySettings(*settings);
+        }
     });
     m_scheduler.add(
         Stage::Input, "playerFire",
@@ -173,6 +176,45 @@ void Game::registerSystems()
                                                m_tick);
                     },
                     {.every = 3});
+}
+
+void Game::applySettings(const rtype::protocol::StartGame &settings)
+{
+    const DifficultyStats difficulty = difficultyStats(settings.difficulty);
+    m_factory.setDifficulty(difficulty);
+    m_registry.each<rtype::Spawner>(
+        [&difficulty](engine::Entity, rtype::Spawner &spawner) {
+            spawner.minDelay *= difficulty.spawnDelay;
+            spawner.maxDelay *= difficulty.spawnDelay;
+        });
+
+    std::vector<engine::Entity> endless;
+    m_registry.each<LevelProgress>(
+        [&](engine::Entity world, LevelProgress &progress) {
+            if (settings.level == rtype::protocol::EndlessLevel) {
+                endless.push_back(world);
+                return;
+            }
+            progress.level = std::min<std::size_t>(settings.level - 1U,
+                                                   progress.levels->size() - 1);
+            switch (settings.boss) {
+            case rtype::protocol::BossChoice::LevelBoss:
+                break;
+            case rtype::protocol::BossChoice::Warship:
+                progress.boss = rtype::EnemyType::Boss;
+                break;
+            case rtype::protocol::BossChoice::Hive:
+                progress.boss = rtype::EnemyType::Hive;
+                break;
+            }
+        });
+    for (const engine::Entity world : endless) {
+        m_registry.remove<LevelProgress>(world);
+    }
+    BB_INFO("Game settings: difficulty "
+            << static_cast<int>(settings.difficulty) << ", level "
+            << static_cast<int>(settings.level) << ", boss "
+            << static_cast<int>(settings.boss));
 }
 
 void Game::tick(engine::Duration dt)

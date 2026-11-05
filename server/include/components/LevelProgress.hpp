@@ -13,6 +13,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace server {
@@ -28,6 +29,8 @@ namespace server {
  * @param elapsed The time since the current level started.
  * @param pause The time left before the current level starts.
  * @param bossSpawned Whether the boss of the current level came.
+ * @param boss The boss chosen in the game settings, which replaces the boss
+ * of every level that has one; nothing to keep the bosses of the files.
  **/
 struct LevelProgress {
     std::shared_ptr<const std::vector<Level>> levels;
@@ -36,6 +39,7 @@ struct LevelProgress {
     engine::Duration elapsed{0.0F};
     engine::Duration pause{0.0F};
     bool bossSpawned = false;
+    std::optional<rtype::EnemyType> boss;
 };
 
 } // namespace server

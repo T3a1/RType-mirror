@@ -266,7 +266,7 @@ the rest is tracked in the project's issues.
 | **Physical and motor** | All keys remappable (`controls.cfg`). Default keys for either hand, so the game can be played with one hand. Auto-fire, so firing needs no repeated presses. | Remapping and toggle options of most PC games | Game speed, controller |
 | **Visual** | Player colors from the Okabe-Ito palette, which color-blind players can tell apart. Never color alone: each ship shows "P1" and "(you)", and notices name the player. | Color-blind modes of multiplayer games | Scalable UI, high contrast |
 | **Audio** | Sound is never the only cue: shots, explosions, the charge glow, the level banner and the game over screen show on screen what the sounds tell. | Visual cues in most action games | Volume settings, turning sound off |
-| **Mental and cognitive** | One-page menus, a few clear actions, a "Level 2" banner and final scores. | | Difficulty levels, a control reminder, reducing flashing effects |
+| **Mental and cognitive** | One-page menus, a few clear actions, a "Level 2" banner and final scores. Three difficulty levels and the choice of the starting level, picked in the waiting room. | Difficulty settings of most action games | A control reminder, reducing flashing effects |
 
 **The documentation**: online pages with a search bar and an outline; a light or dark
 theme that follows the reader's system; images with a visible caption; headings in

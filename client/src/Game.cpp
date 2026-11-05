@@ -252,8 +252,12 @@ void Game::handleLobbyMessages(const std::vector<rtype::protocol::Payload> &all)
                        std::get_if<rtype::protocol::RoomJoined>(&payload)) {
             m_lobby.screen = LobbyState::Screen::InRoom;
             m_lobby.room = joined->room;
+            m_lobby.levels = joined->levels;
+            m_lobby.settings.level =
+                joined->levels > 0 ? 1 : rtype::protocol::EndlessLevel;
             if (m_bench) {
-                m_network.startGame(std::chrono::steady_clock::now());
+                m_network.startGame(m_lobby.settings,
+                                    std::chrono::steady_clock::now());
             }
         } else if (std::holds_alternative<rtype::protocol::RoomRefused>(
                        payload)) {
@@ -315,7 +319,8 @@ void Game::drawScreens()
             waitingRoomScreen(m_lobby, m_sync, *m_graphics, m_menuKeys);
         if (choice == WaitingChoice::Start) {
             m_sounds.play(audio::SoundEvent::MenuConfirm);
-            m_network.startGame(std::chrono::steady_clock::now());
+            m_network.startGame(m_lobby.settings,
+                                std::chrono::steady_clock::now());
         } else if (choice == WaitingChoice::Leave) {
             m_sounds.play(audio::SoundEvent::MenuBack);
             leaveRoom();

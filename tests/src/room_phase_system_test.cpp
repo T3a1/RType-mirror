@@ -16,8 +16,13 @@ using rtype::protocol::RoomStatus;
 
 namespace {
 
-const server::InboundMessage StartMessage{.clientId = 1,
-                                          .kind = server::InboundKind::Start};
+const server::InboundMessage StartMessage{
+    .clientId = 1,
+    .kind = server::InboundKind::Start,
+    .settings = {
+        .difficulty = rtype::protocol::Difficulty::Hard,
+        .level = 2,
+    }};
 const server::InboundMessage ConnectedMessage{
     .clientId = 2, .kind = server::InboundKind::Connected};
 
@@ -28,9 +33,11 @@ TEST(RoomPhaseSystem, StartBeginsAWaitingGameForEveryone)
     server::Outbound outbound;
     RoomStatus status = RoomStatus::Waiting;
 
-    server::roomPhaseSystem({StartMessage}, status, outbound);
+    const auto settings =
+        server::roomPhaseSystem({StartMessage}, status, outbound);
 
     EXPECT_EQ(status, RoomStatus::Playing);
+    EXPECT_EQ(settings, StartMessage.settings);
     const auto sent = outbound.drain();
     ASSERT_EQ(sent.size(), 1U);
     EXPECT_EQ(sent.front().to, server::Recipient::All);
@@ -43,7 +50,8 @@ TEST(RoomPhaseSystem, AnotherStartDoesNothing)
     server::Outbound outbound;
     RoomStatus status = RoomStatus::Playing;
 
-    server::roomPhaseSystem({StartMessage}, status, outbound);
+    static_cast<void>(
+        server::roomPhaseSystem({StartMessage}, status, outbound));
 
     EXPECT_EQ(outbound.size(), 0U);
 }
@@ -53,7 +61,8 @@ TEST(RoomPhaseSystem, AFinishedGameDoesNotStartAgain)
     server::Outbound outbound;
     RoomStatus status = RoomStatus::Over;
 
-    server::roomPhaseSystem({StartMessage}, status, outbound);
+    static_cast<void>(
+        server::roomPhaseSystem({StartMessage}, status, outbound));
 
     EXPECT_EQ(status, RoomStatus::Over);
     EXPECT_EQ(outbound.size(), 0U);
@@ -64,7 +73,8 @@ TEST(RoomPhaseSystem, APlayerJoiningARunningGameIsToldAlone)
     server::Outbound outbound;
     RoomStatus status = RoomStatus::Playing;
 
-    server::roomPhaseSystem({ConnectedMessage}, status, outbound);
+    static_cast<void>(
+        server::roomPhaseSystem({ConnectedMessage}, status, outbound));
 
     const auto sent = outbound.drain();
     ASSERT_EQ(sent.size(), 1U);
@@ -77,7 +87,8 @@ TEST(RoomPhaseSystem, APlayerJoiningAWaitingRoomIsNotTold)
     server::Outbound outbound;
     RoomStatus status = RoomStatus::Waiting;
 
-    server::roomPhaseSystem({ConnectedMessage}, status, outbound);
+    static_cast<void>(
+        server::roomPhaseSystem({ConnectedMessage}, status, outbound));
 
     EXPECT_EQ(status, RoomStatus::Waiting);
     EXPECT_EQ(outbound.size(), 0U);

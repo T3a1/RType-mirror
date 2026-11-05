@@ -250,8 +250,10 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
     registry.emplace<rtype::Health>(
         created, rtype::Health{
                      .current = entity.health,
-                     .max = entity.type == rtype::EntityType::Boss
-                                ? rtype::BossMaxHealth
+                     // A boss arrives with its full health, which depends
+                     // on the difficulty.
+                     .max = rtype::isBossEntity(entity.type)
+                                ? std::max<int>(entity.health, 1)
                                 : rtype::PlayerMaxHealth,
                  });
     const bool local = entity.networkId == state.localShip;

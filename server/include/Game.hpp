@@ -8,6 +8,7 @@
 #ifndef SERVER_GAME_HPP
 #define SERVER_GAME_HPP
 
+#include "Difficulty.hpp"
 #include "EntityFactory.hpp"
 #include "Level.hpp"
 #include "Weapons.hpp"
@@ -115,6 +116,13 @@ class Game final : public engine::IInstance {
      *the room has left its waiting phase.
      **/
     void registerSystems();
+    /**
+     * @brief Applies the settings of the player who started the game: the
+     * difficulty of the enemies, the level to start at (the endless mode
+     * removes the levels) and the boss of the levels.
+     * @param settings The settings sent with StartGame.
+     **/
+    void applySettings(const rtype::protocol::StartGame &settings);
 
     Inbound &m_inbound;
     Outbound &m_outbound;

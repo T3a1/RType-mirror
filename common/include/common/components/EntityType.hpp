@@ -42,7 +42,14 @@ enum class EntityType : std::uint8_t {
     Boss,
     ChargedShot,
     PowerUp,
+    BossHive,
 };
+
+// Whether an entity type is an end-level boss.
+constexpr bool isBossEntity(EntityType type)
+{
+    return type == EntityType::Boss || type == EntityType::BossHive;
+}
 
 } // namespace rtype
 

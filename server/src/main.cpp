@@ -339,6 +339,8 @@ int main(int argc, char *argv[])
     // whole server by reading the terminal: the read just fails.
     static_cast<void>(std::signal(SIGTTIN, SIG_IGN));
 #endif
+    network->setLevelCount(static_cast<std::uint8_t>(
+        std::min<std::size_t>(levels->size(), UINT8_MAX)));
     network->start();
     BB_INFO("Server running on UDP port " << options.port
                                           << ", press Ctrl+C to stop");

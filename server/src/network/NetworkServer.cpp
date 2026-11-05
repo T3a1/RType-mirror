@@ -244,7 +244,10 @@ void NetworkServer::joinRoom(SessionIterator it, engine::InstanceId room,
     it->second.room = membership->id;
     it->second.link = membership->link;
     BB_INFO("Client " << it->second.id << " joined room " << membership->id);
-    send(it, rtype::protocol::RoomJoined{.room = membership->id}, now);
+    send(it,
+         rtype::protocol::RoomJoined{.room = membership->id,
+                                     .levels = m_levelCount},
+         now);
     pushInbound(it->second,
                 {.clientId = it->second.id, .kind = InboundKind::Connected});
 }
@@ -311,10 +314,11 @@ void NetworkServer::handleSessionPacket(SessionIterator it,
                    packet.payload)) {
         leaveRoom(it, rtype::protocol::DisconnectReason::Left);
         sendRoomList(it, now);
-    } else if (std::holds_alternative<rtype::protocol::StartGame>(
-                   packet.payload)) {
-        pushInbound(it->second,
-                    {.clientId = it->second.id, .kind = InboundKind::Start});
+    } else if (const auto *start =
+                   std::get_if<rtype::protocol::StartGame>(&packet.payload)) {
+        pushInbound(it->second, {.clientId = it->second.id,
+                                 .kind = InboundKind::Start,
+                                 .settings = *start});
     } else if (std::holds_alternative<rtype::protocol::Disconnect>(
                    packet.payload)) {
         removeSession(it, rtype::protocol::DisconnectReason::Left);

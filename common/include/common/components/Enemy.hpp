@@ -33,7 +33,14 @@ enum class EnemyType : std::uint8_t {
     Medium,
     Large,
     Boss,
+    Hive,
 };
+
+// Whether an enemy type is an end-level boss (moved by the boss system).
+constexpr bool isBoss(EnemyType type)
+{
+    return type == EnemyType::Boss || type == EnemyType::Hive;
+}
 
 /** @brief Health of the end-level boss; the clients draw its health bar from
  * it. */

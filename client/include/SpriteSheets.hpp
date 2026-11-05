@@ -49,6 +49,7 @@ enum class Sheet : std::uint8_t {
     Explosion,
     Boss,
     PowerUp,
+    Hive,
     Count,
 };
 

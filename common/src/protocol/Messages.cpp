@@ -62,11 +62,17 @@ void encode(const JoinRoom &message, ByteWriter &out) { out.u32(message.room); }
 
 void encode(const LeaveRoom & /*message*/, ByteWriter & /*out*/) {}
 
-void encode(const StartGame & /*message*/, ByteWriter & /*out*/) {}
+void encode(const StartGame &message, ByteWriter &out)
+{
+    out.u8(static_cast<std::uint8_t>(message.difficulty));
+    out.u8(message.level);
+    out.u8(static_cast<std::uint8_t>(message.boss));
+}
 
 void encode(const RoomJoined &message, ByteWriter &out)
 {
     out.u32(message.room);
+    out.u8(message.levels);
 }
 
 void encode(const RoomRefused & /*message*/, ByteWriter & /*out*/) {}
@@ -175,11 +181,19 @@ bool decode(ByteReader &in, JoinRoom &message)
 
 bool decode(ByteReader & /*in*/, LeaveRoom & /*message*/) { return true; }
 
-bool decode(ByteReader & /*in*/, StartGame & /*message*/) { return true; }
+bool decode(ByteReader &in, StartGame &message)
+{
+    if (!readEnum(in, Difficulty::Hard, message.difficulty)) {
+        return false;
+    }
+    message.level = in.u8();
+    return readEnum(in, BossChoice::Hive, message.boss);
+}
 
 bool decode(ByteReader &in, RoomJoined &message)
 {
     message.room = in.u32();
+    message.levels = in.u8();
     return message.room != 0;
 }
 
@@ -249,7 +263,7 @@ bool decode(ByteReader &in, SnapshotPart &message)
     for (std::uint16_t i = 0; i < entityCount; ++i) {
         EntityState entity;
         entity.networkId = in.u32();
-        if (!readEnum(in, EntityType::PowerUp, entity.type)) {
+        if (!readEnum(in, EntityType::BossHive, entity.type)) {
             return false;
         }
         entity.flags = in.u8();
