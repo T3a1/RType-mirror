@@ -65,7 +65,7 @@ Game::Game(const std::string &host, std::uint16_t port,
                                  .height = windowHeight,
                                  .title = "R-Type",
                              })),
-      m_sheets(*m_graphics),
+      m_audio(audio::createAudio()), m_sheets(*m_graphics),
       m_autoJoin(options.bench && !options.room
                      ? std::optional<std::uint32_t>{rtype::protocol::AnyRoom}
                      : options.room),
@@ -173,6 +173,9 @@ void Game::registerSystems()
                     });
     m_scheduler.add(Stage::Simulation, "shipTilt", shipTiltSystem);
     m_scheduler.add(Stage::Simulation, "animation", animationSystem);
+
+    m_scheduler.add(Stage::Output, "audio",
+                    [this](Registry &, Duration) { m_audio->update(); });
 }
 
 /**
