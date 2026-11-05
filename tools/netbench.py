@@ -47,9 +47,12 @@ SCENARIOS = {
     "latency": ("RTT 100 ms", "delay 50ms"),
     "high-latency": ("RTT 300 ms", "delay 150ms"),
     "jitter": ("RTT 100 ms ± 40 ms", "delay 50ms 20ms"),
+    "loss-2": ("RTT 100 ms, 2 % loss", "delay 50ms loss 2%"),
     "loss-5": ("RTT 100 ms, 5 % loss", "delay 50ms loss 5%"),
     "loss-20": ("RTT 100 ms, 20 % loss", "delay 50ms loss 20%"),
     "bursts": ("RTT 100 ms, loss in bursts", "delay 50ms loss gemodel 1% 30%"),
+    "duplicate": ("RTT 100 ms, 2 % duplication", "delay 50ms duplicate 2%"),
+    "bandwidth": ("RTT 100 ms, 5 kB/s", "delay 50ms rate 40kbit"),
 }
 
 # Name, client options.
