@@ -148,8 +148,10 @@ class NetworkClient {
     /**
      * @brief Asks to start the game of the current room.
      * @param now The current time.
+     * @param settings The settings of the game: difficulty, starting level
+     * and boss.
      **/
-    void startGame(TimePoint now);
+    void startGame(const rtype::protocol::StartGame &settings, TimePoint now);
 
     /**
      * @brief Returns the bytes of every datagram received from the server

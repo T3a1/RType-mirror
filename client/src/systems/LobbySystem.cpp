@@ -9,6 +9,7 @@
 #include "PlayerColors.hpp"
 
 #include <algorithm>
+#include <array>
 #include <string>
 
 namespace client {
@@ -169,11 +170,87 @@ lobbyScreen(LobbyState &state, gfx::IGraphics &graphics, const MenuKeys &keys)
     return choice;
 }
 
+namespace {
+
+// Items of the waiting room: the settings, then Start and Leave.
+constexpr std::size_t SettingCount = 3;
+constexpr std::size_t StartItem = SettingCount;
+constexpr std::size_t LeaveItem = SettingCount + 1;
+constexpr std::size_t WaitingItems = SettingCount + 2;
+constexpr gfx::Color HintColor = gfx::rgb(170, 170, 185);
+
+std::string difficultyName(rtype::protocol::Difficulty difficulty)
+{
+    switch (difficulty) {
+    case rtype::protocol::Difficulty::Easy:
+        return "Easy";
+    case rtype::protocol::Difficulty::Normal:
+        return "Normal";
+    case rtype::protocol::Difficulty::Hard:
+        return "Hard";
+    }
+    return "?";
+}
+
+std::string levelName(std::uint8_t level)
+{
+    return level == rtype::protocol::EndlessLevel
+               ? std::string{"Endless mode"}
+               : "Level " + std::to_string(level);
+}
+
+std::string bossName(rtype::protocol::BossChoice boss)
+{
+    switch (boss) {
+    case rtype::protocol::BossChoice::LevelBoss:
+        return "Each level's own";
+    case rtype::protocol::BossChoice::Warship:
+        return "Warship";
+    case rtype::protocol::BossChoice::Hive:
+        return "Hive";
+    }
+    return "?";
+}
+
+/**
+ * @brief Moves one setting of the waiting room to its next value, back to
+ * the first after the last.
+ * @param state The lobby state holding the settings.
+ * @param setting The setting: 0 difficulty, 1 starting level, 2 boss.
+ **/
+void nextSetting(LobbyState &state, std::size_t setting)
+{
+    rtype::protocol::StartGame &settings = state.settings;
+    switch (setting) {
+    case 0:
+        settings.difficulty = static_cast<rtype::protocol::Difficulty>(
+            (static_cast<int>(settings.difficulty) + 1) % 3);
+        break;
+    case 1:
+        // Level 1, 2... up to the last one, then the endless mode.
+        if (settings.level == rtype::protocol::EndlessLevel) {
+            settings.level =
+                state.levels > 0 ? 1 : rtype::protocol::EndlessLevel;
+        } else if (settings.level >= state.levels) {
+            settings.level = rtype::protocol::EndlessLevel;
+        } else {
+            ++settings.level;
+        }
+        break;
+    default:
+        settings.boss = static_cast<rtype::protocol::BossChoice>(
+            (static_cast<int>(settings.boss) + 1) % 3);
+        break;
+    }
+}
+
+} // namespace
+
 WaitingChoice waitingRoomScreen(LobbyState &state, const SyncState &sync,
                                 gfx::IGraphics &graphics, const MenuKeys &keys)
 {
     const engine::Vec2f screen = graphics.screenSize();
-    moveSelection(state.selected, 2, keys);
+    moveSelection(state.selected, WaitingItems, keys);
 
     float y = TopMargin;
     drawCentered(graphics, "Room " + std::to_string(state.room),
@@ -187,15 +264,35 @@ WaitingChoice waitingRoomScreen(LobbyState &state, const SyncState &sync,
             screen.x / 2.0F, y, TextFontSize, playerColor(player.slot));
         y += LineHeight;
     }
+
+    // Each setting is a button that goes to its next value.
+    const std::array<std::string, SettingCount> labels{
+        "Difficulty: " + difficultyName(state.settings.difficulty),
+        "Start at: " + levelName(state.settings.level),
+        "Boss: " + bossName(state.settings.boss),
+    };
+    for (std::size_t i = 0; i < SettingCount; ++i) {
+        const bool clicked =
+            menuButton(graphics, rowAt(screen, y), labels.at(i),
+                       {.selected = state.selected == i});
+        if (clicked || (keys.confirm && state.selected == i)) {
+            nextSetting(state, i);
+        }
+        y += RowHeight + RowGap;
+    }
+    drawCentered(graphics, "The settings of the player who starts are used",
+                 screen.x / 2.0F, y, TextFontSize, HintColor);
+    y += LineHeight;
+
     const bool start = menuButton(graphics, rowAt(screen, y), "Start the game",
-                                  {.selected = state.selected == 0});
+                                  {.selected = state.selected == StartItem});
     y += RowHeight + RowGap;
     const bool leave = menuButton(graphics, rowAt(screen, y), "Back to lobby",
-                                  {.selected = state.selected == 1});
-    if (start || (keys.confirm && state.selected == 0)) {
+                                  {.selected = state.selected == LeaveItem});
+    if (start || (keys.confirm && state.selected == StartItem)) {
         return WaitingChoice::Start;
     }
-    if (leave || (keys.confirm && state.selected == 1)) {
+    if (leave || (keys.confirm && state.selected == LeaveItem)) {
         return WaitingChoice::Leave;
     }
     return WaitingChoice::None;

@@ -106,10 +106,10 @@ void NetworkClient::leaveRoom(TimePoint now)
     }
 }
 
-void NetworkClient::startGame(TimePoint now)
+void NetworkClient::startGame(const StartGame &settings, TimePoint now)
 {
     if (m_state == State::Connected) {
-        send(StartGame{}, now);
+        send(settings, now);
     }
 }
 
