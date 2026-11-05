@@ -41,10 +41,11 @@ engine::Vec2f moveShip(engine::Vec2f position, std::uint8_t actions,
                        float duration);
 
 /**
- * @brief Records an input just sent to the server. When more than
+ * @brief Records the input of one frame. When more than
  * Prediction::MaxPending inputs are pending, the oldest is dropped.
  * @param prediction The prediction.
- * @param sequence The Input sequence number; 0 (not sent) is ignored.
+ * @param sequence The sequence number of the Input that carries this frame,
+ * sent now or later; 0 (not connected) is ignored.
  * @param actions The held actions.
  * @param dt How long the client applies it: the duration of the frame.
  **/

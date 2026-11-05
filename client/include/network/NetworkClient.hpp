@@ -95,12 +95,14 @@ class NetworkClient {
     [[nodiscard]] std::vector<rtype::protocol::Payload> update(TimePoint now);
 
     /**
-     * @brief Sends the actions held this frame, with a new sequence number.
-     * Must be called every frame, even with no key held: it keeps the
-     * connection alive and carries the ack. Does nothing until connected.
+     * @brief Sends the actions held this frame if they changed, or if the
+     * last Input is InputInterval old. Must be called every frame, even with
+     * no key held: it keeps the connection alive and carries the ack. Does
+     * nothing until connected.
      * @param actions The held actions, as Action bits.
      * @param now The current time.
-     * @return The sequence number of the Input, 0 if it was not sent.
+     * @return The sequence number of the Input that carries this frame: the
+     * one just sent, or the next one if nothing was sent. 0 until connected.
      **/
     std::uint32_t sendInput(std::uint8_t actions, TimePoint now);
 
@@ -181,7 +183,9 @@ class NetworkClient {
     TimePoint m_lastHeard;
     TimePoint m_lastSent;
     TimePoint m_nextConnect;
+    TimePoint m_nextInput;
     std::uint32_t m_inputSequence = 0;
+    std::uint8_t m_lastActions = 0;
     rtype::protocol::RejectReason m_rejectReason =
         rtype::protocol::RejectReason::ServerFull;
     rtype::protocol::DisconnectReason m_disconnectReason =

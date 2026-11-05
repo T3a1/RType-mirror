@@ -680,9 +680,10 @@ The client uses the same pattern with roles reversed:
 | Network thread | Socket, handshake, validation and decoding, reliable events and acks, server timeout |
 
 - **Outbound:** the input system pushes the **complete** input state (a bitmask
-  of pressed actions) at a fixed rate, about 60 times per second, whatever the
-  frame rate. Sending the full state every time means a lost packet is
-  corrected by the next one, and a key release can never get lost.
+  of pressed actions) as soon as it changes, and otherwise about 30 times per
+  second, whatever the frame rate. Sending the full state every time means a
+  lost packet is corrected by the next one, and a key release can never get
+  lost.
 - **Inbound:** the main thread drains snapshots and events each frame. The
   snapshot system keeps the last few snapshots in a small buffer, and the
   interpolation system draws remote entities about **100 ms in the past**
