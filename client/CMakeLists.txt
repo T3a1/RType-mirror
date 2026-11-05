@@ -25,7 +25,7 @@ set(SOURCE_FILES
 if(RTYPE_GRAPHICS_BACKEND STREQUAL "raylib")
     find_package(raylib REQUIRED)
     list(APPEND SOURCE_FILES src/graphics/raylib/RaylibGraphics.cpp)
-    list(APPEND SOURCE_FILES src/audio/NullAudio.cpp)
+    list(APPEND SOURCE_FILES src/audio/raylib/RaylibAudio.cpp)
     set(GRAPHICS_LIBRARIES raylib)
 elseif(RTYPE_GRAPHICS_BACKEND STREQUAL "sfml")
     find_package(SFML 3 REQUIRED COMPONENTS Graphics Window System)
