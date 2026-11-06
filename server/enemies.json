@@ -1,3 +1,31 @@
 {
-    "enemies": {}
+    "enemies": {
+        "kamikaze": {
+            "base": "basic",
+            "look": "small",
+            "width": 51,
+            "height": 51,
+            "health": 30,
+            "speed": 380,
+            "score": 60,
+            "pattern": { "kind": "dive", "diveDelay": 1.2, "diveSpeed": 900 }
+        },
+        "gunship": {
+            "base": "shooter",
+            "look": "medium",
+            "width": 96,
+            "height": 63,
+            "health": 250,
+            "speed": 90,
+            "score": 300,
+            "fireInterval": 0.8,
+            "dropsPowerUp": true
+        },
+        "dreadnought": {
+            "base": "hive",
+            "health": 3500,
+            "speed": 90,
+            "score": 8000
+        }
+    }
 }
