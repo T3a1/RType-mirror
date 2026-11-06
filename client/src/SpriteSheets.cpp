@@ -135,7 +135,8 @@ constexpr auto EnemyLargeFrames =
     row<6>({1.0F, 66.0F, 131.0F, 198.0F, 263.0F, 328.0F}, 1.0F, 63.0F, 48.0F);
 /** @brief The frames of the boss. */
 constexpr auto BossFrames = row<2>({2.0F, 191.0F}, 2.0F, 176.0F, 108.0F);
-// The hive: two frames per row, four rows, read row by row.
+/** @brief The frames of the second boss: two per row, four rows, read row by
+ * row. */
 constexpr std::array<Rect, 8> HiveFrames{{
     {.x = 2.0F, .y = 0.0F, .width = 256.0F, .height = 144.0F},
     {.x = 262.0F, .y = 0.0F, .width = 256.0F, .height = 144.0F},
@@ -190,6 +191,7 @@ constexpr AnimationClip EnemyLargeClip{.frames = EnemyLargeFrames,
                                        .frameTime = 0.1F};
 /** @brief The animation of the boss. */
 constexpr AnimationClip BossClip{.frames = BossFrames, .frameTime = 0.3F};
+/** @brief The animation of the second boss. */
 constexpr AnimationClip HiveClip{.frames = HiveFrames, .frameTime = 0.15F};
 /** @brief The animation of a charged shot. */
 constexpr AnimationClip ChargedShotClip{.frames = ChargedShotFrames,

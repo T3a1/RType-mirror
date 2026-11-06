@@ -52,13 +52,21 @@ enum class EntityType : std::uint8_t {
     DestroyableTile,
 };
 
-// Whether an entity type is an end-level boss.
+/**
+ * @brief Tells whether an entity type is an end-level boss.
+ * @param type The entity type.
+ * @return `true` for a boss.
+ **/
 constexpr bool isBossEntity(EntityType type)
 {
     return type == EntityType::Boss || type == EntityType::BossHive;
 }
 
-// Whether an entity type is a part of the level (a wall or a tile).
+/**
+ * @brief Tells whether an entity type is a part of the level.
+ * @param type The entity type.
+ * @return `true` for a wall or a tile.
+ **/
 constexpr bool isObstacleEntity(EntityType type)
 {
     return type == EntityType::Obstacle || type == EntityType::DestroyableTile;
