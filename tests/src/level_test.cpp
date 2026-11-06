@@ -6,6 +6,7 @@
 */
 
 #include "Difficulty.hpp"
+#include "EnemyCatalog.hpp"
 #include "EntityFactory.hpp"
 #include "Level.hpp"
 #include "common/components/Enemy.hpp"
@@ -158,8 +159,13 @@ TEST(Level, ErrorsSayWhereTheProblemIs)
 
 TEST(Level, ShippedLevelsAreValid)
 {
+    // Like the server: the levels name the enemies of enemies.json.
+    std::string error;
+    server::setEnemyCatalog(server::loadEnemies(RTYPE_ENEMIES_FILE, error));
     const server::LevelSet set = server::loadLevels(RTYPE_LEVELS_DIR);
+    server::setEnemyCatalog(server::EnemyCatalog{});
 
+    EXPECT_TRUE(error.empty()) << error;
     EXPECT_TRUE(set.errors.empty())
         << (set.errors.empty() ? "" : set.errors.front());
     EXPECT_GE(set.levels.size(), 2U);
