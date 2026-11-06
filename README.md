@@ -78,7 +78,8 @@ The same options are also in a window: `./rtype.py --gui`.
 
 The full documentation is online, with an outline and a search bar:
 **<https://t3a1.github.io/RType-mirror/>** (or `./rtype.py --docs` to build it
-locally).
+locally). A button on each page switches to its French version
+([version française](https://t3a1.github.io/RType-mirror/fr/)).
 
 | Document | What you will find |
 |----------|--------------------|
@@ -101,6 +102,14 @@ locally).
 |-----------|------|---------|
 | Part 1 | October 18, 2026 | Game engine, networking and a playable prototype. |
 | Part 2 | November 8, 2026 | Advanced features, built on top of the prototype. |
+
+## License
+
+R-Type is free software, under the [GNU General Public License v3.0](LICENSE).
+
+The license covers our code and our documentation, not the third-party assets of
+`client/assets/`: the R-Type sprite sheets remain the property of their rights
+holders, and DejaVu Sans has its own license, next to the font.
 
 ## Authors
 

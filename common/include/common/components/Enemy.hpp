@@ -23,7 +23,8 @@ namespace rtype {
  * @param Small The smallest and fastest enemy, following a sine wave.
  * @param Medium A shooting enemy following a zigzag, drops a power-up.
  * @param Large A slow, tough and shooting enemy, drops a power-up.
- * @param Boss The enemy at the end of a level, moved by bossSystem().
+ * @param Boss The first end-level boss, moved by bossSystem().
+ * @param Hive The second end-level boss, moved by bossSystem().
  **/
 enum class EnemyType : std::uint8_t {
     Basic,
@@ -36,7 +37,12 @@ enum class EnemyType : std::uint8_t {
     Hive,
 };
 
-// Whether an enemy type is an end-level boss (moved by the boss system).
+/**
+ * @brief Tells whether an enemy type is an end-level boss, moved by the boss
+ * system.
+ * @param type The enemy type.
+ * @return `true` for a boss.
+ **/
 constexpr bool isBoss(EnemyType type)
 {
     return type == EnemyType::Boss || type == EnemyType::Hive;

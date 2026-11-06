@@ -104,6 +104,52 @@ def shown_command(settings: GameSettings) -> str:
     return " ".join([launcher, *(shlex.quote(arg) for arg in arguments(settings))])
 
 
+def interface_scale(dpi_scale: float, screen_height: int,
+                    override: str | None = None) -> float:
+    """Returns how much to enlarge the window compared with a 1080p screen.
+    The system's DPI is not enough: it often stays at 96 on Linux, whatever the
+    resolution. So the height of the screen also counts, in steps of 25 %.
+    RTYPE_GUI_SCALE, a number from 0.5 to 4, overrides it all."""
+    if override:
+        try:
+            value = float(override)
+        except ValueError:
+            value = 0.0
+        if 0.5 <= value <= 4.0:
+            return value
+    by_height = round(screen_height / 1080 * 4) / 4
+    return min(max(dpi_scale, by_height, 1.0), 4.0)
+
+
+def make_dpi_aware() -> None:
+    """On Windows, asks for the real pixels: otherwise the system stretches
+    the window and it looks blurry. Must be called before the window opens."""
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)
+    except (AttributeError, OSError):
+        pass
+
+
+def apply_scale(root) -> float:
+    """Enlarges the fonts of a window to fit the screen; returns the scale.
+    Fonts in points follow Tk's scaling, and fonts in pixels (a negative size)
+    must be changed one by one."""
+    from tkinter import font
+    points_to_pixels = float(root.tk.call("tk", "scaling"))
+    scale = interface_scale(points_to_pixels * 72 / 96, root.winfo_screenheight(),
+                            os.environ.get("RTYPE_GUI_SCALE"))
+    root.tk.call("tk", "scaling", scale * 96 / 72)
+    for name in font.names(root):
+        named = font.nametofont(name, root=root)
+        size = int(named.cget("size"))
+        if size < 0:
+            named.configure(size=round(size * scale))
+    return scale
+
+
 class LauncherWindow:
     """The window: a form of GameSettings, and the command it gives."""
 
@@ -113,9 +159,11 @@ class LauncherWindow:
         self.tk = tk
         from tkinter import ttk
         self.ttk = ttk
+        make_dpi_aware()
         self.root = tk.Tk()
+        self.scale = apply_scale(self.root)
         self.root.title("R-Type launcher")
-        self.root.minsize(560, 420)
+        self.root.minsize(self.px(560), self.px(420))
         defaults = GameSettings()
         self.mode = tk.StringVar(value=defaults.mode)
         self.native = tk.BooleanVar(value=defaults.native)
@@ -138,10 +186,16 @@ class LauncherWindow:
             variable.trace_add("write", lambda *_: self.refresh())
         self.refresh()
 
+    def px(self, size):
+        """Scales a size in pixels, or a tuple of sizes, to the screen."""
+        if isinstance(size, tuple):
+            return tuple(round(value * self.scale) for value in size)
+        return round(size * self.scale)
+
     def _build_form(self) -> None:
         """Lays out the settings, the command and the status line."""
         ttk = self.ttk
-        form = ttk.Frame(self.root, padding=12)
+        form = ttk.Frame(self.root, padding=self.px(12))
         form.grid(row=0, column=0, sticky="nsew")
         self.root.columnconfigure(0, weight=1)
         form.columnconfigure(1, weight=1)
@@ -151,11 +205,11 @@ class LauncherWindow:
         modes.grid(row=0, column=1, sticky="w")
         for value, label in MODES.items():
             ttk.Radiobutton(modes, text=label, value=value,
-                            variable=self.mode).pack(side="left", padx=(0, 12))
+                            variable=self.mode).pack(side="left", padx=self.px((0, 12)))
 
         native = ttk.Checkbutton(form, variable=self.native,
                                  text="Run the server here instead of in Docker")
-        native.grid(row=1, column=1, sticky="w", pady=4)
+        native.grid(row=1, column=1, sticky="w", pady=self.px(4))
         self.server_fields.append(native)
 
         rows = (
@@ -172,32 +226,32 @@ class LauncherWindow:
         )
         for row, (label, widget, client_only) in enumerate(rows, start=2):
             ttk.Label(form, text=label).grid(row=row, column=0, sticky="w",
-                                             padx=(0, 12), pady=2)
+                                             padx=self.px((0, 12)), pady=self.px(2))
             widget.grid(row=row, column=1, sticky="w" if label != "Server address"
-                        else "ew", pady=2)
+                        else "ew", pady=self.px(2))
             if client_only:
                 self.client_fields.append(widget)
 
         ttk.Label(form, text="Command").grid(row=7, column=0, sticky="w",
-                                             pady=(10, 0))
+                                             pady=self.px((10, 0)))
         ttk.Entry(form, textvariable=self.command, state="readonly").grid(
-            row=7, column=1, sticky="ew", pady=(10, 0))
+            row=7, column=1, sticky="ew", pady=self.px((10, 0)))
         ttk.Label(form, textvariable=self.status, foreground="#a33").grid(
-            row=8, column=0, columnspan=2, sticky="w", pady=(6, 0))
+            row=8, column=0, columnspan=2, sticky="w", pady=self.px((6, 0)))
         self.form = form
 
     def _build_output(self) -> None:
         """Lays out the Start and Stop buttons and the output of the game."""
         ttk = self.ttk
-        buttons = ttk.Frame(self.root, padding=(12, 0))
+        buttons = ttk.Frame(self.root, padding=self.px((12, 0)))
         buttons.grid(row=1, column=0, sticky="ew")
         self.start_button = ttk.Button(buttons, text="Start", command=self.start)
         self.start_button.pack(side="left")
         self.stop_button = ttk.Button(buttons, text="Stop", command=self.stop)
-        self.stop_button.pack(side="left", padx=8)
+        self.stop_button.pack(side="left", padx=self.px(8))
         self.stop_button.state(["disabled"])
 
-        output = ttk.Frame(self.root, padding=12)
+        output = ttk.Frame(self.root, padding=self.px(12))
         output.grid(row=2, column=0, sticky="nsew")
         self.root.rowconfigure(2, weight=1)
         output.columnconfigure(0, weight=1)
@@ -209,21 +263,21 @@ class LauncherWindow:
         scroll.grid(row=0, column=1, sticky="ns")
         self.output.configure(yscrollcommand=scroll.set)
 
-        # The administration console of a native server reads this input.
-        console = ttk.Frame(self.root, padding=(12, 0, 12, 12))
+        # The administration console of the server reads this input.
+        console = ttk.Frame(self.root, padding=self.px((12, 0, 12, 12)))
         console.grid(row=3, column=0, sticky="ew")
         console.columnconfigure(1, weight=1)
         ttk.Label(console, text="Server console").grid(row=0, column=0,
-                                                        padx=(0, 8))
+                                                        padx=self.px((0, 8)))
         self.console_line = self.tk.StringVar()
         entry = ttk.Entry(console, textvariable=self.console_line)
         entry.grid(row=0, column=1, sticky="ew")
         entry.bind("<Return>", lambda _: self.send())
         ttk.Button(console, text="Send", command=self.send).grid(
-            row=0, column=2, padx=(8, 0))
+            row=0, column=2, padx=self.px((8, 0)))
 
     def send(self) -> None:
-        """Sends the console line to the running command: with a native
+        """Sends the console line to the running command: with a
         server, its administration commands (help, status, kick...)."""
         line = self.console_line.get().strip()
         if not line or self.process is None or self.process.stdin is None:
