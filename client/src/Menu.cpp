@@ -406,7 +406,6 @@ void MenuPanel::tabs(const gfx::Rect &rect, std::span<const std::string> labels,
         m_graphics->drawRectangle(tab, active || contains(tab, mouse)
                                            ? ButtonActiveColor
                                            : ButtonColor);
-        // The brackets tell the current tab without relying on color.
         const std::string text = active ? "[" + labels[i] + "]" : labels[i];
         drawCentered(*m_graphics, text, tab.x + (tab.width / 2.0F),
                      textTop(rect), ButtonFontSize, gfx::colors::OffWhite);
