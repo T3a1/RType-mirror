@@ -7,7 +7,9 @@
 
 #include "SpriteSheets.hpp"
 #include "PlayerColors.hpp"
+#include "common/Obstacles.hpp"
 #include "common/Playfield.hpp"
+#include "common/components/Health.hpp"
 #include "common/components/Transform.hpp"
 #include "components/Animation.hpp"
 #include "components/ChargeState.hpp"
@@ -434,6 +436,19 @@ void chargeGlowSystem(engine::Registry &registry, const SpriteSheets &sheets,
             } else {
                 graphics.drawRectangle(dest, rgb(120, 220, 255));
             }
+        });
+}
+
+void tileCrackSystem(engine::Registry &registry, engine::Duration /*dt*/)
+{
+    registry.each<rtype::EntityType, rtype::Health, Sprite>(
+        [](engine::Entity, const rtype::EntityType &type,
+           const rtype::Health &health, Sprite &sprite) {
+            if (type != rtype::EntityType::DestroyableTile) {
+                return;
+            }
+            const bool cracked = 2 * health.current <= rtype::TileMaxHealth;
+            sprite.source = ObstacleFrames.at(cracked ? 2 : 1);
         });
 }
 

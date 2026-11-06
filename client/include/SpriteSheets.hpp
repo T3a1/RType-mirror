@@ -9,6 +9,7 @@
 #define CLIENT_SPRITESHEETS_HPP
 
 #include "common/components/EntityType.hpp"
+#include "engine/Clock.hpp"
 #include "engine/Entity.hpp"
 #include "engine/Registry.hpp"
 #include "graphics/IGraphics.hpp"
@@ -117,6 +118,14 @@ void attachSprite(engine::Registry &registry, engine::Entity entity,
  **/
 void chargeGlowSystem(engine::Registry &registry, const SpriteSheets &sheets,
                       gfx::IGraphics &graphics);
+
+/**
+ * @brief Shows a destroyable tile cracked once it has lost half of its
+ * health, and intact otherwise.
+ * @param registry The client's registry.
+ * @param dt Unused: the frame only depends on the health.
+ **/
+void tileCrackSystem(engine::Registry &registry, engine::Duration dt);
 
 /**
  * @brief Creates an explosion where a destroyed ship or enemy was, if it

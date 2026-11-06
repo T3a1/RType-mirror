@@ -190,6 +190,7 @@ void Game::registerSystems()
                     });
     m_scheduler.add(Stage::Simulation, "shipTilt", shipTiltSystem);
     m_scheduler.add(Stage::Simulation, "animation", animationSystem);
+    m_scheduler.add(Stage::Simulation, "tileCrack", tileCrackSystem);
 
     m_scheduler.add(Stage::Output, "audio", [this](Registry &, Duration) {
         audioSystem(m_registry, inRoom() && m_sync.started && !m_sync.gameOver,
