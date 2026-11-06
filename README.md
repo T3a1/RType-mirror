@@ -106,7 +106,7 @@ locally).
 | [Architecture](docs/ARCHITECTURE.md) | How the code is organized: game engine, subsystems, game loop, threads. |
 | [Network protocol](docs/PROTOCOL.md) | The messages exchanged between the server and the clients. |
 | [Technical study](docs/TECHNICAL_STUDY.md) | Why these technologies: comparisons, storage, security, accessibility, before and after. |
-| [How-to guides](docs/HOWTO.md) | Adding a component, a system, an enemy or a packet; building and debugging. |
+| [How-to guides](docs/HOWTO.md) | Adding a component, a system, an enemy, a packet, a sound, a menu page or a setting; building and debugging. |
 | [Levels](docs/LEVELS.md) | Writing a level: the JSON file of its enemy waves, and how the server plays the levels. |
 | [Weapons](docs/WEAPONS.md) | The charged shot, the power-ups and the weapon settings file. |
 | [Network testing](docs/NETWORK_TESTING.md) | Playing with added latency, packet loss, duplication and low bandwidth on one machine. |

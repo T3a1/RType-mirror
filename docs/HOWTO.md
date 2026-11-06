@@ -12,6 +12,8 @@ content that needs no C++, see [writing levels](LEVELS.md) and
 3. [Add a packet type](#3-add-a-packet-type)
 4. [Build and debug](#4-build-and-debug)
 5. [Add a sound](#5-add-a-sound)
+6. [Add a menu page](#6-add-a-menu-page)
+7. [Add a setting](#7-add-a-setting)
 
 ## 1. Add a component and a system
 
@@ -294,3 +296,109 @@ and `sounds.setMusic()` to play it.
 
 **5. Do not rely on it alone**: a player who cannot hear must still get the
 information, so make sure something on screen shows the same thing.
+
+## 6. Add a menu page
+
+The example adds a Records page to the main menu. See the
+[menu architecture](ARCHITECTURE.md#45-menus) for how pages and widgets work.
+
+**1. Name the page** in `client/include/MenuPages.hpp`, in the `MenuPage` enum and
+its Doxygen comment, and give it a cursor in `MenuState`:
+
+```cpp
+enum class MenuPage : std::uint8_t { /* ... */ Records };
+
+struct MenuState {
+    // ...
+    MenuCursor recordsCursor;
+};
+```
+
+**2. Write the page** in `client/src/MenuPages.cpp` and declare it in the header. A
+page draws with a `MenuPanel` and returns what the player did, so it stays testable.
+Here, `RecordLines` is a table of lines to write beside `CreditsLines`:
+
+```cpp
+bool recordsPage(const MenuContext &context, MenuCursor &cursor)
+{
+    MenuPanel panel(context, cursor);
+    gfx::IGraphics &graphics = *context.graphics;
+
+    const float top = drawMenuTitle(graphics, "RECORDS");
+    const float y = drawLines(graphics, RecordLines, top);
+    return panel.backButton(menuRow(graphics.screenSize(), y + MenuLineHeight),
+                            "Back");
+}
+```
+
+**3. Add its button**: a value in the `MainChoice` enum and a line in `MainEntries`,
+in the order of the menu:
+
+```cpp
+MainEntry{.label = "Records", .choice = MainChoice::Records},
+```
+
+**4. Connect it** in `client/src/Game.cpp`, in `Game::applyMainChoice()` and
+`Game::drawMenu()`:
+
+```cpp
+case MainChoice::Records:
+    m_menu.page = MenuPage::Records;
+    break;
+```
+
+```cpp
+case MenuPage::Records:
+    if (recordsPage(context, m_menu.recordsCursor)) {
+        m_menu.page = MenuPage::Main;
+    }
+    break;
+```
+
+Escape already goes back from any page but the main menu, and the keyboard, the mouse
+and the sounds come with the widgets. Test the page in `tests/src/menu_test.cpp`,
+which runs the menus on a fake graphics backend.
+
+To add a widget, add a method to `MenuPanel` in `client/src/Menu.cpp`. It must call
+`nextIsSelected()` exactly once, so that the keyboard selection counts it. Pages always
+use the panel: a button drawn by hand would escape the keyboard selection.
+
+## 7. Add a setting
+
+Settings live in the `Settings` struct (`client/include/Settings.hpp`), which only
+holds data. They are saved in `settings.cfg`.
+
+### A setting that is on or off
+
+**1. Add the field** to `Settings`, with its default value and its Doxygen comment:
+
+```cpp
+bool reduceFlashing = false;
+```
+
+**2. Add a line** to the `Toggles` table. The settings file and the Accessibility
+page both read this table, so it needs no other code there:
+
+```cpp
+ToggleDef{.key = "reduce_flashing",
+          .label = "Reduce flashing",
+          .field = &Settings::reduceFlashing},
+```
+
+**3. Use it** in `Game`, from `m_settings`. A system that only runs when the option
+is on can use the `.when` condition of its `SystemOptions`, like the player labels.
+
+### Any other setting
+
+A volume is the model for a value that is not on or off:
+
+1. Add the field to `Settings`.
+2. Read it in `readLine()` and write it in `writeSettings()`, in
+   `client/src/Settings.cpp`. A bad value must return an error and keep the old one.
+3. Add its widget to a page, such as a `panel.slider()` in `audioTab()` in
+   `client/src/MenuPages.cpp`. Set `changed` in the result, so that `Game` saves the
+   file.
+4. Apply it in `Game`, as `applyVolumes()` does for the volumes.
+
+Test the file in `tests/src/settings_test.cpp`, and describe the option in the
+[README](https://github.com/T3a1/RType-mirror#readme) if players use it.
