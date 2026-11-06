@@ -26,6 +26,7 @@ struct MainEntry {
 constexpr std::array MainEntries{
     MainEntry{.label = "Play", .choice = MainChoice::Play},
     MainEntry{.label = "Settings", .choice = MainChoice::Settings},
+    MainEntry{.label = "Accessibility", .choice = MainChoice::Accessibility},
     MainEntry{.label = "How to play", .choice = MainChoice::HowToPlay},
     MainEntry{.label = "Credits", .choice = MainChoice::Credits},
     MainEntry{.label = "Quit", .choice = MainChoice::Quit},
@@ -121,6 +122,25 @@ SettingsResult settingsPage(const MenuContext &context, MenuCursor &cursor,
                      audio::SoundEvent::PlayerShot) ||
         result.changed;
     y += MenuRowHeight + MenuRowGap;
+    result.back = panel.backButton(menuRow(screen, y), "Back");
+    return result;
+}
+
+SettingsResult accessibilityPage(const MenuContext &context, MenuCursor &cursor,
+                                 Settings &settings)
+{
+    MenuPanel panel(context, cursor);
+    gfx::IGraphics &graphics = *context.graphics;
+    const engine::Vec2f screen = graphics.screenSize();
+
+    float y = drawMenuTitle(graphics, "ACCESSIBILITY");
+    SettingsResult result;
+    for (const ToggleDef &toggle : Toggles) {
+        result.changed = panel.checkbox(menuRow(screen, y), toggle.label,
+                                        settings.*toggle.field) ||
+                         result.changed;
+        y += MenuRowHeight + MenuRowGap;
+    }
     result.back = panel.backButton(menuRow(screen, y), "Back");
     return result;
 }

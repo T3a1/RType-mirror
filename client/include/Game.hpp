@@ -109,14 +109,17 @@ class Game {
     void render(engine::Duration dt);
     void registerSystems();
     void registerRenderSystems();
-    void addRender(Layer layer, std::string name, engine::System system);
+    void addRender(Layer layer, std::string name, engine::System system,
+                   engine::SystemOptions options = {});
     [[nodiscard]] bool inRoom() const;
     void handleBackKey();
     [[nodiscard]] MenuContext menuContext();
     void applyMainChoice(MainChoice choice);
     void applyVolumes();
     void drawMenu();
+    void finishSettingsPage(const SettingsResult &result);
     void drawSettings();
+    void drawAccessibility();
     void drawLobby();
     void drawWaitingRoom();
     void drawGame();

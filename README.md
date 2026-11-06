@@ -59,10 +59,19 @@ also edit by hand. A volume goes from 0 to 1:
 # name = value
 music_volume = 0.4
 sound_volume = 1
+auto_fire = off
+player_labels = on
 ```
 
 A line the game cannot read is reported when it starts, and that setting keeps
 its value. Saving replaces the whole file, so your comments are not kept.
+
+**Accessibility options**: open Accessibility in the main menu.
+
+- **Auto-fire**: auto-fire is on when the game starts. The auto-fire key still
+  turns it on or off during a session, without changing this option.
+- **Player labels**: shows "P1" and "(you)" above the ships. Without them, only
+  the color tells the ships apart during a game.
 
 ## Getting started
 

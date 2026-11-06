@@ -83,10 +83,12 @@ Game::Game(const std::string &host, std::uint16_t port,
         m_menu.page = MenuPage::Lobby;
     }
     applyVolumes();
+    m_autoFire.enabled = m_settings.autoFire;
     if (options.bench) {
         m_bench.emplace(*options.bench);
         m_audio->setSoundVolume(0.0F);
         m_audio->setMusicVolume(0.0F);
+        m_autoFire.enabled = false;
     }
     spawnBackground();
     registerSystems();
@@ -203,11 +205,14 @@ void Game::registerSystems()
  * @param layer The layer the system draws in.
  * @param name The name of the system, for logs and debugging.
  * @param system The system to run.
+ * @param options When the system runs.
  **/
-void Game::addRender(Layer layer, std::string name, engine::System system)
+void Game::addRender(Layer layer, std::string name, engine::System system,
+                     engine::SystemOptions options)
 {
     m_layers.at(static_cast<std::size_t>(layer))
-        .add(engine::Stage::Output, std::move(name), std::move(system));
+        .add(engine::Stage::Output, std::move(name), std::move(system),
+             std::move(options));
 }
 
 /**
@@ -226,9 +231,11 @@ void Game::registerRenderSystems()
     addRender(Layer::World, "chargeGlow", [this](Registry &r, Duration) {
         chargeGlowSystem(r, m_sheets, *m_graphics);
     });
-    addRender(Layer::World, "playerLabels", [this](Registry &r, Duration) {
-        playerLabelSystem(r, m_sync, *m_graphics);
-    });
+    addRender(Layer::World, "playerLabels",
+              [this](Registry &r, Duration) {
+                  playerLabelSystem(r, m_sync, *m_graphics);
+              },
+              {.when = [this] { return m_settings.playerLabels; }});
     addRender(Layer::Overlay, "screens",
               [this](Registry &, Duration) { drawScreens(); });
     addRender(Layer::Overlay, "status",
@@ -345,6 +352,9 @@ void Game::applyMainChoice(MainChoice choice)
     case MainChoice::Settings:
         m_menu.page = MenuPage::Settings;
         break;
+    case MainChoice::Accessibility:
+        m_menu.page = MenuPage::Accessibility;
+        break;
     case MainChoice::HowToPlay:
         m_menu.page = MenuPage::HowToPlay;
         break;
@@ -367,6 +377,21 @@ void Game::applyVolumes()
 }
 
 /**
+ * @brief Ends a frame of a page of settings: saves what changed, and goes back
+ * to the main menu if the player chose to.
+ * @param result What the player did on the page.
+ **/
+void Game::finishSettingsPage(const SettingsResult &result)
+{
+    if (result.changed) {
+        saveSettingsFile(SettingsPath, m_settings);
+    }
+    if (result.back) {
+        m_menu.page = MenuPage::Main;
+    }
+}
+
+/**
  * @brief Draws the Settings page, and applies and saves what changed.
  **/
 void Game::drawSettings()
@@ -375,11 +400,24 @@ void Game::drawSettings()
         settingsPage(menuContext(), m_menu.settingsCursor, m_settings);
     if (result.changed) {
         applyVolumes();
-        saveSettingsFile(SettingsPath, m_settings);
     }
-    if (result.back) {
-        m_menu.page = MenuPage::Main;
+    finishSettingsPage(result);
+}
+
+/**
+ * @brief Draws the Accessibility page, and applies and saves what changed.
+ * Auto-fire only follows its own checkbox, so that changing another option
+ * keeps what the player chose with its key.
+ **/
+void Game::drawAccessibility()
+{
+    const bool autoFire = m_settings.autoFire;
+    const SettingsResult result = accessibilityPage(
+        menuContext(), m_menu.accessibilityCursor, m_settings);
+    if (m_settings.autoFire != autoFire) {
+        m_autoFire.enabled = m_settings.autoFire;
     }
+    finishSettingsPage(result);
 }
 
 /**
@@ -399,6 +437,9 @@ void Game::drawMenu()
         break;
     case MenuPage::Settings:
         drawSettings();
+        break;
+    case MenuPage::Accessibility:
+        drawAccessibility();
         break;
     case MenuPage::HowToPlay:
         if (howToPlayPage(context, m_menu.howToPlayCursor, m_controls)) {

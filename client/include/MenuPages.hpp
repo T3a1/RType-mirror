@@ -24,6 +24,7 @@ namespace client {
  * @param Main The main menu.
  * @param Lobby The menu of the rooms.
  * @param Settings The settings of the player.
+ * @param Accessibility The accessibility options of the player.
  * @param HowToPlay The rules and the keys.
  * @param Credits The authors of the game.
  **/
@@ -31,6 +32,7 @@ enum class MenuPage : std::uint8_t {
     Main,
     Lobby,
     Settings,
+    Accessibility,
     HowToPlay,
     Credits
 };
@@ -41,6 +43,7 @@ enum class MenuPage : std::uint8_t {
  * @param page The page shown.
  * @param mainCursor The keyboard selection of the main menu.
  * @param settingsCursor The keyboard selection of the Settings page.
+ * @param accessibilityCursor The keyboard selection of the Accessibility page.
  * @param howToPlayCursor The keyboard selection of the How to play page.
  * @param creditsCursor The keyboard selection of the Credits page.
  **/
@@ -48,6 +51,7 @@ struct MenuState {
     MenuPage page = MenuPage::Main;
     MenuCursor mainCursor;
     MenuCursor settingsCursor;
+    MenuCursor accessibilityCursor;
     MenuCursor howToPlayCursor;
     MenuCursor creditsCursor;
 };
@@ -58,6 +62,7 @@ struct MenuState {
  * @param None Nothing this frame.
  * @param Play Go to the lobby.
  * @param Settings Show the settings of the player.
+ * @param Accessibility Show the accessibility options of the player.
  * @param HowToPlay Show the rules and the keys.
  * @param Credits Show the authors of the game.
  * @param Quit Close the game.
@@ -66,6 +71,7 @@ enum class MainChoice : std::uint8_t {
     None,
     Play,
     Settings,
+    Accessibility,
     HowToPlay,
     Credits,
     Quit
@@ -84,7 +90,7 @@ enum class MainChoice : std::uint8_t {
 
 /**
  * @struct SettingsResult
- * @brief What the player did on the Settings page this frame.
+ * @brief What the player did on a page of settings this frame.
  * @param changed Whether a setting changed.
  * @param back Whether the player chose to go back.
  **/
@@ -104,6 +110,17 @@ struct SettingsResult {
 [[nodiscard]] SettingsResult settingsPage(const MenuContext &context,
                                           MenuCursor &cursor,
                                           Settings &settings);
+
+/**
+ * @brief Draws one checkbox per line of Toggles, in screen pixels.
+ * @param context What the menu needs for this frame.
+ * @param cursor The keyboard selection of this menu, updated.
+ * @param settings The settings, updated.
+ * @return What the player did.
+ **/
+[[nodiscard]] SettingsResult accessibilityPage(const MenuContext &context,
+                                               MenuCursor &cursor,
+                                               Settings &settings);
 
 /**
  * @brief Returns the lines of the How to play page. The keys come from the

@@ -476,9 +476,9 @@ TEST(MenuPages, MainMenuOffersItsChoicesInOrder)
     const MenuKeys confirm{.confirm = true};
     EXPECT_EQ(client::mainMenuPage(rig.context(confirm), rig.cursor, true),
               MainChoice::Play);
-    const std::array<MainChoice, 4> others{
-        MainChoice::Settings, MainChoice::HowToPlay, MainChoice::Credits,
-        MainChoice::Quit};
+    const std::array<MainChoice, 5> others{
+        MainChoice::Settings, MainChoice::Accessibility, MainChoice::HowToPlay,
+        MainChoice::Credits, MainChoice::Quit};
     for (const MainChoice expected : others) {
         static_cast<void>(client::mainMenuPage(rig.context({.down = true}),
                                                rig.cursor, true));
@@ -632,6 +632,57 @@ TEST(MenuPages, SettingsGoBack)
     rig.cursor.selected = 2;
 
     const client::SettingsResult result = client::settingsPage(
+        rig.context({.confirm = true}), rig.cursor, settings);
+
+    EXPECT_TRUE(result.back);
+    EXPECT_FALSE(result.changed);
+    EXPECT_EQ(rig.played(), std::vector<std::string>{BackSound});
+}
+
+TEST(MenuPages, AccessibilityShowsEveryToggle)
+{
+    MenuRig rig;
+    client::Settings settings;
+
+    const client::SettingsResult result =
+        client::accessibilityPage(rig.context(), rig.cursor, settings);
+
+    EXPECT_FALSE(result.changed);
+    EXPECT_FALSE(result.back);
+    EXPECT_EQ(rig.cursor.count, client::Toggles.size() + 1);
+    for (const client::ToggleDef &toggle : client::Toggles) {
+        const bool checked = settings.*toggle.field;
+        EXPECT_TRUE(
+            rig.drew((checked ? "[x] " : "[ ] ") + std::string{toggle.label}))
+            << toggle.label;
+    }
+}
+
+TEST(MenuPages, AccessibilityChangesTheSelectedToggleOnly)
+{
+    MenuRig rig;
+    client::Settings settings;
+    const client::Settings before;
+    rig.cursor.selected = 1;
+
+    const client::SettingsResult result = client::accessibilityPage(
+        rig.context({.confirm = true}), rig.cursor, settings);
+
+    EXPECT_TRUE(result.changed);
+    EXPECT_NE(settings.*client::Toggles.at(1).field,
+              before.*client::Toggles.at(1).field);
+    EXPECT_EQ(settings.*client::Toggles.at(0).field,
+              before.*client::Toggles.at(0).field);
+    EXPECT_EQ(rig.played(), std::vector<std::string>{ConfirmSound});
+}
+
+TEST(MenuPages, AccessibilityGoesBack)
+{
+    MenuRig rig;
+    client::Settings settings;
+    rig.cursor.selected = client::Toggles.size();
+
+    const client::SettingsResult result = client::accessibilityPage(
         rig.context({.confirm = true}), rig.cursor, settings);
 
     EXPECT_TRUE(result.back);
