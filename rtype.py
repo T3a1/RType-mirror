@@ -40,6 +40,8 @@ SERVER_BIN = os.environ.get("SERVER_BIN")
 CLIENT_BIN = os.environ.get("CLIENT_BIN")
 IMAGE = os.environ.get("IMAGE", "rtype-server")
 CONTAINER = os.environ.get("CONTAINER", "rtype-server")
+# Address the clients connect to when -H is not given.
+DEFAULT_HOST = "127.0.0.1"
 # What Conan does with missing system packages (X11/OpenGL headers for the
 # graphics library): install (with sudo), check (fail if missing) or report
 # (only list them).
@@ -432,9 +434,66 @@ def stop(process: subprocess.Popen) -> None:
             process.kill()
 
 
+def access_args(args: argparse.Namespace) -> list[str]:
+    """The ban list and white list options of the native server."""
+    result = []
+    if args.banlist:
+        result += ["--banlist", str(args.banlist)]
+    if args.whitelist:
+        result += ["--whitelist", str(args.whitelist)]
+    return result
+
+
+def start_clients(args: argparse.Namespace, client_bin: Path) -> list[subprocess.Popen]:
+    """Starts args.clients clients connected to args.host:args.port."""
+    clients = []
+    room_args = ["--room", str(args.room)] if args.room else []
+    for i in range(1, args.clients + 1):
+        log(f"Starting client {i}/{args.clients} -> {args.host}:{args.port}")
+        clients.append(subprocess.Popen([str(client_bin), args.host, str(args.port),
+                                         *room_args]))
+    return clients
+
+
+def serve(args: argparse.Namespace) -> int:
+    """--server-only: starts the server alone and keeps it running until it is
+    stopped. Natively, its administration console reads this terminal (quit
+    stops it); in Docker, its output is followed here. Ctrl+C stops it in both
+    cases."""
+    server: subprocess.Popen | None = None
+    container_started = False
+    if (args.banlist or args.whitelist) and not args.native:
+        raise LauncherError("--banlist and --whitelist need --native: the Docker image "
+                            "has no file system to keep them")
+    try:
+        if args.native:
+            server = start_native_server(args.port, False, access_args(args))
+        else:
+            start_docker_server(args.port)
+            container_started = True
+        log(f"Players join with: ./rtype.py --clients-only -H <address of this machine> "
+            f"-p {args.port}")
+        if server is not None:
+            log("Server running. Type quit or press Ctrl+C to stop it.")
+            return server.wait()
+        log(f"Server running, its output follows (console: docker attach {CONTAINER}). "
+            "Press Ctrl+C to stop it.")
+        call("docker", "logs", "-f", CONTAINER)
+        return 0
+    finally:
+        if server is not None or container_started:
+            log("Shutting down...")
+        if server is not None:
+            stop(server)
+        if container_started:
+            succeeds("docker", "stop", "-t", "5", CONTAINER)
+
+
 def play(args: argparse.Namespace) -> int:
     """Default mode: starts the server and the clients, waits until every
-    client is closed, then stops everything (also on Ctrl+C or an error)."""
+    client is closed, then stops everything (also on Ctrl+C or an error).
+    With --clients-only, no server is started: the clients join the one at
+    args.host:args.port."""
     server: subprocess.Popen | None = None
     clients: list[subprocess.Popen] = []
     container_started = False
@@ -448,22 +507,15 @@ def play(args: argparse.Namespace) -> int:
                             "here (-c 1) and the others from other terminals")
     try:
         client_bin = ensure_binary("r-type_client", CLIENT_BIN, "-DBUILD_CLIENT=ON")
-        if args.native:
-            access_args = []
-            if args.banlist:
-                access_args += ["--banlist", str(args.banlist)]
-            if args.whitelist:
-                access_args += ["--whitelist", str(args.whitelist)]
-            server = start_native_server(args.port, in_terminal, access_args)
+        if args.only == "clients":
+            log(f"No server started: the clients join the one at {args.host}:{args.port}")
+        elif args.native:
+            server = start_native_server(args.port, in_terminal, access_args(args))
         else:
             start_docker_server(args.port)
             container_started = True
 
-        for i in range(1, args.clients + 1):
-            log(f"Starting client {i}/{args.clients} -> {args.host}:{args.port}")
-            room_args = ["--room", str(args.room)] if args.room else []
-            clients.append(subprocess.Popen([str(client_bin), args.host, str(args.port),
-                                             *room_args]))
+        clients = start_clients(args, client_bin)
 
         if in_terminal:
             log("Running. Press q in the game to stop (its logs: r-type_client.log).")
@@ -677,6 +729,9 @@ examples:
   ./rtype.py                    server in Docker + 1 client
   ./rtype.py --native -c 2      server built and run here + 2 clients
   ./rtype.py -g sfml            client built with SFML
+  ./rtype.py -S -n              only the server, built and run here
+  ./rtype.py -O -H 10.0.0.5 -c 2
+                                2 clients joining the server at 10.0.0.5
   ./rtype.py --test             build and run the unit tests
   ./rtype.py --check-format     check the formatting like the CI
   (on Windows: python rtype.py ...)
@@ -696,14 +751,21 @@ def parse_args() -> argparse.Namespace:
         description="Builds and starts the R-Type server (in Docker by default, or\n"
                     "natively) and its clients, or runs one developer tool.")
     game = parser.add_argument_group("game (default mode)")
+    only = game.add_mutually_exclusive_group()
+    only.add_argument("-S", "--server-only", dest="only", action="store_const",
+                      const="server", help="start only the server, until Ctrl+C (for "
+                                           "players on other machines)")
+    only.add_argument("-O", "--clients-only", dest="only", action="store_const",
+                      const="clients", help="start only the clients, connected to a "
+                                            "server already running at -H and -p")
     game.add_argument("-n", "--native", action="store_true",
                       help="run the server natively instead of in Docker")
-    game.add_argument("-c", "--clients", type=positive, default=1, metavar="N",
+    game.add_argument("-c", "--clients", type=positive, metavar="N",
                       help="number of clients to launch (default: 1)")
     game.add_argument("-p", "--port", type=port, default=4242,
                       help="UDP port of the server (default: 4242)")
-    game.add_argument("-H", "--host", default="127.0.0.1",
-                      help="address the clients connect to (default: 127.0.0.1)")
+    game.add_argument("-H", "--host", default=DEFAULT_HOST,
+                      help=f"address the clients connect to (default: {DEFAULT_HOST})")
     game.add_argument("-r", "--room", type=positive, metavar="N",
                       help="room the clients join (default: the first with a free slot)")
     game.add_argument("--banlist", metavar="FILE",
@@ -732,6 +794,29 @@ def parse_args() -> argparse.Namespace:
     mode.add_argument("-d", "--docs", dest="action", action="store_const", const="docs",
                       help="generate the HTML documentation with Doxygen")
     return parser.parse_args()
+
+
+def check_game_options(args: argparse.Namespace) -> None:
+    """Rejects the options that do nothing in the chosen game mode, so that a
+    mistake is reported instead of ignored, then sets the defaults that depend
+    on the mode."""
+    if args.only == "clients":
+        server_options = [name for name, given in (
+            ("--native", args.native), ("--banlist", args.banlist),
+            ("--whitelist", args.whitelist)) if given]
+        if server_options:
+            raise LauncherError(f"{', '.join(server_options)}: only for the server, but "
+                                "--clients-only starts none")
+    if args.only == "server":
+        client_options = [name for name, given in (
+            ("--clients", args.clients is not None), ("--room", args.room),
+            ("--host", args.host != DEFAULT_HOST)) if given]
+        if client_options:
+            raise LauncherError(f"{', '.join(client_options)}: only for the clients, but "
+                                "--server-only starts none (the server listens on "
+                                "every address)")
+    if args.clients is None:
+        args.clients = 1
 
 
 ACTIONS = {
@@ -769,6 +854,9 @@ def main() -> int:
             return check_format(args.check_format)
         if args.action:
             return ACTIONS[args.action]()
+        check_game_options(args)
+        if args.only == "server":
+            return serve(args)
         return play(args)
     except LauncherError as error:
         print_error(str(error))

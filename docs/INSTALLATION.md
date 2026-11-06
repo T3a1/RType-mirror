@@ -78,6 +78,18 @@ To play without Docker, or with friends on the same machine:
 ./rtype.py --native -g ncurses   # client drawn in this terminal (not on Windows)
 ```
 
+To play on several machines, start the server alone on one of them, then only
+the clients on the others:
+
+```bash
+./rtype.py --server-only --native         # on the host: no client, runs until quit or Ctrl+C
+./rtype.py --clients-only -H 192.168.1.20 # on each player's machine: the host's address
+./rtype.py --clients-only -H 192.168.1.20 -c 2   # two players on the same machine
+```
+
+The server listens on every network address of the host. Its firewall must let
+UDP port 4242 in (or the port given with `-p`, the same on both sides).
+
 ## 3. The launcher: rtype.py
 
 `rtype.py` works from any directory and on every OS: it only uses Python's
@@ -101,6 +113,8 @@ the options. Before building, it sets up everything that is missing:
 | Option | Effect |
 |--------|--------|
 | *(none)* | Starts the server in Docker and one client. |
+| `-S`, `--server-only` | Starts only the server, in Docker or with `--native`, until Ctrl+C (or `quit` in its console with `--native`). It prints the command the players run. Refuses the client options (`-c`, `-r`, `-H`). |
+| `-O`, `--clients-only` | Starts only the clients, connected to a server already running at `-H` and `-p`. Refuses the server options (`-n`, `--banlist`, `--whitelist`). |
 | `-n`, `--native` | Runs the server natively instead of in Docker. |
 | `-c N`, `--clients N` | Starts `N` clients (default: 1). |
 | `-r N`, `--room N` | The clients enter room `N` directly, created if needed (default: they start in the lobby, where they choose a room). One server runs up to 16 independent games. |
