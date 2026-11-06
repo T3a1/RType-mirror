@@ -453,6 +453,40 @@ def start_clients(args: argparse.Namespace, client_bin: Path) -> list[subprocess
     return clients
 
 
+def serve(args: argparse.Namespace) -> int:
+    """--server-only: starts the server alone and keeps it running until it is
+    stopped. Natively, its administration console reads this terminal (quit
+    stops it); in Docker, its output is followed here. Ctrl+C stops it in both
+    cases."""
+    server: subprocess.Popen | None = None
+    container_started = False
+    if (args.banlist or args.whitelist) and not args.native:
+        raise LauncherError("--banlist and --whitelist need --native: the Docker image "
+                            "has no file system to keep them")
+    try:
+        if args.native:
+            server = start_native_server(args.port, False, access_args(args))
+        else:
+            start_docker_server(args.port)
+            container_started = True
+        log(f"Players join with: ./rtype.py --clients-only -H <address of this machine> "
+            f"-p {args.port}")
+        if server is not None:
+            log("Server running. Type quit or press Ctrl+C to stop it.")
+            return server.wait()
+        log(f"Server running, its output follows (console: docker attach {CONTAINER}). "
+            "Press Ctrl+C to stop it.")
+        call("docker", "logs", "-f", CONTAINER)
+        return 0
+    finally:
+        if server is not None or container_started:
+            log("Shutting down...")
+        if server is not None:
+            stop(server)
+        if container_started:
+            succeeds("docker", "stop", "-t", "5", CONTAINER)
+
+
 def play(args: argparse.Namespace) -> int:
     """Default mode: starts the server and the clients, waits until every
     client is closed, then stops everything (also on Ctrl+C or an error)."""
@@ -708,6 +742,10 @@ def parse_args() -> argparse.Namespace:
         description="Builds and starts the R-Type server (in Docker by default, or\n"
                     "natively) and its clients, or runs one developer tool.")
     game = parser.add_argument_group("game (default mode)")
+    only = game.add_mutually_exclusive_group()
+    only.add_argument("-S", "--server-only", dest="only", action="store_const",
+                      const="server", help="start only the server, until Ctrl+C (for "
+                                           "players on other machines)")
     game.add_argument("-n", "--native", action="store_true",
                       help="run the server natively instead of in Docker")
     game.add_argument("-c", "--clients", type=positive, default=1, metavar="N",
@@ -781,6 +819,8 @@ def main() -> int:
             return check_format(args.check_format)
         if args.action:
             return ACTIONS[args.action]()
+        if args.only == "server":
+            return serve(args)
         return play(args)
     except LauncherError as error:
         print_error(str(error))
