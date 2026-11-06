@@ -24,6 +24,12 @@ inline constexpr engine::Vec2f TileSize{.x = 64.0F, .y = 64.0F};
 inline constexpr int TileMaxHealth = 150;
 
 /**
+ * @brief The points given to the player whose shot breaks a destroyable
+ * tile.
+ */
+inline constexpr int TileScore = 20;
+
+/**
  * @brief How fast the obstacles scroll to the left, in playfield units per
  * second.
  */

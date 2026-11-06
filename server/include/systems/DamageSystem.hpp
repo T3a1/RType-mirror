@@ -10,6 +10,7 @@
 
 #include "Despawn.hpp"
 #include "EnemyDefs.hpp"
+#include "common/Obstacles.hpp"
 #include "common/components/Damage.hpp"
 #include "common/components/Enemy.hpp"
 #include "common/components/Health.hpp"

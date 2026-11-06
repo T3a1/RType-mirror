@@ -12,8 +12,8 @@ namespace server {
 namespace {
 
 /**
- * @brief Gives the points of a destroyed enemy to the player who fired the
- * projectile that destroyed it.
+ * @brief Gives the points of a destroyed enemy or tile to the player who
+ * fired the projectile that destroyed it.
  * @param registry The registry holding both entities.
  * @param projectile The projectile that dealt the last hit.
  * @param target The destroyed entity.
@@ -22,12 +22,17 @@ void awardKill(engine::Registry &registry, engine::Entity projectile,
                engine::Entity target)
 {
     const auto *shot = registry.tryGet<rtype::Projectile>(projectile);
-    const auto *enemy = registry.tryGet<rtype::Enemy>(target);
-    if (shot == nullptr || enemy == nullptr) {
+    if (shot == nullptr) {
         return;
     }
-    if (auto *shooter = registry.tryGet<rtype::Player>(shot->owner)) {
+    auto *shooter = registry.tryGet<rtype::Player>(shot->owner);
+    if (shooter == nullptr) {
+        return;
+    }
+    if (const auto *enemy = registry.tryGet<rtype::Enemy>(target)) {
         shooter->score += enemyDef(enemy->type).score;
+    } else if (registry.has<Obstacle>(target)) {
+        shooter->score += rtype::TileScore;
     }
 }
 
