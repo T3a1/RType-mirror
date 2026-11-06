@@ -108,7 +108,7 @@ travel in a packet ([section 3](#3-add-a-packet-type)).
 **Most new enemies need no code.** A kind of enemy or boss that reuses the
 behavior and the sprite of a built-in one (with other stats, size, path or
 points) is a few lines of
-[`server/enemies.json`](ENEMIES.md#add-an-enemy-without-writing-c), then its name
+[`server/enemies.json`](ENEMIES.md), then its name
 in a level file. Write code only for a **new sprite** or a **new behavior**.
 
 A new sprite needs a new value on both sides, so clients and server must be

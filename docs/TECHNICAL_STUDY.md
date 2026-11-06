@@ -193,6 +193,7 @@ its room. What remains to store is configuration:
 |------|-------|--------|------------|
 | Levels | `server/levels/*.json` | JSON | The developers |
 | Weapon settings | `server/weapons.json` | JSON | The developers |
+| Enemy and boss kinds | `server/enemies.json` | JSON | The developers |
 | Banned and allowed addresses | `--banlist`, `--whitelist` files | Text, one address per line | The server (console commands) |
 | Key bindings | `controls.cfg` | Text, `action = keys` | The player |
 | Benchmark results | `build/netbench/*.csv` | CSV | The client, with `--bench` |
@@ -210,7 +211,7 @@ its room. What remains to store is configuration:
 ### Reliability in practice
 
 - **Size limits**: a level file is refused above 1 MiB, the weapon file above
-  64 KiB, so a wrong file cannot exhaust the memory.
+  64 KiB, the enemy file above 256 KiB, so a wrong file cannot exhaust the memory.
 - **Validation**: a level is checked field by field. An invalid one is skipped and
   reported with its position (`waves[4].count: must be a whole number from 1 to
   20`), and the server still starts.
