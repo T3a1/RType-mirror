@@ -395,16 +395,34 @@ def check_docker() -> None:
         + ", or use --native")
 
 
-def start_docker_server(port: int) -> None:
-    """Builds the server image and starts it in a detached container."""
+def start_docker_server(port: int, in_terminal: bool = False,
+                        server_only: bool = False) -> subprocess.Popen | None:
+    """Builds the server image and starts it in a container. The container
+    reads this program's standard input, so the commands typed here, or sent by
+    the graphical launcher, reach the server's administration console. When the
+    client draws in this terminal, nothing else may use it: the container is
+    detached, and None is returned. A real terminal for the container (the
+    prompt, Ctrl+C) is only for a server alone: it would garble the clients'
+    output."""
     check_docker()
     log("Building server image...")
     run("docker", "build", "-t", IMAGE, ".", error="Docker build failed")
     succeeds("docker", "rm", "-f", CONTAINER)
     log(f"Starting server in Docker on port {port}/udp...")
-    run("docker", "run", "-dit", "--rm", "--init", "--name", CONTAINER,
-        "-p", f"{port}:4242/udp", IMAGE, quiet=True,
-        error="Could not start the server container")
+    options = ["--rm", "--init", "--name", CONTAINER, "-p", f"{port}:4242/udp", IMAGE]
+    if in_terminal:
+        run("docker", "run", "-dit", *options, quiet=True,
+            error="Could not start the server container")
+        return None
+    terminal = server_only and sys.stdin.isatty() and sys.stdout.isatty()
+    server = subprocess.Popen(["docker", "run", "-it" if terminal else "-i", *options])
+    try:
+        server.wait(timeout=1)
+    except subprocess.TimeoutExpired:
+        return server
+    if server.returncode != 0:
+        raise LauncherError("Could not start the server container")
+    return server
 
 
 def start_native_server(port: int, in_terminal: bool,
@@ -469,17 +487,12 @@ def serve(args: argparse.Namespace) -> int:
         if args.native:
             server = start_native_server(args.port, False, access_args(args))
         else:
-            start_docker_server(args.port)
+            server = start_docker_server(args.port, server_only=True)
             container_started = True
         log(f"Players join with: ./rtype.py --clients-only -H <address of this machine> "
             f"-p {args.port}")
-        if server is not None:
-            log("Server running. Type quit or press Ctrl+C to stop it.")
-            return server.wait()
-        log(f"Server running, its output follows (console: docker attach {CONTAINER}). "
-            "Press Ctrl+C to stop it.")
-        call("docker", "logs", "-f", CONTAINER)
-        return 0
+        log("Server running. Type quit or press Ctrl+C to stop it.")
+        return server.wait()
     finally:
         if server is not None or container_started:
             log("Shutting down...")
@@ -512,7 +525,7 @@ def play(args: argparse.Namespace) -> int:
         elif args.native:
             server = start_native_server(args.port, in_terminal, access_args(args))
         else:
-            start_docker_server(args.port)
+            server = start_docker_server(args.port, in_terminal)
             container_started = True
 
         clients = start_clients(args, client_bin)
