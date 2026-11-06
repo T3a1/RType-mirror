@@ -97,3 +97,127 @@ def shown_command(settings: GameSettings) -> str:
     """Returns the command as a user types it in a terminal, to show it."""
     launcher = "python rtype.py" if sys.platform == "win32" else "./rtype.py"
     return " ".join([launcher, *(shlex.quote(arg) for arg in arguments(settings))])
+
+
+class LauncherWindow:
+    """The window: a form of GameSettings, and the command it gives."""
+
+    def __init__(self, tk) -> None:
+        """Builds the window. tk is the tkinter module, imported by main() so
+        that the rest of this file works without it."""
+        self.tk = tk
+        from tkinter import ttk
+        self.ttk = ttk
+        self.root = tk.Tk()
+        self.root.title("R-Type launcher")
+        self.root.minsize(560, 420)
+        defaults = GameSettings()
+        self.mode = tk.StringVar(value=defaults.mode)
+        self.native = tk.BooleanVar(value=defaults.native)
+        self.clients = tk.StringVar(value=str(defaults.clients))
+        self.host = tk.StringVar(value=defaults.host)
+        self.port = tk.StringVar(value=str(defaults.port))
+        self.room = tk.StringVar(value=str(defaults.room))
+        self.graphics = tk.StringVar(value=defaults.graphics)
+        self.command = tk.StringVar()
+        self.status = tk.StringVar(value="Ready.")
+        self.client_fields: list = []
+        self.server_fields: list = []
+        self._build_form()
+        for variable in (self.mode, self.native, self.clients, self.host,
+                         self.port, self.room, self.graphics):
+            variable.trace_add("write", lambda *_: self.refresh())
+        self.refresh()
+
+    def _build_form(self) -> None:
+        """Lays out the settings, the command and the status line."""
+        ttk = self.ttk
+        form = ttk.Frame(self.root, padding=12)
+        form.grid(row=0, column=0, sticky="nsew")
+        self.root.columnconfigure(0, weight=1)
+        form.columnconfigure(1, weight=1)
+
+        ttk.Label(form, text="Start").grid(row=0, column=0, sticky="w")
+        modes = ttk.Frame(form)
+        modes.grid(row=0, column=1, sticky="w")
+        for value, label in MODES.items():
+            ttk.Radiobutton(modes, text=label, value=value,
+                            variable=self.mode).pack(side="left", padx=(0, 12))
+
+        native = ttk.Checkbutton(form, variable=self.native,
+                                 text="Run the server here instead of in Docker")
+        native.grid(row=1, column=1, sticky="w", pady=4)
+        self.server_fields.append(native)
+
+        rows = (
+            ("Clients", ttk.Spinbox(form, from_=1, to=4, width=6,
+                                    textvariable=self.clients), True),
+            ("Server address", ttk.Entry(form, textvariable=self.host), True),
+            ("Port (UDP)", ttk.Entry(form, width=8, textvariable=self.port),
+             False),
+            ("Room (0: lobby)", ttk.Spinbox(form, from_=0, to=16, width=6,
+                                            textvariable=self.room), True),
+            ("Graphics", ttk.Combobox(form, values=GRAPHICS_CHOICES,
+                                      state="readonly", width=10,
+                                      textvariable=self.graphics), True),
+        )
+        for row, (label, widget, client_only) in enumerate(rows, start=2):
+            ttk.Label(form, text=label).grid(row=row, column=0, sticky="w",
+                                             padx=(0, 12), pady=2)
+            widget.grid(row=row, column=1, sticky="w" if label != "Server address"
+                        else "ew", pady=2)
+            if client_only:
+                self.client_fields.append(widget)
+
+        ttk.Label(form, text="Command").grid(row=7, column=0, sticky="w",
+                                             pady=(10, 0))
+        ttk.Entry(form, textvariable=self.command, state="readonly").grid(
+            row=7, column=1, sticky="ew", pady=(10, 0))
+        ttk.Label(form, textvariable=self.status, foreground="#a33").grid(
+            row=8, column=0, columnspan=2, sticky="w", pady=(6, 0))
+        self.form = form
+
+    def settings(self) -> GameSettings | None:
+        """Reads the form, or returns None if a number is not one."""
+        try:
+            return GameSettings(
+                mode=self.mode.get(), native=self.native.get(),
+                clients=int(self.clients.get()), host=self.host.get().strip(),
+                port=int(self.port.get()), room=int(self.room.get()),
+                graphics=self.graphics.get())
+        except ValueError:
+            return None
+
+    def refresh(self) -> None:
+        """Updates the command shown, the problem of the settings if any, and
+        greys out the fields that do nothing in the chosen mode."""
+        mode = self.mode.get()
+        for widget in self.client_fields:
+            widget.state(["disabled"] if mode == "server" else ["!disabled"])
+        for widget in self.server_fields:
+            widget.state(["disabled"] if mode == "clients" else ["!disabled"])
+        settings = self.settings()
+        if settings is None:
+            self.command.set("")
+            self.status.set("Clients, port and room are whole numbers.")
+            return
+        self.command.set(shown_command(settings))
+        self.status.set(check(settings) or "Ready.")
+
+    def run(self) -> None:
+        """Shows the window until it is closed."""
+        self.root.mainloop()
+
+
+def main() -> int:
+    """Opens the window; returns 1 if tkinter is missing."""
+    try:
+        import tkinter
+    except ImportError:
+        print("[error] the graphical launcher needs tkinter (Linux: install "
+              "python3-tk; macOS with Homebrew: brew install python-tk). "
+              "The command line does the same: ./rtype.py --help",
+              file=sys.stderr)
+        return 1
+    LauncherWindow(tkinter).run()
+    return 0
