@@ -25,6 +25,7 @@ struct MainEntry {
 /** @brief The buttons of the main menu, from top to bottom. */
 constexpr std::array MainEntries{
     MainEntry{.label = "Play", .choice = MainChoice::Play},
+    MainEntry{.label = "Settings", .choice = MainChoice::Settings},
     MainEntry{.label = "How to play", .choice = MainChoice::HowToPlay},
     MainEntry{.label = "Credits", .choice = MainChoice::Credits},
     MainEntry{.label = "Quit", .choice = MainChoice::Quit},
@@ -101,6 +102,27 @@ MainChoice mainMenuPage(const MenuContext &context, MenuCursor &cursor,
         y += MenuRowHeight + MenuRowGap;
     }
     return choice;
+}
+
+SettingsResult settingsPage(const MenuContext &context, MenuCursor &cursor,
+                            Settings &settings)
+{
+    MenuPanel panel(context, cursor);
+    gfx::IGraphics &graphics = *context.graphics;
+    const engine::Vec2f screen = graphics.screenSize();
+
+    float y = drawMenuTitle(graphics, "SETTINGS");
+    SettingsResult result;
+    result.changed =
+        panel.slider(menuRow(screen, y), "Music volume", settings.musicVolume);
+    y += MenuRowHeight + MenuRowGap;
+    result.changed =
+        panel.slider(menuRow(screen, y), "Sound volume", settings.soundVolume,
+                     audio::SoundEvent::PlayerShot) ||
+        result.changed;
+    y += MenuRowHeight + MenuRowGap;
+    result.back = panel.backButton(menuRow(screen, y), "Back");
+    return result;
 }
 
 std::array<std::string, 5> howToPlayLines(const Controls &controls)

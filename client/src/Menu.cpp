@@ -311,7 +311,7 @@ bool MenuPanel::checkbox(const gfx::Rect &rect, const std::string &label,
 }
 
 bool MenuPanel::slider(const gfx::Rect &rect, const std::string &label,
-                       float &value)
+                       float &value, audio::SoundEvent feedback)
 {
     const bool selected = nextIsSelected();
     const gfx::Rect bar = sliderBar(rect);
@@ -332,7 +332,7 @@ bool MenuPanel::slider(const gfx::Rect &rect, const std::string &label,
     const bool changed = step != before;
     if (changed) {
         value = static_cast<float>(step) / static_cast<float>(SliderSteps);
-        m_sounds->play(audio::SoundEvent::MenuMove);
+        m_sounds->play(feedback);
     }
 
     drawRow(*m_graphics, rect, label, selected);

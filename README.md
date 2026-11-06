@@ -51,8 +51,9 @@ autofire = Tab
 - A line the game cannot read is reported when it starts, and that action
   keeps its default keys.
 
-**Change the volume**: write a `settings.cfg` file in the folder you start the
-game from. A volume goes from 0 to 1:
+**Change the volume**: open Settings in the main menu. The game saves your
+choice in a `settings.cfg` file in the folder you start it from, which you can
+also edit by hand. A volume goes from 0 to 1:
 
 ```text
 # name = value
@@ -61,7 +62,7 @@ sound_volume = 1
 ```
 
 A line the game cannot read is reported when it starts, and that setting keeps
-its value.
+its value. Saving replaces the whole file, so your comments are not kept.
 
 ## Getting started
 

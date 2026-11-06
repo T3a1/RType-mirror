@@ -10,6 +10,7 @@
 
 #include "Controls.hpp"
 #include "Menu.hpp"
+#include "Settings.hpp"
 
 #include <array>
 #include <cstdint>
@@ -22,22 +23,31 @@ namespace client {
  * @brief The page shown while the player is not in a room.
  * @param Main The main menu.
  * @param Lobby The menu of the rooms.
+ * @param Settings The settings of the player.
  * @param HowToPlay The rules and the keys.
  * @param Credits The authors of the game.
  **/
-enum class MenuPage : std::uint8_t { Main, Lobby, HowToPlay, Credits };
+enum class MenuPage : std::uint8_t {
+    Main,
+    Lobby,
+    Settings,
+    HowToPlay,
+    Credits
+};
 
 /**
  * @struct MenuState
  * @brief Where the player is in the menus.
  * @param page The page shown.
  * @param mainCursor The keyboard selection of the main menu.
+ * @param settingsCursor The keyboard selection of the Settings page.
  * @param howToPlayCursor The keyboard selection of the How to play page.
  * @param creditsCursor The keyboard selection of the Credits page.
  **/
 struct MenuState {
     MenuPage page = MenuPage::Main;
     MenuCursor mainCursor;
+    MenuCursor settingsCursor;
     MenuCursor howToPlayCursor;
     MenuCursor creditsCursor;
 };
@@ -47,11 +57,19 @@ struct MenuState {
  * @brief What the player chose in the main menu.
  * @param None Nothing this frame.
  * @param Play Go to the lobby.
+ * @param Settings Show the settings of the player.
  * @param HowToPlay Show the rules and the keys.
  * @param Credits Show the authors of the game.
  * @param Quit Close the game.
  **/
-enum class MainChoice : std::uint8_t { None, Play, HowToPlay, Credits, Quit };
+enum class MainChoice : std::uint8_t {
+    None,
+    Play,
+    Settings,
+    HowToPlay,
+    Credits,
+    Quit
+};
 
 /**
  * @brief Draws the main menu, in screen pixels.
@@ -63,6 +81,29 @@ enum class MainChoice : std::uint8_t { None, Play, HowToPlay, Credits, Quit };
  **/
 [[nodiscard]] MainChoice mainMenuPage(const MenuContext &context,
                                       MenuCursor &cursor, bool connected);
+
+/**
+ * @struct SettingsResult
+ * @brief What the player did on the Settings page this frame.
+ * @param changed Whether a setting changed.
+ * @param back Whether the player chose to go back.
+ **/
+struct SettingsResult {
+    bool changed = false;
+    bool back = false;
+};
+
+/**
+ * @brief Draws the settings of the player, in screen pixels. The sound volume
+ * plays a sound of the game when it changes, so the player can hear it.
+ * @param context What the menu needs for this frame.
+ * @param cursor The keyboard selection of this menu, updated.
+ * @param settings The settings, updated.
+ * @return What the player did.
+ **/
+[[nodiscard]] SettingsResult settingsPage(const MenuContext &context,
+                                          MenuCursor &cursor,
+                                          Settings &settings);
 
 /**
  * @brief Returns the lines of the How to play page. The keys come from the

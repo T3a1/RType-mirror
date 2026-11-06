@@ -114,7 +114,9 @@ class Game {
     void handleBackKey();
     [[nodiscard]] MenuContext menuContext();
     void applyMainChoice(MainChoice choice);
+    void applyVolumes();
     void drawMenu();
+    void drawSettings();
     void drawLobby();
     void drawWaitingRoom();
     void drawGame();
@@ -148,6 +150,7 @@ class Game {
     float m_gameOverTime = 0.0F;
     std::optional<Bench> m_bench;
     Controls m_controls;
+    Settings m_settings;
     AutoFire m_autoFire;
     NetworkClient::TimePoint m_now;
     std::vector<rtype::protocol::Payload> m_payloads;

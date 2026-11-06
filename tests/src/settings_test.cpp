@@ -9,6 +9,7 @@
 
 #include <gtest/gtest.h>
 
+#include <filesystem>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -159,4 +160,39 @@ TEST(Settings, WritesEveryToggleOfTheTable)
     for (const client::ToggleDef &toggle : client::Toggles) {
         EXPECT_NE(out.str().find(toggle.key), std::string::npos) << toggle.key;
     }
+}
+
+TEST(Settings, LoadsTheDefaultsWithoutAFile)
+{
+    const std::filesystem::path path =
+        std::filesystem::temp_directory_path() / "rtype_no_settings.cfg";
+    std::filesystem::remove(path);
+
+    const Settings settings = client::loadSettingsFile(path.string());
+
+    EXPECT_FLOAT_EQ(settings.musicVolume, Settings{}.musicVolume);
+}
+
+TEST(Settings, LoadsWhatItSaves)
+{
+    const std::filesystem::path path =
+        std::filesystem::temp_directory_path() / "rtype_settings_test.cfg";
+    Settings written;
+    written.musicVolume = 0.15F;
+    written.autoFire = true;
+
+    EXPECT_TRUE(client::saveSettingsFile(path.string(), written));
+    const Settings settings = client::loadSettingsFile(path.string());
+    std::filesystem::remove(path);
+
+    EXPECT_FLOAT_EQ(settings.musicVolume, written.musicVolume);
+    EXPECT_TRUE(settings.autoFire);
+}
+
+TEST(Settings, ReportsAFileItCannotWrite)
+{
+    const std::filesystem::path path = std::filesystem::temp_directory_path() /
+                                       "rtype_no_such_folder" / "settings.cfg";
+
+    EXPECT_FALSE(client::saveSettingsFile(path.string(), Settings{}));
 }

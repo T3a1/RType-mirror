@@ -75,15 +75,14 @@ Game::Game(const std::string &host, std::uint16_t port,
       m_autoJoin(options.bench && !options.room
                      ? std::optional<std::uint32_t>{rtype::protocol::AnyRoom}
                      : options.room),
-      m_controls(options.controls)
+      m_controls(options.controls), m_settings(options.settings)
 {
     m_sync.interpolate = options.interpolate;
     m_sync.predict = options.predict;
     if (m_autoJoin) {
         m_menu.page = MenuPage::Lobby;
     }
-    m_audio->setMusicVolume(options.settings.musicVolume);
-    m_audio->setSoundVolume(options.settings.soundVolume);
+    applyVolumes();
     if (options.bench) {
         m_bench.emplace(*options.bench);
         m_audio->setSoundVolume(0.0F);
@@ -343,6 +342,9 @@ void Game::applyMainChoice(MainChoice choice)
     case MainChoice::Play:
         m_menu.page = MenuPage::Lobby;
         break;
+    case MainChoice::Settings:
+        m_menu.page = MenuPage::Settings;
+        break;
     case MainChoice::HowToPlay:
         m_menu.page = MenuPage::HowToPlay;
         break;
@@ -352,6 +354,31 @@ void Game::applyMainChoice(MainChoice choice)
     case MainChoice::Quit:
         m_quitRequested = true;
         break;
+    }
+}
+
+/**
+ * @brief Gives the volumes of the settings to the audio backend.
+ **/
+void Game::applyVolumes()
+{
+    m_audio->setMusicVolume(m_settings.musicVolume);
+    m_audio->setSoundVolume(m_settings.soundVolume);
+}
+
+/**
+ * @brief Draws the Settings page, and applies and saves what changed.
+ **/
+void Game::drawSettings()
+{
+    const SettingsResult result =
+        settingsPage(menuContext(), m_menu.settingsCursor, m_settings);
+    if (result.changed) {
+        applyVolumes();
+        saveSettingsFile(SettingsPath, m_settings);
+    }
+    if (result.back) {
+        m_menu.page = MenuPage::Main;
     }
 }
 
@@ -369,6 +396,9 @@ void Game::drawMenu()
         break;
     case MenuPage::Lobby:
         drawLobby();
+        break;
+    case MenuPage::Settings:
+        drawSettings();
         break;
     case MenuPage::HowToPlay:
         if (howToPlayPage(context, m_menu.howToPlayCursor, m_controls)) {

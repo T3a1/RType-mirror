@@ -89,6 +89,7 @@ target_include_directories(r-type_client_menu
 
 target_link_libraries(r-type_client_menu
     PUBLIC r-type_engine r-type_client_audio r-type_client_controls
+    r-type_client_settings
 )
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})

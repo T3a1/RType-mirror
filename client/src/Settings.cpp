@@ -7,10 +7,6 @@
 
 #include "Settings.hpp"
 
-#include <charconv>
-#include <optional>
-#include <string_view>
-
 namespace client {
 
 namespace {
@@ -127,6 +123,31 @@ void writeSettings(std::ostream &out, const Settings &settings)
         out << toggle.key << " = " << (settings.*toggle.field ? "on" : "off")
             << '\n';
     }
+}
+
+Settings loadSettingsFile(const std::string &path)
+{
+    Settings settings;
+    std::ifstream in(path);
+    if (!in) {
+        return settings;
+    }
+    for (const std::string &error : readSettings(in, settings)) {
+        std::cerr << "r-type_client: " << path << ": " << error << '\n';
+    }
+    return settings;
+}
+
+bool saveSettingsFile(const std::string &path, const Settings &settings)
+{
+    std::ofstream out(path);
+    writeSettings(out, settings);
+    out.flush();
+    if (!out) {
+        std::cerr << "r-type_client: cannot write " << path << '\n';
+        return false;
+    }
+    return true;
 }
 
 } // namespace client

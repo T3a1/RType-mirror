@@ -9,12 +9,20 @@
 #define CLIENT_SETTINGS_HPP
 
 #include <array>
+#include <charconv>
+#include <fstream>
+#include <iostream>
 #include <istream>
+#include <optional>
 #include <ostream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace client {
+
+/** @brief The settings file, in the current directory. */
+inline constexpr const char *SettingsPath = "settings.cfg";
 
 /**
  * @struct Settings
@@ -70,6 +78,22 @@ std::vector<std::string> readSettings(std::istream &in, Settings &settings);
  * @param settings The settings.
  **/
 void writeSettings(std::ostream &out, const Settings &settings);
+
+/**
+ * @brief Reads a settings file over the default settings, if it exists, and
+ * reports its bad lines on stderr.
+ * @param path The file.
+ * @return The settings.
+ **/
+[[nodiscard]] Settings loadSettingsFile(const std::string &path);
+
+/**
+ * @brief Replaces a settings file, and reports on stderr if it cannot.
+ * @param path The file.
+ * @param settings The settings.
+ * @return Whether the file was written.
+ **/
+bool saveSettingsFile(const std::string &path, const Settings &settings);
 
 } // namespace client
 

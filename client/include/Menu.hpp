@@ -179,13 +179,15 @@ class MenuPanel {
     bool checkbox(const gfx::Rect &rect, const std::string &label, bool &value);
     /**
      * @brief Draws a slider: Left and Right move it by 5%, and a click on its
-     * bar puts it there. Changing it plays MenuMove.
+     * bar puts it there.
      * @param rect Where it is, in screen pixels.
      * @param label Its text.
      * @param value Its value from 0 to 1, updated.
+     * @param feedback The sound played when it changes.
      * @return Whether it changed this frame.
      **/
-    bool slider(const gfx::Rect &rect, const std::string &label, float &value);
+    bool slider(const gfx::Rect &rect, const std::string &label, float &value,
+                audio::SoundEvent feedback = audio::SoundEvent::MenuMove);
     /**
      * @brief Draws a row of tabs: Left and Right change the tab when the row
      * is selected, and a click chooses one. Changing it plays MenuMove.

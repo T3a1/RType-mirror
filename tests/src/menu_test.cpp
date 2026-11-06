@@ -33,6 +33,7 @@ constexpr gfx::Rect Row{
 constexpr const char *MoveSound = "assets/sounds/menu_move.wav";
 constexpr const char *ConfirmSound = "assets/sounds/menu_confirm.wav";
 constexpr const char *BackSound = "assets/sounds/menu_back.wav";
+constexpr const char *ShotSound = "assets/sounds/player_shot.wav";
 
 // Holds the keys and the mouse of a test, and records the text drawn.
 class FakeGraphics final : public gfx::IGraphics {
@@ -475,8 +476,9 @@ TEST(MenuPages, MainMenuOffersItsChoicesInOrder)
     const MenuKeys confirm{.confirm = true};
     EXPECT_EQ(client::mainMenuPage(rig.context(confirm), rig.cursor, true),
               MainChoice::Play);
-    const std::array<MainChoice, 3> others{
-        MainChoice::HowToPlay, MainChoice::Credits, MainChoice::Quit};
+    const std::array<MainChoice, 4> others{
+        MainChoice::Settings, MainChoice::HowToPlay, MainChoice::Credits,
+        MainChoice::Quit};
     for (const MainChoice expected : others) {
         static_cast<void>(client::mainMenuPage(rig.context({.down = true}),
                                                rig.cursor, true));
@@ -568,5 +570,71 @@ TEST(MenuPages, CreditsNameTheTeamAndGoBack)
         rig.drew("Leandre Fouret, Romane Cauvez, Thomas Peze, David Caron"));
     EXPECT_TRUE(
         client::creditsPage(rig.context({.confirm = true}), rig.cursor));
+    EXPECT_EQ(rig.played(), std::vector<std::string>{BackSound});
+}
+
+TEST(MenuPanel, ASliderPlaysTheSoundItIsGiven)
+{
+    MenuRig rig;
+    float value = 0.5F;
+
+    MenuPanel panel(rig.context({.right = true}), rig.cursor);
+    panel.slider(Row, "Sound", value, client::audio::SoundEvent::PlayerShot);
+
+    EXPECT_EQ(rig.played(), std::vector<std::string>{ShotSound});
+}
+
+TEST(MenuPages, SettingsChangeTheMusicVolume)
+{
+    MenuRig rig;
+    client::Settings settings;
+
+    const client::SettingsResult result =
+        client::settingsPage(rig.context({.left = true}), rig.cursor, settings);
+
+    EXPECT_TRUE(result.changed);
+    EXPECT_FALSE(result.back);
+    EXPECT_FLOAT_EQ(settings.musicVolume, 0.35F);
+    EXPECT_EQ(rig.played(), std::vector<std::string>{MoveSound});
+}
+
+TEST(MenuPages, SettingsTestTheSoundVolume)
+{
+    MenuRig rig;
+    client::Settings settings;
+    rig.cursor.selected = 1;
+
+    const client::SettingsResult result =
+        client::settingsPage(rig.context({.left = true}), rig.cursor, settings);
+
+    EXPECT_TRUE(result.changed);
+    EXPECT_FLOAT_EQ(settings.soundVolume, 0.95F);
+    EXPECT_EQ(rig.played(), std::vector<std::string>{ShotSound});
+}
+
+TEST(MenuPages, SettingsReportNothingWithoutInput)
+{
+    MenuRig rig;
+    client::Settings settings;
+
+    const client::SettingsResult result =
+        client::settingsPage(rig.context(), rig.cursor, settings);
+
+    EXPECT_FALSE(result.changed);
+    EXPECT_FALSE(result.back);
+    EXPECT_TRUE(rig.played().empty());
+}
+
+TEST(MenuPages, SettingsGoBack)
+{
+    MenuRig rig;
+    client::Settings settings;
+    rig.cursor.selected = 2;
+
+    const client::SettingsResult result = client::settingsPage(
+        rig.context({.confirm = true}), rig.cursor, settings);
+
+    EXPECT_TRUE(result.back);
+    EXPECT_FALSE(result.changed);
     EXPECT_EQ(rig.played(), std::vector<std::string>{BackSound});
 }
