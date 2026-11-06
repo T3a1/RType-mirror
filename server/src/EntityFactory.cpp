@@ -6,6 +6,7 @@
 */
 
 #include "EntityFactory.hpp"
+#include "common/Obstacles.hpp"
 #include "common/Playfield.hpp"
 
 #include <algorithm>
@@ -201,6 +202,48 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
 
     BB_DEBUG("Power-up spawned with id " << networkId);
     return powerUp;
+}
+
+engine::Entity EntityFactory::create(engine::Registry &registry,
+                                     const SpawnObstacle &request)
+{
+    const engine::Entity block = registry.create();
+    const std::uint32_t networkId = m_nextNetworkId++;
+
+    registry.emplace<rtype::NetworkId>(block,
+                                       rtype::NetworkId{.value = networkId});
+    registry.emplace<rtype::Transform>(
+        block, rtype::Transform{.position = request.position});
+    registry.emplace<rtype::Velocity>(
+        block,
+        rtype::Velocity{.value = {.x = -rtype::ObstacleSpeed, .y = 0.0F}});
+    registry.emplace<rtype::EntityType>(
+        block, request.destroyable ? rtype::EntityType::DestroyableTile
+                                   : rtype::EntityType::Obstacle);
+    registry.emplace<rtype::Collider>(
+        block, rtype::Collider{
+                   .size = rtype::TileSize,
+                   .layer = rtype::CollisionLayer::Obstacle,
+                   .mask = rtype::CollisionLayer::Player |
+                           rtype::CollisionLayer::PlayerProjectile |
+                           rtype::CollisionLayer::EnemyProjectile,
+               });
+    // A ship that touches a block is destroyed, like on an enemy.
+    registry.emplace<rtype::Damage>(block);
+    registry.emplace<Obstacle>(block,
+                               Obstacle{.destroyable = request.destroyable});
+    if (request.destroyable) {
+        registry.emplace<rtype::Health>(block,
+                                        rtype::Health{
+                                            .current = rtype::TileMaxHealth,
+                                            .max = rtype::TileMaxHealth,
+                                        });
+    }
+    registry.emplace<DestroyOffScreen>(block);
+
+    BB_DEBUG((request.destroyable ? "Tile" : "Wall")
+             << " spawned with id " << networkId);
+    return block;
 }
 
 } // namespace server

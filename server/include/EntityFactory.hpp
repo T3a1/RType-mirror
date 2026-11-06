@@ -27,6 +27,7 @@
 #include "components/Boss.hpp"
 #include "components/DestroyOffScreen.hpp"
 #include "components/KeepInPlayfield.hpp"
+#include "components/Obstacle.hpp"
 #include "components/Piercing.hpp"
 #include "components/PowerUp.hpp"
 #include "engine/Entity.hpp"
@@ -106,6 +107,19 @@ class EntityFactory {
      **/
     engine::Entity create(engine::Registry &registry,
                           const SpawnPowerUp &request);
+
+    /**
+     * @brief Creates a wall block or a destroyable tile of TileSize that
+     * scrolls to the left at ObstacleSpeed and is destroyed off-screen.
+     *
+     * It collides with the ships and every shot, and deals the Damage that
+     * destroys a ship. A tile also gets TileMaxHealth.
+     * @param registry The registry to create the block in.
+     * @param request Where it appears and whether it is destroyable.
+     * @return The created entity.
+     **/
+    engine::Entity create(engine::Registry &registry,
+                          const SpawnObstacle &request);
 
   private:
     std::uint32_t m_nextNetworkId = 1;
