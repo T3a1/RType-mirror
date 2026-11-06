@@ -56,6 +56,7 @@ endif()
 # Spawning, levels and combat (collisions, damage, deaths) are a library so
 # the tests can run them without the game loop.
 add_library(r-type_server_spawn STATIC
+    src/EnemyCatalog.cpp
     src/EntityFactory.cpp
     src/Formations.cpp
     src/Level.cpp
