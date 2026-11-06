@@ -75,8 +75,8 @@ auto_fire = off
 player_labels = on
 ```
 
-Window sizes: `1280x720`, `1600x900`, `1920x1080`, `2560x1440`. Frame limits: `30`,
-`60`, `120`, or `0` for no limit. A line the game cannot read is reported when it
+Window sizes: `1280x720`, `1600x900`, `1920x1080`, `2560x1440`. Frame limits: `15`,
+`30`, `60`, `120`, or `0` for no limit. A line the game cannot read is reported when it
 starts, and that setting keeps its value. Saving replaces the whole file, so your comments are not kept.
 
 **Accessibility options**: open Accessibility in the main menu.
