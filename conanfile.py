@@ -17,8 +17,7 @@ class RType(ConanFile):
     options = {"graphics": ["raylib", "sfml", "ncurses"]}
     default_options = {
         "graphics": "raylib",
-        # The client only uses SFML's window and graphics modules.
-        "sfml/*:audio": False,
+        # The client only uses SFML's window, graphics and audio modules.
         "sfml/*:network": False,
         # The ncurses client only needs the library itself.
         "ncurses/*:with_cxx": False,

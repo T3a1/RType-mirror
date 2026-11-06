@@ -11,6 +11,8 @@
 #include "Bench.hpp"
 #include "Controls.hpp"
 #include "SpriteSheets.hpp"
+#include "audio/IAudio.hpp"
+#include "audio/SoundBoard.hpp"
 #include "engine/Clock.hpp"
 #include "engine/Registry.hpp"
 #include "engine/Scheduler.hpp"
@@ -121,6 +123,8 @@ class Game {
     void drawStatus() const;
     NetworkClient m_network;
     std::unique_ptr<gfx::IGraphics> m_graphics;
+    std::unique_ptr<audio::IAudio> m_audio;
+    audio::SoundBoard m_sounds;
     SpriteSheets m_sheets;
     engine::Registry m_registry;
     gfx::Texture m_backgroundTexture;

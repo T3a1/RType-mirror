@@ -12,6 +12,7 @@ set(SOURCE_FILES
     src/Menu.cpp
     src/SpriteSheets.cpp
     src/systems/AnimationSystem.cpp
+    src/systems/AudioSystem.cpp
     src/Bench.cpp
     src/systems/BackgroundRenderSystem.cpp
     src/systems/BackgroundScrollSystem.cpp
@@ -25,17 +26,21 @@ set(SOURCE_FILES
 if(RTYPE_GRAPHICS_BACKEND STREQUAL "raylib")
     find_package(raylib REQUIRED)
     list(APPEND SOURCE_FILES src/graphics/raylib/RaylibGraphics.cpp)
+    list(APPEND SOURCE_FILES src/audio/raylib/RaylibAudio.cpp)
     set(GRAPHICS_LIBRARIES raylib)
 elseif(RTYPE_GRAPHICS_BACKEND STREQUAL "sfml")
-    find_package(SFML 3 REQUIRED COMPONENTS Graphics Window System)
+    find_package(SFML 3 REQUIRED COMPONENTS Graphics Window System Audio)
     list(APPEND SOURCE_FILES src/graphics/sfml/SfmlGraphics.cpp)
-    set(GRAPHICS_LIBRARIES SFML::Graphics)
+    list(APPEND SOURCE_FILES src/graphics/sfml/ExecutableDirectory.cpp)
+    list(APPEND SOURCE_FILES src/audio/sfml/SfmlAudio.cpp)
+    set(GRAPHICS_LIBRARIES SFML::Graphics SFML::Audio)
 elseif(RTYPE_GRAPHICS_BACKEND STREQUAL "ncurses")
     if(WIN32)
         message(FATAL_ERROR "The ncurses client only runs on Linux")
     endif()
     find_package(Curses REQUIRED)
     list(APPEND SOURCE_FILES src/graphics/ncurses/NcursesGraphics.cpp)
+    list(APPEND SOURCE_FILES src/audio/NullAudio.cpp)
     set(GRAPHICS_LIBRARIES Curses::Curses)
 else()
     message(FATAL_ERROR "Unknown RTYPE_GRAPHICS_BACKEND: ${RTYPE_GRAPHICS_BACKEND}")
@@ -61,6 +66,14 @@ target_include_directories(r-type_client_controls
     PUBLIC include
 )
 
+# The sounds of the game are a library so the tests can run them on a fake
+# backend.
+add_library(r-type_client_audio STATIC src/audio/SoundBoard.cpp)
+
+target_include_directories(r-type_client_audio
+    PUBLIC include
+)
+
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 target_include_directories(${PROJECT_NAME}
@@ -68,7 +81,8 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
-    PRIVATE r-type_client_network r-type_client_controls ${GRAPHICS_LIBRARIES}
+    PRIVATE r-type_client_network r-type_client_controls r-type_client_audio
+    ${GRAPHICS_LIBRARIES}
 )
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

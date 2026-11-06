@@ -124,8 +124,9 @@ void chargeGlowSystem(engine::Registry &registry, const SpriteSheets &sheets,
  * @param entity The destroyed entity, still holding its EntityType and
  * Transform.
  * @param sheets The loaded sprite sheets.
+ * @return Whether an explosion was created.
  **/
-void spawnExplosion(engine::Registry &registry, engine::Entity entity,
+bool spawnExplosion(engine::Registry &registry, engine::Entity entity,
                     const SpriteSheets &sheets);
 
 } // namespace client
