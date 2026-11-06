@@ -432,6 +432,27 @@ def stop(process: subprocess.Popen) -> None:
             process.kill()
 
 
+def access_args(args: argparse.Namespace) -> list[str]:
+    """The ban list and white list options of the native server."""
+    result = []
+    if args.banlist:
+        result += ["--banlist", str(args.banlist)]
+    if args.whitelist:
+        result += ["--whitelist", str(args.whitelist)]
+    return result
+
+
+def start_clients(args: argparse.Namespace, client_bin: Path) -> list[subprocess.Popen]:
+    """Starts args.clients clients connected to args.host:args.port."""
+    clients = []
+    room_args = ["--room", str(args.room)] if args.room else []
+    for i in range(1, args.clients + 1):
+        log(f"Starting client {i}/{args.clients} -> {args.host}:{args.port}")
+        clients.append(subprocess.Popen([str(client_bin), args.host, str(args.port),
+                                         *room_args]))
+    return clients
+
+
 def play(args: argparse.Namespace) -> int:
     """Default mode: starts the server and the clients, waits until every
     client is closed, then stops everything (also on Ctrl+C or an error)."""
@@ -449,21 +470,12 @@ def play(args: argparse.Namespace) -> int:
     try:
         client_bin = ensure_binary("r-type_client", CLIENT_BIN, "-DBUILD_CLIENT=ON")
         if args.native:
-            access_args = []
-            if args.banlist:
-                access_args += ["--banlist", str(args.banlist)]
-            if args.whitelist:
-                access_args += ["--whitelist", str(args.whitelist)]
-            server = start_native_server(args.port, in_terminal, access_args)
+            server = start_native_server(args.port, in_terminal, access_args(args))
         else:
             start_docker_server(args.port)
             container_started = True
 
-        for i in range(1, args.clients + 1):
-            log(f"Starting client {i}/{args.clients} -> {args.host}:{args.port}")
-            room_args = ["--room", str(args.room)] if args.room else []
-            clients.append(subprocess.Popen([str(client_bin), args.host, str(args.port),
-                                             *room_args]))
+        clients = start_clients(args, client_bin)
 
         if in_terminal:
             log("Running. Press q in the game to stop (its logs: r-type_client.log).")
