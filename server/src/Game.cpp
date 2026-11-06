@@ -41,6 +41,9 @@ void Game::registerSystems()
     const engine::SystemOptions playing{.when = [this] {
         return m_status != rtype::protocol::RoomStatus::Waiting;
     }};
+    const engine::SystemOptions spawning{.when = [this] {
+        return m_status == rtype::protocol::RoomStatus::Playing;
+    }};
 
     m_scheduler.add(Stage::Input, "drainInbound", [this](Registry &, Duration) {
         m_messages = m_inbound.drain();
@@ -81,19 +84,19 @@ void Game::registerSystems()
                 });
             }
         },
-        playing);
+        spawning);
     m_scheduler.add(
         Stage::Simulation, "obstacles",
         [this](Registry &r, Duration) {
             server::obstacleSystem(r, m_commands);
         },
-        playing);
+        spawning);
     m_scheduler.add(
         Stage::Simulation, "spawn",
         [this](Registry &r, Duration dt) {
             server::spawnSystem(r, m_commands, dt);
         },
-        playing);
+        spawning);
     m_scheduler.add(
         Stage::Simulation, "shoot",
         [this](Registry &r, Duration dt) {
