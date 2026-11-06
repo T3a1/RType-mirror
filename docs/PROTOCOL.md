@@ -280,6 +280,8 @@ right edge) but **MUST** be finite: NaN and infinities are invalid.
 | 10 | ChargedShot (a player's charged shot, which goes through enemies) |
 | 11 | PowerUp (a bonus: the player who touches it gets one more weapon level) |
 | 12 | BossHive (the second end-level boss; its full health is the health of its first record) |
+| 13 | Obstacle (a wall of the level: it stops every shot and destroys the ships that touch it) |
+| 14 | DestroyableTile (a block of the level that stops shots and breaks after a few hits; its full health is `TileMaxHealth`, 150) |
 
 ### `GameEvent` (0x22)
 
@@ -585,3 +587,4 @@ B0 04 00 00                           tick 1200
 | 7 | New entity type `Boss`. |
 | 9 | New entity types `ChargedShot` and `PowerUp`; the `Charging` flag is now sent ([WEAPONS.md](WEAPONS.md)). Version 8 is the administration console. |
 | 10 | `StartGame` carries the game settings (difficulty, starting level, boss), `RoomJoined` the number of levels; new entity type `BossHive`. |
+| 11 | New entity types `Obstacle` and `DestroyableTile` (obstacles read from the level files, [LEVELS.md](LEVELS.md)). |
