@@ -25,6 +25,7 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <optional>
@@ -46,6 +47,12 @@ std::optional<server::Level> parse(const std::string &text,
         *error = message;
     }
     return level;
+}
+
+/** @brief The obstacle columns of a level, none if it is not valid. */
+std::vector<server::ObstacleColumn> columnsOf(const std::string &text)
+{
+    return parse(text).value_or(server::Level{}).obstacles;
 }
 
 std::size_t countType(engine::Registry &registry, rtype::EntityType wanted)
@@ -74,35 +81,35 @@ void fight(engine::Registry &registry)
 
 TEST(ObstacleLevel, SplitsAGroupIntoColumns)
 {
-    const auto level = parse(R"({ "name": "x",
+    const std::vector<server::ObstacleColumn> columns =
+        columnsOf(R"({ "name": "x",
         "waves": [ { "time": 1, "enemy": "basic" } ],
         "obstacles": [ { "time": 4, "kind": "tile", "y": 96, "rows": 3,
                          "columns": 2 } ] })");
 
-    ASSERT_TRUE(level.has_value());
-    ASSERT_EQ(level->obstacles.size(), 2U);
-    for (const server::ObstacleColumn &column : level->obstacles) {
-        EXPECT_TRUE(column.destroyable);
-        EXPECT_FLOAT_EQ(column.top, 96.0F);
-        EXPECT_EQ(column.rows, 3U);
-    }
-    EXPECT_FLOAT_EQ(level->obstacles.at(0).time.count(), 4.0F);
-    EXPECT_FLOAT_EQ(level->obstacles.at(1).time.count(), 4.0F + ColumnStep);
+    ASSERT_EQ(columns.size(), 2U);
+    EXPECT_TRUE(
+        std::ranges::all_of(columns, [](const server::ObstacleColumn &column) {
+            return column.destroyable && column.top == 96.0F &&
+                   column.rows == 3U;
+        }));
+    EXPECT_FLOAT_EQ(columns.at(0).time.count(), 4.0F);
+    EXPECT_FLOAT_EQ(columns.at(1).time.count(), 4.0F + ColumnStep);
 }
 
 TEST(ObstacleLevel, DefaultsToOneWallBlockAndSortsByTime)
 {
-    const auto level = parse(R"({ "name": "x",
+    const std::vector<server::ObstacleColumn> columns =
+        columnsOf(R"({ "name": "x",
         "waves": [ { "time": 1, "enemy": "basic" } ],
         "obstacles": [ { "time": 9, "kind": "wall", "y": 500 },
                        { "time": 2, "kind": "wall", "y": 100 } ] })");
 
-    ASSERT_TRUE(level.has_value());
-    ASSERT_EQ(level->obstacles.size(), 2U);
-    EXPECT_FALSE(level->obstacles.at(0).destroyable);
-    EXPECT_EQ(level->obstacles.at(0).rows, 1U);
-    EXPECT_FLOAT_EQ(level->obstacles.at(0).top, 100.0F);
-    EXPECT_FLOAT_EQ(level->obstacles.at(1).top, 500.0F);
+    ASSERT_EQ(columns.size(), 2U);
+    EXPECT_FALSE(columns.at(0).destroyable);
+    EXPECT_EQ(columns.at(0).rows, 1U);
+    EXPECT_FLOAT_EQ(columns.at(0).top, 100.0F);
+    EXPECT_FLOAT_EQ(columns.at(1).top, 500.0F);
 }
 
 TEST(ObstacleLevel, RejectsInvalidGroups)
