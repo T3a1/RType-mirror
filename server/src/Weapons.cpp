@@ -94,10 +94,12 @@ std::optional<WeaponStats> parseWeapons(std::string_view text,
             throw WeaponsError("must be an object");
         }
         for (const auto &item : root.items()) {
-            static constexpr std::array<std::string_view, 9> Keys{
-                "fireInterval",   "shotSpeed",   "shotDamage",
-                "enemyShotSpeed", "chargeTime",  "beamSpeed",
-                "beamDamage",     "spreadAngle", "maxLevel"};
+            static constexpr std::array<std::string_view, 14> Keys{
+                "fireInterval",   "shotSpeed",     "shotDamage",
+                "enemyShotSpeed", "chargeTime",    "beamSpeed",
+                "beamDamage",     "spreadAngle",   "maxLevel",
+                "spreadDuration", "aimedDuration", "burstDuration",
+                "burstShots",     "burstDelay"};
             if (std::ranges::find(Keys, item.key()) == Keys.end()) {
                 throw WeaponsError("unknown key \"" + item.key() + "\"");
             }
@@ -112,6 +114,16 @@ std::optional<WeaponStats> parseWeapons(std::string_view text,
         read(root, "beamDamage", 1.0, 10000.0, stats.beamDamage);
         read(root, "spreadAngle", 0.0, 1.0, stats.spreadAngle);
         read(root, "maxLevel", 1.0, double{MaxWeaponLevel}, stats.maxLevel);
+        // In PowerUpKind order, up to 255 s: the snapshots send the
+        // seconds left in one byte.
+        readSeconds(root, "spreadDuration", 1.0, 255.0,
+                    stats.boostDuration.at(0));
+        readSeconds(root, "aimedDuration", 1.0, 255.0,
+                    stats.boostDuration.at(1));
+        readSeconds(root, "burstDuration", 1.0, 255.0,
+                    stats.boostDuration.at(2));
+        read(root, "burstShots", 1.0, 5.0, stats.burstShots);
+        readSeconds(root, "burstDelay", 0.02, 1.0, stats.burstDelay);
         return stats;
     } catch (const Json::exception &exception) {
         error = exception.what();

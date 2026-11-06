@@ -14,8 +14,12 @@
 #include "common/components/Transform.hpp"
 #include "common/components/Weapon.hpp"
 #include "common/protocol/Messages.hpp"
+#include "components/PowerUp.hpp"
+#include "components/ShotStyles.hpp"
 
 #include <algorithm>
+#include <array>
+#include <cmath>
 #include <limits>
 #include <vector>
 
@@ -48,11 +52,14 @@ std::uint16_t healthOf(engine::Registry &registry, engine::Entity entity)
  * @param registry The registry holding the entity.
  * @param entity The entity.
  * @return The Owner bits of a projectile fired by a player still alive,
- * Charging for a player's ship whose fire key is held for a while, 0
- * otherwise.
+ * Charging for a player's ship whose fire key is held for a while, the
+ * Boost bits of a power-up, 0 otherwise.
  **/
 std::uint8_t flagsOf(engine::Registry &registry, engine::Entity entity)
 {
+    if (const auto *powerUp = registry.tryGet<PowerUp>(entity)) {
+        return rtype::protocol::EntityFlag::boost(powerUp->kind);
+    }
     const auto *projectile = registry.tryGet<rtype::Projectile>(entity);
     if (projectile == nullptr) {
         const auto *weapon = registry.tryGet<rtype::Weapon>(entity);
@@ -92,6 +99,28 @@ entityStates(engine::Registry &registry)
 }
 
 /**
+ * @brief Returns the boost timers of a ship as sent in a snapshot.
+ * @param registry The registry holding the ship.
+ * @param ship The ship.
+ * @return The seconds left of each boost, rounded up, 0 for none.
+ **/
+std::array<std::uint8_t, rtype::PowerUpKindCount>
+boostsOf(engine::Registry &registry, engine::Entity ship)
+{
+    std::array<std::uint8_t, rtype::PowerUpKindCount> seconds{};
+    const auto *boosts = registry.tryGet<Boosts>(ship);
+    if (boosts == nullptr) {
+        return seconds;
+    }
+    for (std::size_t i = 0; i < seconds.size(); ++i) {
+        seconds.at(i) = static_cast<std::uint8_t>(
+            std::clamp(std::ceil(boosts->left.at(i).count()), 0.0F,
+                       float{std::numeric_limits<std::uint8_t>::max()}));
+    }
+    return seconds;
+}
+
+/**
  * @brief Builds the players block of a snapshot.
  * @param registry The registry holding the ships.
  * @param players The connected players.
@@ -108,6 +137,7 @@ std::vector<rtype::protocol::PlayerInfo> playerInfos(engine::Registry &registry,
             .score = player.score,
             .lastInput = player.lastSequence,
             .shipId = networkId != nullptr ? networkId->value : 0,
+            .boosts = boostsOf(registry, player.ship),
         });
     }
     return infos;

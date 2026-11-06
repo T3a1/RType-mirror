@@ -24,48 +24,96 @@ namespace server {
 namespace {
 
 /**
- * @brief Gives a player the shot style of a power-up. Picking the style it
- * already has raises its level; a new style would replace the old one.
+ * @brief Gives a player the boost of a power-up for its full duration.
  * @param registry The registry holding the player.
  * @param player The player's ship.
- * @param kind The shot style of the power-up.
- * @param maxLevel The highest level of a style.
+ * @param kind The boost of the power-up.
+ * @param stats The weapon stats.
  **/
 void applyPowerUp(engine::Registry &registry, engine::Entity player,
-                  PowerUpKind kind, std::uint8_t maxLevel)
+                  rtype::PowerUpKind kind, const WeaponStats &stats)
 {
+    auto *boosts = registry.tryGet<Boosts>(player);
+    if (boosts == nullptr) {
+        boosts = &registry.emplace<Boosts>(player);
+    }
+    boosts->of(kind) = stats.durationOf(kind);
     switch (kind) {
-    case PowerUpKind::Spread: {
+    case rtype::PowerUpKind::Spread: {
         auto *spread = registry.tryGet<SpreadShot>(player);
         if (spread == nullptr) {
-            registry.emplace<SpreadShot>(player);
-            break;
+            spread = &registry.emplace<SpreadShot>(player);
         }
-        spread->level = std::min<std::uint8_t>(spread->level + 1, maxLevel);
+        // The first boost goes straight to 3 shots, the next ones add 2.
+        spread->level = std::min<std::uint8_t>(
+            std::max<std::uint8_t>(spread->level + 1, 2), stats.maxLevel);
         BB_DEBUG("Spread level " << static_cast<int>(spread->level));
         break;
     }
+    case rtype::PowerUpKind::Aimed:
+        if (!registry.has<AimedShot>(player)) {
+            registry.emplace<AimedShot>(player);
+        }
+        break;
+    case rtype::PowerUpKind::Burst:
+        if (!registry.has<BurstShot>(player)) {
+            registry.emplace<BurstShot>(player);
+        }
+        break;
+    case rtype::PowerUpKind::Count:
+        break;
     }
+}
+
+/**
+ * @brief Takes a boost away from a player whose time is up.
+ * @param registry The registry holding the player.
+ * @param player The player's ship.
+ * @param kind The boost.
+ **/
+void endBoost(engine::Registry &registry, engine::Entity player,
+              rtype::PowerUpKind kind)
+{
+    switch (kind) {
+    case rtype::PowerUpKind::Spread:
+        if (auto *spread = registry.tryGet<SpreadShot>(player)) {
+            spread->level = 1;
+        }
+        break;
+    case rtype::PowerUpKind::Aimed:
+        registry.remove<AimedShot>(player);
+        break;
+    case rtype::PowerUpKind::Burst:
+        registry.remove<BurstShot>(player);
+        break;
+    case rtype::PowerUpKind::Count:
+        break;
+    }
+    BB_DEBUG("Boost " << rtype::powerUpName(kind) << " ended");
 }
 
 } // namespace
 
-void powerUpDropSystem(engine::Registry &registry, SpawnCommands &commands)
+void powerUpDropSystem(engine::Registry &registry, SpawnCommands &commands,
+                       std::mt19937 &random)
 {
+    std::uniform_int_distribution<std::size_t> pick(0, rtype::PowerUpKindCount -
+                                                           1);
     registry.each<rtype::Enemy, rtype::Health, rtype::Transform>(
-        [&commands](engine::Entity, const rtype::Enemy &enemy,
-                    const rtype::Health &health,
-                    const rtype::Transform &transform) {
+        [&](engine::Entity, const rtype::Enemy &enemy,
+            const rtype::Health &health, const rtype::Transform &transform) {
             if (health.current <= 0 && enemyDef(enemy).dropsPowerUp) {
-                commands.emplace_back(
-                    SpawnPowerUp{.position = transform.position});
+                commands.emplace_back(SpawnPowerUp{
+                    .position = transform.position,
+                    .kind = rtype::PowerUpKinds.at(pick(random)),
+                });
             }
         });
 }
 
 void pickupSystem(engine::Registry &registry,
                   const std::vector<Collision> &collisions, Outbound &outbound,
-                  std::uint8_t maxLevel)
+                  const WeaponStats &stats)
 {
     std::vector<engine::Entity> taken;
     const auto pick = [&](engine::Entity player, engine::Entity powerUp) {
@@ -74,7 +122,7 @@ void pickupSystem(engine::Registry &registry,
             std::ranges::find(taken, powerUp) != taken.end()) {
             return;
         }
-        applyPowerUp(registry, player, bonus->kind, maxLevel);
+        applyPowerUp(registry, player, bonus->kind, stats);
         taken.push_back(powerUp);
         despawn(registry, powerUp, outbound);
     };
@@ -82,6 +130,23 @@ void pickupSystem(engine::Registry &registry,
         pick(collision.a, collision.b);
         pick(collision.b, collision.a);
     }
+}
+
+void boostSystem(engine::Registry &registry, engine::Duration dt)
+{
+    registry.each<Boosts>([&](engine::Entity player, Boosts &boosts) {
+        for (const rtype::PowerUpKind kind : rtype::PowerUpKinds) {
+            engine::Duration &left = boosts.of(kind);
+            if (left.count() <= 0.0F) {
+                continue;
+            }
+            left -= dt;
+            if (left.count() <= 0.0F) {
+                left = engine::Duration{0.0F};
+                endBoost(registry, player, kind);
+            }
+        }
+    });
 }
 
 } // namespace server

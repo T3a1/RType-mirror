@@ -47,6 +47,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <random>
 #include <thread>
 #include <vector>
 
@@ -141,6 +142,7 @@ class Game final : public engine::IInstance {
     std::vector<InboundMessage> m_messages;
     std::vector<Collision> m_collisions;
     SpawnCommands m_commands;
+    std::mt19937 m_random{std::random_device{}()};
     static_assert(std::atomic<bool>::is_always_lock_free);
 };
 

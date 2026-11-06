@@ -117,6 +117,9 @@ void encode(const SnapshotPart &message, ByteWriter &out)
             out.u32(player.score);
             out.u32(player.lastInput);
             out.u32(player.shipId);
+            for (const std::uint8_t seconds : player.boosts) {
+                out.u8(seconds);
+            }
         }
     }
     for (const EntityState &entity : message.entities) {
@@ -248,6 +251,9 @@ bool decode(ByteReader &in, SnapshotPart &message)
             player.score = in.u32();
             player.lastInput = in.u32();
             player.shipId = in.u32();
+            for (std::uint8_t &seconds : player.boosts) {
+                seconds = in.u8();
+            }
             if (!isValidSlot(player.slot)) {
                 return false;
             }
@@ -272,6 +278,7 @@ bool decode(ByteReader &in, SnapshotPart &message)
         entity.y = in.f32();
         if ((entity.flags & EntityFlag::All) != entity.flags ||
             EntityFlag::ownerOf(entity.flags) > MaxPlayers ||
+            EntityFlag::boostOf(entity.flags) >= PowerUpKind::Count ||
             !std::isfinite(entity.x) || !std::isfinite(entity.y)) {
             return false;
         }

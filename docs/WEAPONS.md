@@ -11,18 +11,23 @@
   shot). Released earlier, nothing more is fired.
 - **Auto-fire** (F or Right Shift) presses the fire key for you 4 times per
   second: rapid fire without tapping, and no charged shot.
-- **Power-ups**: medium and large enemies, and the boss, leave an orb when
-  they are destroyed. It slowly floats to the left; the ship that touches it
-  gets one more level of its **shot style**. Today there is one style, the
-  spread:
+- **Power-ups**: medium and large enemies, and the bosses, leave an orb
+  when they are destroyed. It slowly floats to the left; the ship that
+  touches it gets its **boost** for a limited time. Each orb has a random
+  kind, shown by its color and its letter:
 
-  | Spread level | Shots at once |
-  |-------------:|---------------|
-  | 1 | 1 |
-  | 2 | 3, in a spread |
-  | 3 | 5, in a wider spread |
+  | Letter | Boost | Effect | Lasts |
+  |:------:|-------|--------|------:|
+  | S (yellow) | Spread | 3 shots in a spread; taken again while active, 5 in a wider spread | 30 s |
+  | A (blue) | Aimed | One more shot, flying towards the nearest enemy | 45 s |
+  | B (orange) | Burst | Each shot is fired again twice, right after it | 30 s |
 
-  A new ship starts with a level 1 spread (a single shot).
+  Boosts **stack**: each has its own timer. For example, a spread taken at
+  5:02 and an aimed boost taken at 5:22 both fire together until 5:32, when
+  the spread ends; the aimed boost goes on until 6:07. Taking a boost the
+  ship already has restarts its timer. The HUD lists the active boosts of
+  the local player with their seconds left (`Spread 12s`). Without any
+  boost, a ship fires a single shot.
 
 ## Weapon settings: `server/weapons.json`
 
@@ -43,7 +48,12 @@ the server.
     "beamSpeed": 1300,
     "beamDamage": 300,
     "spreadAngle": 0.12,
-    "maxLevel": 3
+    "maxLevel": 3,
+    "spreadDuration": 30,
+    "aimedDuration": 45,
+    "burstDuration": 30,
+    "burstShots": 2,
+    "burstDelay": 0.08
 }
 ```
 
@@ -57,7 +67,12 @@ the server.
 | `beamSpeed` | 1300 | 100 to 5000 | Speed of a charged shot |
 | `beamDamage` | 300 | 1 to 10000 | Damage of a charged shot to each enemy it goes through |
 | `spreadAngle` | 0.12 | 0 to 1 | Angle between two shots of a spread, in radians |
-| `maxLevel` | 3 | 1 to 5 | Highest level of a shot style; a level N spread fires 2N - 1 shots |
+| `maxLevel` | 3 | 1 to 5 | Highest spread level; a level N spread fires 2N - 1 shots (the first Spread boost gives level 2) |
+| `spreadDuration` | 30 | 1 to 255 | Seconds a Spread boost lasts |
+| `aimedDuration` | 45 | 1 to 255 | Seconds an Aimed boost lasts |
+| `burstDuration` | 30 | 1 to 255 | Seconds a Burst boost lasts |
+| `burstShots` | 2 | 1 to 5 | How many times a Burst boost fires each shot again |
+| `burstDelay` | 0.08 | 0.02 to 1 | Seconds between two shots of a burst |
 
 Unknown keys and values of the wrong type or out of range make the file
 invalid, so that a typo is reported instead of silently ignored.
@@ -65,56 +80,62 @@ invalid, so that a typo is reported instead of silently ignored.
 ## Shot styles
 
 A shot style is **how a player's weapon turns one shot into projectiles**.
-It is an ECS component on the player's ship, applied by its own system:
+It is an ECS component on the player's ship, applied by its own system, so
+a ship can have several styles at once:
 
 ```mermaid
 flowchart LR
     input["Fire pressed<br/>(InputState)"] --> shoot["shootSystem<br/>cooldown, charge"]
-    shoot -- "Weapon::fired" --> spread["spreadShotSystem<br/>(SpreadShot)"]
-    shoot -- "Weapon::fired" --> other["burstShotSystem<br/>(BurstShot, to come)"]
+    shoot -- "Weapon::fired" --> burst["burstShotSystem<br/>(BurstShot)"]
+    burst -- "Weapon::fired again" --> spread["spreadShotSystem<br/>(SpreadShot)"]
+    burst -- "Weapon::fired" --> aimed["aimedShotSystem<br/>(AimedShot)"]
     spread --> commands["SpawnCommands<br/>projectiles, created in Cleanup"]
-    other --> commands
+    aimed --> commands
+    pickup["pickupSystem"] -- "adds, raises" --> styles["styles + Boosts timers"]
+    boost["boostSystem"] -- "time up: removes" --> styles
 ```
 
 - `shootSystem` handles what every weapon shares: the fire rate, holding to
   charge and the charged shot. When the player fires this tick, it only
   sets `Weapon::fired`.
 - The system of each style turns `fired` into projectiles for the players
-  that have its component. A ship has exactly one style: without any, it
-  fires nothing.
-- A power-up carries the style it gives (`PowerUpKind`). Picking up the
-  style the ship already has raises its level; another style replaces it.
+  that have its component. `SpreadShot` is on every ship (level 1: a single
+  shot); `AimedShot` and `BurstShot` come from boosts. `burstShotSystem`
+  runs first and only sets `fired` again on the next ticks of a burst, so
+  every other style repeats with it.
+- A power-up carries its boost (`rtype::PowerUpKind`, shared with the
+  client). `pickupSystem` sets that boost's timer in the ship's `Boosts` to
+  its full duration and adds the style (a Spread boost raises the spread
+  level instead). `boostSystem` counts the timers down and, when one runs
+  out, removes its style (the spread goes back to level 1).
+- `powerUpDropSystem` picks the kind of each dropped power-up at random.
 
-### Adding a shot style
+### Adding a boost
 
-Example: a burst, which fires 3 shots one after the other.
+Example: a rapid fire, which halves the time between two shots.
 
-1. **Component**, in `server/include/components/ShotStyles.hpp`: the style
-   and its own state, e.g.
-   `struct BurstShot { std::uint8_t level = 1; std::uint8_t left = 0; engine::Duration next{0.0F}; };`,
-   and a new `PowerUpKind::Burst`.
-2. **System**, in `server/include/systems/ShotStyleSystems.hpp` and its
-   `.cpp`: `burstShotSystem(registry, commands, stats, dt)` iterates
-   `Weapon, BurstShot, Transform`; on `weapon.fired` it starts a burst
-   (`left = 3`) and fires the remaining shots as `next` runs out, with
-   `commands.emplace_back(SpawnProjectile{...})`.
-3. **Register it** in `server::Game::registerSystems()`, right after
-   `"spreadShot"`, with the `playing` option.
-4. **Power-up**: in `applyPowerUp()` (`server/src/systems/PowerUpSystem.cpp`)
-   add the `PowerUpKind::Burst` case: remove the other style components
-   (`registry.remove<SpreadShot>(player)`) and add or upgrade `BurstShot`.
-   Then choose who drops it: the `SpawnPowerUp::kind` used by
-   `powerUpDropSystem()` (for example a field in `EnemyDef`).
-5. **Settings**: if it needs some (shots per burst, delay), add them to
-   `WeaponStats` and to `parseWeapons()` (`server/src/Weapons.cpp`), then
-   to the table above.
-6. **Client**: every power-up is drawn with the same orb. To draw this one
-   differently, give it its own `EntityType` (a protocol change: new value
-   at the end, version incremented, `docs/PROTOCOL.md`) and its sprite in
-   `client/src/SpriteSheets.cpp` (`lookOf()`).
-7. **Tests**, in `tests/src/weapons_test.cpp`: the fixture runs
-   `shootSystem` then `spreadShotSystem`; add your system to `hold()` and
-   check the number of `PlayerMissile` created.
+1. **Kind**, in `common/include/common/components/PowerUpKind.hpp`: add
+   `PowerUpKind::Rapid` before `Count`, to `PowerUpKinds` and to
+   `powerUpName()`. This is a protocol change (see step 6).
+2. **Component and system**: a style that makes shots goes in
+   `server/include/components/ShotStyles.hpp` with its own system in
+   `systems/ShotStyleSystems.*`, registered in
+   `server::Game::registerSystems()` next to `"spreadShot"`. A boost that
+   changes the weapon instead (here: `struct RapidFire {};`, read by
+   `shootSystem` when it sets the cooldown) needs no new system.
+3. **Boost**: in `server/src/systems/PowerUpSystem.cpp`, add the case to
+   `applyPowerUp()` (add the component) and to `endBoost()` (remove it).
+4. **Settings**: add its duration (`rapidDuration`) to `parseWeapons()`
+   (`server/src/Weapons.cpp`, in `PowerUpKind` order) and to the table
+   above.
+5. **Client**: give it a color in `powerUpColor()`
+   (`client/include/PlayerColors.hpp`); its letter and HUD line come from
+   `powerUpName()`.
+6. **Protocol**: the players block gets one more byte per player and the
+   Boost flag bits may need one more bit: increment `ProtocolVersion` and
+   update `docs/PROTOCOL.md`.
+7. **Tests**, in `tests/src/weapons_test.cpp`: the fixture's `pick()`
+   gives a boost, `wait()` runs the timers and `hold()` fires.
 
 ## Code
 
@@ -126,7 +147,7 @@ Example: a burst, which fires 3 shots one after the other.
   and [`server/include/systems/ShotStyleSystems.hpp`](https://github.com/T3a1/RType-mirror/blob/dev/server/include/systems/ShotStyleSystems.hpp):
   the shot styles and their systems.
 - [`server/include/systems/PowerUpSystem.hpp`](https://github.com/T3a1/RType-mirror/blob/dev/server/include/systems/PowerUpSystem.hpp):
-  dropping power-ups (`EnemyDef::dropsPowerUp`) and picking them up
-  (`applyPowerUp()`).
+  dropping power-ups (`EnemyDef::dropsPowerUp`), picking them up
+  (`applyPowerUp()`) and the boost timers (`boostSystem()`).
 - The `Charging` flag of a player ship's snapshot record makes the clients
   draw the glow (see the [protocol](PROTOCOL.md)).

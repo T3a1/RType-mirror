@@ -245,7 +245,7 @@ tick exécute les étapes dans cet ordre, et les systèmes d'une étape dans leu
 | Étape | Serveur | Client |
 |-------|---------|--------|
 | 1. Input | Vider la file réseau entrante, sessions, `InputState` des joueurs, phase de la salle, décisions de tir et d'IA | Recevoir du serveur, messages du lobby, appliquer le dernier snapshot, lire et envoyer les entrées |
-| 2. Simulation | Niveaux, obstacles, apparition, tirs, contrôle des joueurs, trajectoires, mouvement, collisions, dégâts, mort, durée de vie, limites, fin de partie | Défilement du fond, lissage, prédiction, inclinaison des vaisseaux, animation, fissures des blocs |
+| 2. Simulation | Niveaux, obstacles, apparition, tirs, contrôle des joueurs, trajectoires, mouvement, collisions, dégâts, bonus et minuteurs de leurs boosts, mort, durée de vie, limites, fin de partie | Défilement du fond, lissage, prédiction, inclinaison des vaisseaux, animation, fissures des blocs |
 | 3. Cleanup | Créer les entités demandées (`spawnCommandSystem`) ; l'ordonnanceur appelle ensuite `registry.flush()` | L'ordonnanceur appelle `registry.flush()` |
 | 4. Output | Construire les snapshots et les pousser dans la file sortante | Choisir la musique (`audioSystem`) |
 

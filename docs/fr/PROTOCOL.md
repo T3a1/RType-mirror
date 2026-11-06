@@ -1,4 +1,4 @@
-# Protocole réseau de R-Type (version 11)
+# Protocole réseau de R-Type (version 12)
 
 Ce document spécifie le protocole binaire parlé entre le serveur de R-Type et ses clients. Il est
 assez précis pour écrire un client ou un serveur compatible sans lire notre code. L'implémentation
@@ -71,7 +71,7 @@ Chaque paquet commence par cet en-tête de 12 octets :
 | Position | Taille | Champ | Valeur |
 |---------:|-------:|-------|--------|
 | 0 | 2 | magic | `52 54` (ASCII `"RT"`). Reconnaît nos paquets : un datagramme quelconque ne commence presque jamais par ces octets |
-| 2 | 1 | version | `11`. Voir [Gestion des versions](#12-gestion-des-versions) |
+| 2 | 1 | version | `12`. Voir [Gestion des versions](#12-gestion-des-versions) |
 | 3 | 1 | type | La charge utile qui suit. Voir [Types de paquets](#5-types-de-paquets) |
 | 4 | 1 | flags | Bit 0 : **Reliable**. Les bits 1 à 7 sont réservés et **MUST** valoir 0 |
 | 5 | 1 | reserved | **MUST** valoir 0 |
@@ -230,15 +230,16 @@ L'état des entités visibles à un tick du serveur. Un snapshot qui ne tient pa
 | 5 | 1 | partCount | Le nombre de parties de ce tick, au moins `1` |
 | 6 | 2 | entityCount | `u16`, le nombre d'enregistrements d'entités de cette partie |
 
-**Bloc des joueurs (partie 0 uniquement) : 1 + 13 octets par joueur**
+**Bloc des joueurs (partie 0 uniquement) : 1 + 16 octets par joueur**
 
 | Taille | Champ | Valeurs |
 |-------:|-------|---------|
 | 1 | playerCount | `0` à `4` |
-| 1 | slot | `1` à `4`, répété `playerCount` fois avec les trois champs suivants |
+| 1 | slot | `1` à `4`, répété `playerCount` fois avec les quatre champs suivants |
 | 4 | score | `u32` |
 | 4 | lastInput | `u32`. La `sequence` du dernier `Input` de ce joueur que le serveur a appliqué à ce tick, `0` s'il n'y en a pas. Le client rejoue ses entrées plus récentes par-dessus cet état (prédiction côté client) |
 | 4 | shipId | `u32`, l'identifiant réseau du vaisseau du joueur, `0` s'il n'en a pas (détruit). Permet à chaque client de savoir quel vaisseau appartient à quel joueur (couleur et étiquette) |
+| 3 | boosts | Un `u8` par type de bonus, dans l'ordre Spread, Aimed, Burst : les secondes restantes de ce boost du joueur, arrondies au supérieur, `0` s'il ne l'a pas ([WEAPONS.md](WEAPONS.md)) |
 
 **Enregistrement d'entité (16 octets), répété `entityCount` fois**
 
@@ -246,7 +247,7 @@ L'état des entités visibles à un tick du serveur. Un snapshot qui ne tient pa
 |---------:|-------:|-------|---------|
 | 0 | 4 | networkId | `u32`, identifie l'entité. Jamais réutilisé par le serveur |
 | 4 | 1 | type | Le type d'entité, voir ci-dessous. Le client en déduit le sprite |
-| 5 | 1 | flags | Bit 0 (`0x01`) Invincible (clignotant), bit 1 (`0x02`) Charging (un vaisseau de joueur dont la touche de tir est maintenue : son tir chargé arrive). Bits 2 à 4 (`0x1C`) Owner : le numéro (`1` à `4`) du joueur qui a tiré un `PlayerMissile`, `0` pour toute autre entité. Les bits 5 à 7 **MUST** valoir 0 |
+| 5 | 1 | flags | Bit 0 (`0x01`) Invincible (clignotant), bit 1 (`0x02`) Charging (un vaisseau de joueur dont la touche de tir est maintenue : son tir chargé arrive). Bits 2 à 4 (`0x1C`) Owner : le numéro (`1` à `4`) du joueur qui a tiré un `PlayerMissile`, `0` pour toute autre entité. Bits 5 et 6 (`0x60`) Boost : le type d'un `PowerUp` (`0` Spread, `1` Aimed, `2` Burst ; `3` est invalide), `0` pour toute autre entité. Le bit 7 **MUST** valoir 0 |
 | 6 | 2 | health | `u16`, les points de vie |
 | 8 | 4 | x | `f32`, le centre, en unités de l'aire de jeu |
 | 12 | 4 | y | `f32`, le centre, en unités de l'aire de jeu |
@@ -268,7 +269,7 @@ invalides.
 | 8 | EnemyLarge |
 | 9 | Boss (boss de fin de niveau ; sa vie complète est `BossMaxHealth`, 2500, pour la barre de vie du client) |
 | 10 | ChargedShot (le tir chargé d'un joueur, qui traverse les ennemis) |
-| 11 | PowerUp (un bonus : le joueur qui le touche gagne un niveau d'arme) |
+| 11 | PowerUp (un bonus : le joueur qui le touche obtient pour un temps le boost indiqué par ses bits Boost) |
 | 12 | BossHive (le second boss de fin de niveau ; sa vie complète est la vie de son premier enregistrement) |
 | 13 | Obstacle (un mur du niveau : il arrête tous les tirs et détruit les vaisseaux qui le touchent) |
 | 14 | DestroyableTile (un bloc du niveau qui arrête les tirs et casse après quelques coups ; sa vie complète est `TileMaxHealth`, 150) |
@@ -444,7 +445,7 @@ ses entités. Seule la partie 0 porte le bloc des joueurs.
 
 | Partie | Place pour les entités |
 |--------|------------------------|
-| Partie 0, avec 4 joueurs | (1188 − 8 − 53) / 16 = **70** entités |
+| Partie 0, avec 4 joueurs | (1188 − 8 − 65) / 16 = **69** entités |
 | Autres parties | (1188 − 8) / 16 = **73** entités |
 
 `partCount` vaut 255 au maximum.
@@ -489,7 +490,7 @@ Tous les octets sont en hexadécimal.
 Séquence non fiable 298, acquittant le paquet fiable 17, entrée numéro 1000 :
 
 ```text
-52 54 0B 10 00 00 2A 01 11 00 05 00   header: "RT", v11, Input, no flags,
+52 54 0C 10 00 00 2A 01 11 00 05 00   header: "RT", v12, Input, no flags,
                                               sequence 298, ack 17, size 5
 E8 03 00 00                           sequence 1000
 11                                    actions 0x11 = Up | Fire
@@ -500,7 +501,7 @@ E8 03 00 00                           sequence 1000
 Séquence fiable 2, numéro 2, vaisseau 58, tick 1200 :
 
 ```text
-52 54 0B 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
+52 54 0C 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
                                               sequence 2, ack 0, size 9
 02                                    slot 2
 3A 00 00 00                           shipId 58
@@ -510,13 +511,14 @@ B0 04 00 00                           tick 1200
 ### `Snapshot` avec un joueur et une entité
 
 ```text
-52 54 0B 20 00 00 2B 01 11 00 26 00   header: Snapshot, size 38
+52 54 0C 20 00 00 2B 01 11 00 29 00   header: Snapshot, size 41
 2C 01 00 00                           tick 300
 00 01                                 part 0 of 1
 01 00                                 1 entity
 01                                    1 player
 01 DC 05 00 00 E8 03 00 00              slot 1, score 1500, last input 1000,
 07 00 00 00                               ship 7
+00 00 00                                  no boost
 07 00 00 00                           networkId 7
 00                                      type PlayerShip
 00                                      flags none
@@ -546,3 +548,4 @@ B0 04 00 00                           tick 1200
 | 9 | Nouveaux types d'entité `ChargedShot` et `PowerUp` ; le drapeau `Charging` est maintenant envoyé ([WEAPONS.md](WEAPONS.md)). La version 8 est la console d'administration. |
 | 10 | `StartGame` porte les réglages de partie (difficulté, niveau de départ, boss), `RoomJoined` le nombre de niveaux ; nouveau type d'entité `BossHive`. |
 | 11 | Nouveaux types d'entité `Obstacle` et `DestroyableTile` (obstacles lus depuis les fichiers de niveau, [LEVELS.md](LEVELS.md)). |
+| 12 | Les bonus donnent des boosts temporaires d'un type tiré au hasard : bits Boost (5 et 6) des drapeaux d'un `PowerUp`, ajout de `boosts` au bloc des joueurs (16 octets par joueur) ([WEAPONS.md](WEAPONS.md)). |

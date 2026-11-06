@@ -11,17 +11,22 @@
   tôt, rien de plus n'est tiré.
 - **Tir automatique** (F ou Maj droite) appuie sur la touche de tir pour vous 4 fois par
   seconde : un tir rapide sans tapoter, mais pas de tir chargé.
-- **Bonus** : les ennemis moyens et grands, ainsi que le boss, laissent un orbe quand ils
-  sont détruits. Il flotte lentement vers la gauche ; le vaisseau qui le touche gagne un
-  niveau de son **style de tir**. Il existe aujourd'hui un seul style, l'éventail :
+- **Bonus** : les ennemis moyens et grands, ainsi que les boss, laissent un orbe quand
+  ils sont détruits. Il flotte lentement vers la gauche ; le vaisseau qui le touche
+  obtient son **boost** pour un temps limité. Chaque orbe a un type tiré au hasard,
+  reconnaissable à sa couleur et à sa lettre :
 
-  | Niveau d'éventail | Tirs simultanés |
-  |------------------:|-----------------|
-  | 1 | 1 |
-  | 2 | 3, en éventail |
-  | 3 | 5, en éventail plus large |
+  | Lettre | Boost | Effet | Durée |
+  |:------:|-------|-------|------:|
+  | S (jaune) | Éventail | 3 tirs en éventail ; repris pendant qu'il est actif, 5 en éventail plus large | 30 s |
+  | A (bleu) | Visée | Un tir de plus, qui part vers l'ennemi le plus proche | 45 s |
+  | B (orange) | Rafale | Chaque tir est tiré deux fois de plus, juste après lui | 30 s |
 
-  Un nouveau vaisseau commence avec un éventail de niveau 1 (un seul tir).
+  Les boosts **se cumulent** : chacun a son propre minuteur. Par exemple, un éventail
+  pris à 5:02 et une visée prise à 5:22 tirent ensemble jusqu'à 5:32, quand l'éventail
+  se termine ; la visée continue jusqu'à 6:07. Reprendre un boost que le vaisseau a déjà
+  relance son minuteur. Le HUD liste les boosts actifs du joueur local avec leurs
+  secondes restantes (`Spread 12s`). Sans boost, un vaisseau tire un seul tir.
 
 ## Réglages des armes : `server/weapons.json`
 
@@ -41,7 +46,12 @@ sortie du serveur et les valeurs par défaut s'appliquent ; il n'arrête jamais 
     "beamSpeed": 1300,
     "beamDamage": 300,
     "spreadAngle": 0.12,
-    "maxLevel": 3
+    "maxLevel": 3,
+    "spreadDuration": 30,
+    "aimedDuration": 45,
+    "burstDuration": 30,
+    "burstShots": 2,
+    "burstDelay": 0.08
 }
 ```
 
@@ -55,7 +65,12 @@ sortie du serveur et les valeurs par défaut s'appliquent ; il n'arrête jamais 
 | `beamSpeed` | 1300 | 100 à 5000 | La vitesse d'un tir chargé |
 | `beamDamage` | 300 | 1 à 10000 | Les dégâts d'un tir chargé à chaque ennemi traversé |
 | `spreadAngle` | 0.12 | 0 à 1 | L'angle entre deux tirs d'un éventail, en radians |
-| `maxLevel` | 3 | 1 à 5 | Le niveau maximal d'un style de tir ; un éventail de niveau N tire 2N - 1 tirs |
+| `maxLevel` | 3 | 1 à 5 | Le niveau maximal de l'éventail ; un éventail de niveau N tire 2N - 1 tirs (le premier boost Éventail donne le niveau 2) |
+| `spreadDuration` | 30 | 1 à 255 | Les secondes que dure un boost Éventail |
+| `aimedDuration` | 45 | 1 à 255 | Les secondes que dure un boost Visée |
+| `burstDuration` | 30 | 1 à 255 | Les secondes que dure un boost Rafale |
+| `burstShots` | 2 | 1 à 5 | Le nombre de fois qu'un boost Rafale retire chaque tir |
+| `burstDelay` | 0.08 | 0.02 à 1 | Les secondes entre deux tirs d'une rafale |
 
 Les clés inconnues et les valeurs du mauvais type ou hors limites rendent le fichier
 invalide, pour qu'une faute de frappe soit signalée au lieu d'être ignorée en silence.
@@ -63,53 +78,61 @@ invalide, pour qu'une faute de frappe soit signalée au lieu d'être ignorée en
 ## Styles de tir
 
 Un style de tir est **la façon dont l'arme d'un joueur transforme un tir en projectiles**.
-C'est un composant ECS sur le vaisseau du joueur, appliqué par son propre système :
+C'est un composant ECS sur le vaisseau du joueur, appliqué par son propre système, si
+bien qu'un vaisseau peut avoir plusieurs styles à la fois :
 
 ```mermaid
 flowchart LR
     input["Tir appuyé<br/>(InputState)"] --> shoot["shootSystem<br/>cadence, charge"]
-    shoot -- "Weapon::fired" --> spread["spreadShotSystem<br/>(SpreadShot)"]
-    shoot -- "Weapon::fired" --> other["burstShotSystem<br/>(BurstShot, à venir)"]
+    shoot -- "Weapon::fired" --> burst["burstShotSystem<br/>(BurstShot)"]
+    burst -- "Weapon::fired à nouveau" --> spread["spreadShotSystem<br/>(SpreadShot)"]
+    burst -- "Weapon::fired" --> aimed["aimedShotSystem<br/>(AimedShot)"]
     spread --> commands["SpawnCommands<br/>projectiles, créés en Cleanup"]
-    other --> commands
+    aimed --> commands
+    pickup["pickupSystem"] -- "ajoute, augmente" --> styles["styles + minuteurs Boosts"]
+    boost["boostSystem"] -- "temps écoulé : retire" --> styles
 ```
 
 - `shootSystem` gère ce que toutes les armes partagent : la cadence, le maintien pour
   charger et le tir chargé. Quand le joueur tire pendant ce tick, il se contente de
   mettre `Weapon::fired`.
 - Le système de chaque style transforme `fired` en projectiles pour les joueurs qui ont
-  son composant. Un vaisseau a exactement un style : sans style, il ne tire rien.
-- Un bonus porte le style qu'il donne (`PowerUpKind`). Ramasser le style que le vaisseau
-  a déjà augmente son niveau ; un autre style le remplace.
+  son composant. `SpreadShot` est sur chaque vaisseau (niveau 1 : un seul tir) ;
+  `AimedShot` et `BurstShot` viennent des boosts. `burstShotSystem` s'exécute en premier
+  et se contente de remettre `fired` aux ticks suivants d'une rafale, si bien que tous
+  les autres styles se répètent avec lui.
+- Un bonus porte son boost (`rtype::PowerUpKind`, partagé avec le client).
+  `pickupSystem` met le minuteur de ce boost dans les `Boosts` du vaisseau à sa durée
+  complète et ajoute le style (un boost Éventail augmente plutôt le niveau de
+  l'éventail). `boostSystem` décompte les minuteurs et, quand l'un d'eux arrive à zéro,
+  retire son style (l'éventail revient au niveau 1).
+- `powerUpDropSystem` tire au hasard le type de chaque bonus lâché.
 
-### Ajouter un style de tir
+### Ajouter un boost
 
-Exemple : une rafale, qui tire 3 coups l'un après l'autre.
+Exemple : un tir rapide, qui divise par deux le temps entre deux tirs.
 
-1. **Composant**, dans `server/include/components/ShotStyles.hpp` : le style et son
-   propre état, par exemple
-   `struct BurstShot { std::uint8_t level = 1; std::uint8_t left = 0; engine::Duration next{0.0F}; };`,
-   et un nouveau `PowerUpKind::Burst`.
-2. **Système**, dans `server/include/systems/ShotStyleSystems.hpp` et son `.cpp` :
-   `burstShotSystem(registry, commands, stats, dt)` parcourt `Weapon, BurstShot, Transform` ;
-   sur `weapon.fired`, il démarre une rafale (`left = 3`) et tire les coups restants à
-   l'expiration de `next`, avec `commands.emplace_back(SpawnProjectile{...})`.
-3. **Enregistrez-le** dans `server::Game::registerSystems()`, juste après `"spreadShot"`,
-   avec l'option `playing`.
-4. **Bonus** : dans `applyPowerUp()` (`server/src/systems/PowerUpSystem.cpp`), ajoutez le
-   cas `PowerUpKind::Burst` : retirez les autres composants de style
-   (`registry.remove<SpreadShot>(player)`) et ajoutez ou améliorez `BurstShot`. Choisissez
-   ensuite qui le laisse tomber : le `SpawnPowerUp::kind` utilisé par
-   `powerUpDropSystem()` (par exemple un champ dans `EnemyDef`).
-5. **Réglages** : s'il en a besoin (tirs par rafale, délai), ajoutez-les à `WeaponStats`
-   et à `parseWeapons()` (`server/src/Weapons.cpp`), puis au tableau ci-dessus.
-6. **Client** : tous les bonus sont dessinés avec le même orbe. Pour dessiner celui-ci
-   autrement, donnez-lui son propre `EntityType` (un changement de protocole : nouvelle
-   valeur à la fin, version incrémentée, `docs/PROTOCOL.md`) et son sprite dans
-   `client/src/SpriteSheets.cpp` (`lookOf()`).
-7. **Tests**, dans `tests/src/weapons_test.cpp` : la fixture exécute `shootSystem` puis
-   `spreadShotSystem` ; ajoutez votre système à `hold()` et vérifiez le nombre de
-   `PlayerMissile` créés.
+1. **Type**, dans `common/include/common/components/PowerUpKind.hpp` : ajoutez
+   `PowerUpKind::Rapid` avant `Count`, dans `PowerUpKinds` et dans `powerUpName()`.
+   C'est un changement de protocole (voir l'étape 6).
+2. **Composant et système** : un style qui crée des tirs va dans
+   `server/include/components/ShotStyles.hpp` avec son propre système dans
+   `systems/ShotStyleSystems.*`, enregistré dans `server::Game::registerSystems()` à côté
+   de `"spreadShot"`. Un boost qui modifie plutôt l'arme (ici : `struct RapidFire {};`,
+   lu par `shootSystem` quand il fixe le délai de recharge) n'a pas besoin de nouveau
+   système.
+3. **Boost** : dans `server/src/systems/PowerUpSystem.cpp`, ajoutez le cas à
+   `applyPowerUp()` (ajouter le composant) et à `endBoost()` (le retirer).
+4. **Réglages** : ajoutez sa durée (`rapidDuration`) à `parseWeapons()`
+   (`server/src/Weapons.cpp`, dans l'ordre de `PowerUpKind`) et au tableau ci-dessus.
+5. **Client** : donnez-lui une couleur dans `powerUpColor()`
+   (`client/include/PlayerColors.hpp`) ; sa lettre et sa ligne du HUD viennent de
+   `powerUpName()`.
+6. **Protocole** : le bloc des joueurs gagne un octet par joueur et les bits Boost des
+   drapeaux peuvent avoir besoin d'un bit de plus : incrémentez `ProtocolVersion` et
+   mettez à jour `docs/PROTOCOL.md`.
+7. **Tests**, dans `tests/src/weapons_test.cpp` : `pick()` de la fixture donne un
+   boost, `wait()` fait avancer les minuteurs et `hold()` tire.
 
 ## Code
 
@@ -121,6 +144,7 @@ Exemple : une rafale, qui tire 3 coups l'un après l'autre.
   et [`server/include/systems/ShotStyleSystems.hpp`](https://github.com/T3a1/RType-mirror/blob/dev/server/include/systems/ShotStyleSystems.hpp) :
   les styles de tir et leurs systèmes.
 - [`server/include/systems/PowerUpSystem.hpp`](https://github.com/T3a1/RType-mirror/blob/dev/server/include/systems/PowerUpSystem.hpp) :
-  le lâcher des bonus (`EnemyDef::dropsPowerUp`) et leur ramassage (`applyPowerUp()`).
+  le lâcher des bonus (`EnemyDef::dropsPowerUp`), leur ramassage (`applyPowerUp()`) et
+  les minuteurs des boosts (`boostSystem()`).
 - Le drapeau `Charging` de l'enregistrement d'un vaisseau dans les snapshots fait
   dessiner la lueur par les clients (voir le [protocole](PROTOCOL.md)).
