@@ -31,6 +31,12 @@ inline constexpr std::size_t MaxWaveCount = 20;
 inline constexpr float MaxWaveTime = 3600.0F;
 /** @brief The longest level name, in characters. */
 inline constexpr std::size_t MaxLevelNameLength = 64;
+/** @brief The most obstacle groups one level can have. */
+inline constexpr std::size_t MaxObstacleGroups = 1000;
+/** @brief The most rows of blocks in one obstacle group: a full column. */
+inline constexpr std::size_t MaxObstacleRows = 16;
+/** @brief The most columns of blocks in one obstacle group. */
+inline constexpr std::size_t MaxObstacleColumns = 30;
 
 /**
  * @struct Wave
@@ -47,17 +53,40 @@ struct Wave {
 };
 
 /**
+ * @struct ObstacleGroup
+ * @brief A rectangle of wall blocks or destroyable tiles that comes in from
+ * the right edge at a given time of a level.
+ * @param time When it starts to come in, counted from the start of the
+ * level.
+ * @param destroyable Whether its blocks are destroyable tiles instead of
+ * walls.
+ * @param top The height of the center of its top row, in playfield units.
+ * @param rows Its number of rows, from top to bottom.
+ * @param columns Its number of columns, from left to right.
+ **/
+struct ObstacleGroup {
+    engine::Duration time{0.0F};
+    bool destroyable = false;
+    float top = 0.0F;
+    std::size_t rows = 1;
+    std::size_t columns = 1;
+};
+
+/**
  * @struct Level
  * @brief A level, as read from its JSON file.
  * @param name The name shown to the players.
  * @param waves Its waves, sorted by time.
  * @param boss The boss that comes once every wave is cleared, if any; the
  * level ends when it is destroyed.
+ * @param obstacles Its walls and tiles, sorted by time. They do not keep
+ * the level from ending.
  **/
 struct Level {
     std::string name;
     std::vector<Wave> waves;
     std::optional<rtype::EnemyType> boss;
+    std::vector<ObstacleGroup> obstacles;
 };
 
 /**
