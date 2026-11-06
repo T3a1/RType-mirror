@@ -67,7 +67,10 @@ class EnemyCatalog {
      **/
     [[nodiscard]] const EnemyKind &at(EnemyKindId id) const;
 
-    /** @brief Returns every kind, built-in ones first. */
+    /**
+     * @brief Returns every kind of enemy.
+     * @return The kinds, built-in ones first.
+     **/
     [[nodiscard]] const std::vector<EnemyKind> &kinds() const
     {
         return m_kinds;

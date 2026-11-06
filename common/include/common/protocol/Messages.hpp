@@ -395,6 +395,9 @@ struct LeaveRoom {
  * @enum Difficulty
  * @brief How hard a game is: enemy health, fire rate and, in endless mode,
  * how often they come.
+ * @param Easy Enemies with less health, which fire less often.
+ * @param Normal The stats of the enemy file.
+ * @param Hard Enemies with more health, which fire more often.
  **/
 enum class Difficulty : std::uint8_t { Easy, Normal, Hard };
 

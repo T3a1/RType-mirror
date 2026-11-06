@@ -66,8 +66,8 @@ Refs #101.
 - The description is a short summary, then the issues, with their full reference, as a
   short `#30` on the mirror points to the mirror's own pull requests:
   `Closes EpitechPGE3-2026/G-ING-500-LIL-5-1-rtype-3#30`.
-- All the checks must pass: formatting, build, tests, clang-tidy, Docker image and
-  documentation.
+- All the checks must pass: formatting, build and tests on Linux and Windows,
+  clang-tidy, Docker image and documentation.
 - A change to the protocol says so in the description: everyone must rebuild the
   server and the client together.
 
@@ -86,18 +86,20 @@ request as the code:
 | What it takes to add content | [HOWTO.md](HOWTO.md), [LEVELS.md](LEVELS.md), [WEAPONS.md](WEAPONS.md), [ENEMIES.md](ENEMIES.md) |
 | Controls, options, or how to run the game | The [README](https://github.com/T3a1/RType-mirror#readme) and [INSTALLATION.md](INSTALLATION.md) |
 | Network code that affects performance | Run `./tools/netbench.py`, then update the analysis of [NETWORK_COMPARISON.md](NETWORK_COMPARISON.md) |
-| A new page | Link it from the documentation table of the [README](https://github.com/T3a1/RType-mirror#readme) |
+| A new page | Link it from the documentation table of the [README](https://github.com/T3a1/RType-mirror#readme), and add its translation |
+| Any page | Its French version in `docs/fr/`, with the same file name; the English one is the reference |
 | A new member, or a new main area of work | [CONTRIBUTORS.md](CONTRIBUTORS.md) |
 
 Before a delivery, also refresh the [before and after](TECHNICAL_STUDY.md#9-before-and-after-the-part-1-prototype-and-the-final-version)
 figures of the technical study.
 
-The CI builds the website on every push: a broken link between pages fails the
-documentation check. Build it yourself with `./rtype.py --docs`.
+The CI builds the website on every push: a broken link between pages, or a page
+without its French version, fails the documentation check. Build it yourself with `./rtype.py --docs`.
 
 ### Writing rules
 
-- English, simple sentences: many readers are not native speakers.
+- Simple sentences: many readers are not native speakers. The pages of `docs/` are in
+  English, those of `docs/fr/` in French, and code comments are in English only.
 - Explain the why and how things work together. The code says the details, and
   Doxygen comments describe each function.
 - Images have a description, shown as a caption on the website. Headings follow each other without skipping a
