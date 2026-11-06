@@ -47,13 +47,23 @@ void hit(engine::Registry &registry, engine::Entity attacker,
     const auto *damage = registry.tryGet<rtype::Damage>(attacker);
     auto *health = registry.tryGet<rtype::Health>(target);
     auto *piercing = registry.tryGet<Piercing>(attacker);
+    const bool isShot = registry.has<rtype::Projectile>(attacker);
+    // The level stops every shot, piercing or not.
+    const bool blocked = isShot && registry.has<Obstacle>(target);
 
-    if (damage == nullptr || health == nullptr || health->current <= 0 ||
+    if (damage == nullptr ||
         std::ranges::find(alreadyHit, attacker) != alreadyHit.end()) {
         return;
     }
+    if (health == nullptr || health->current <= 0) {
+        if (blocked) {
+            alreadyHit.push_back(attacker);
+            despawn(registry, attacker, outbound);
+        }
+        return;
+    }
     // A piercing shot damages each entity once and goes on.
-    if (piercing != nullptr) {
+    if (piercing != nullptr && !blocked) {
         if (std::ranges::find(piercing->hit, target) != piercing->hit.end()) {
             return;
         }
@@ -67,7 +77,7 @@ void hit(engine::Registry &registry, engine::Entity attacker,
         awardKill(registry, attacker, target);
     }
 
-    if (piercing == nullptr && registry.has<rtype::Projectile>(attacker)) {
+    if (isShot && (piercing == nullptr || blocked)) {
         alreadyHit.push_back(attacker);
         despawn(registry, attacker, outbound);
     }
