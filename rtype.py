@@ -729,6 +729,9 @@ examples:
   ./rtype.py                    server in Docker + 1 client
   ./rtype.py --native -c 2      server built and run here + 2 clients
   ./rtype.py -g sfml            client built with SFML
+  ./rtype.py -S -n              only the server, built and run here
+  ./rtype.py -O -H 10.0.0.5 -c 2
+                                2 clients joining the server at 10.0.0.5
   ./rtype.py --test             build and run the unit tests
   ./rtype.py --check-format     check the formatting like the CI
   (on Windows: python rtype.py ...)
