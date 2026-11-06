@@ -81,7 +81,8 @@ target_include_directories(r-type_client_settings
 )
 
 # The menu widgets are a library so the tests can run them on a fake backend.
-add_library(r-type_client_menu STATIC src/Menu.cpp src/MenuPages.cpp)
+add_library(r-type_client_menu STATIC src/KeyCapture.cpp src/Menu.cpp
+    src/MenuPages.cpp)
 
 target_include_directories(r-type_client_menu
     PUBLIC include

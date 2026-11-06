@@ -12,7 +12,6 @@
 
 #include <cstdint>
 #include <exception>
-#include <fstream>
 #include <iostream>
 #include <optional>
 #include <span>
@@ -30,8 +29,6 @@ constexpr const char *Usage =
     "Usage: r-type_client [host] [port] [--controls FILE]\n"
     "                     [--no-interpolation] [--no-prediction]\n"
     "                     [--room N] [--bench SECONDS FILE.csv]\n";
-/** @brief The controls file read if --controls is not given. */
-constexpr const char *DefaultControlsPath = "controls.cfg";
 
 /**
  * @struct Arguments
@@ -140,32 +137,6 @@ Arguments parseArguments(std::span<char *> args)
     return parsed;
 }
 
-/**
- * @brief Reads the controls file over the default controls and reports
- * its bad lines on stderr.
- * @param path The file given with --controls, or nothing to read
- * controls.cfg from the current directory if it exists.
- * @return The controls.
- * @throws std::runtime_error If the file given with --controls cannot be
- * opened.
- **/
-client::Controls loadControls(const std::optional<std::string> &path)
-{
-    client::Controls controls = client::defaultControls();
-    const std::string file = path.value_or(DefaultControlsPath);
-    std::ifstream in(file);
-    if (!in) {
-        if (path) {
-            throw std::runtime_error("cannot open " + file);
-        }
-        return controls;
-    }
-    for (const std::string &error : client::readControls(in, controls)) {
-        std::cerr << "r-type_client: " << file << ": " << error << '\n';
-    }
-    return controls;
-}
-
 } // namespace
 
 /**
@@ -180,7 +151,9 @@ int main(int argc, char *argv[])
     Arguments parsed;
     try {
         parsed = parseArguments(args.subspan(1));
-        parsed.options.controls = loadControls(parsed.controlsPath);
+        parsed.options.controls = client::loadControlsFile(parsed.controlsPath);
+        parsed.options.controlsPath =
+            parsed.controlsPath.value_or(client::DefaultControlsPath);
         parsed.options.settings =
             client::loadSettingsFile(client::SettingsPath);
     } catch (const std::exception &error) {

@@ -32,6 +32,8 @@ constexpr float TitleTop = 24.0F;
 constexpr float TitleHeight = 64.0F;
 /** @brief The font size of the title of a menu, in pixels. */
 constexpr int TitleFontSize = 48;
+/** @brief The space between two columns of a grid, in pixels. */
+constexpr float ColumnGap = 12.0F;
 /** @brief The space inside a row, on its left and right, in pixels. */
 constexpr float RowPadding = 12.0F;
 /** @brief Where the bar of a slider starts, as a share of its row. */
@@ -190,6 +192,19 @@ float drawMenuTitle(gfx::IGraphics &graphics, const std::string &title)
     drawCentered(graphics, title, graphics.screenSize().x / 2.0F, TitleTop,
                  TitleFontSize, gfx::colors::OffWhite);
     return TitleTop + TitleHeight;
+}
+
+gfx::Rect menuGridCell(engine::Vec2f screen, float top, std::size_t index)
+{
+    const float left = (screen.x - (2.0F * MenuRowWidth) - ColumnGap) / 2.0F;
+    const std::size_t column = index % 2;
+    const std::size_t row = index / 2;
+    return {
+        .x = left + (static_cast<float>(column) * (MenuRowWidth + ColumnGap)),
+        .y = top + (static_cast<float>(row) * (MenuRowHeight + MenuRowGap)),
+        .width = MenuRowWidth,
+        .height = MenuRowHeight,
+    };
 }
 
 gfx::Rect menuRow(engine::Vec2f screen, float y)

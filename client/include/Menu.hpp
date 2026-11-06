@@ -107,6 +107,16 @@ void drawCentered(gfx::IGraphics &graphics, const std::string &text,
 float drawMenuTitle(gfx::IGraphics &graphics, const std::string &title);
 
 /**
+ * @brief Returns the rectangle of an item of a grid of two centered columns.
+ * @param screen The size of the window.
+ * @param top The top of the first row.
+ * @param index The index of the item, from left to right and top to bottom.
+ * @return The rectangle.
+ **/
+[[nodiscard]] gfx::Rect menuGridCell(engine::Vec2f screen, float top,
+                                     std::size_t index);
+
+/**
  * @brief Returns the rectangle of a row of a centered column.
  * @param screen The size of the window.
  * @param y The top of the row.

@@ -45,6 +45,7 @@ namespace client {
  * @param bench The network benchmark to run instead of the keyboard, if
  * any.
  * @param controls The keys bound to each control.
+ * @param controlsPath The file the keys are saved in when they change.
  * @param settings The settings of the player.
  **/
 struct GameOptions {
@@ -53,6 +54,7 @@ struct GameOptions {
     std::optional<std::uint32_t> room;
     std::optional<BenchConfig> bench;
     Controls controls = defaultControls();
+    std::string controlsPath = DefaultControlsPath;
     Settings settings;
 };
 
@@ -153,6 +155,7 @@ class Game {
     float m_gameOverTime = 0.0F;
     std::optional<Bench> m_bench;
     Controls m_controls;
+    std::string m_controlsPath;
     Settings m_settings;
     AutoFire m_autoFire;
     NetworkClient::TimePoint m_now;

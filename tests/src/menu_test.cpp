@@ -20,6 +20,7 @@
 
 namespace {
 
+using client::Control;
 using client::MainChoice;
 using client::MenuCursor;
 using client::MenuInput;
@@ -123,6 +124,27 @@ struct MenuRig {
                graphics.texts.end();
     }
 };
+
+// The Settings page and what it changes.
+struct SettingsRig : MenuRig {
+    client::SettingsPageState page;
+    client::Settings settings;
+    client::Controls controls = client::defaultControls();
+
+    client::SettingsResult frame(const MenuKeys &keys = {})
+    {
+        return client::settingsPage(context(keys), page, settings, controls);
+    }
+
+    [[nodiscard]] const std::vector<gfx::Key> &keysOf(Control control) const
+    {
+        return controls.at(static_cast<std::size_t>(control));
+    }
+};
+
+// The second key of Fire among the widgets: after the tabs, two per control.
+constexpr std::size_t FireSecondKey =
+    1 + (static_cast<std::size_t>(client::Control::Fire) * 2) + 1;
 
 } // namespace
 
@@ -586,57 +608,186 @@ TEST(MenuPanel, ASliderPlaysTheSoundItIsGiven)
 
 TEST(MenuPages, SettingsChangeTheMusicVolume)
 {
-    MenuRig rig;
-    client::Settings settings;
+    SettingsRig rig;
+    rig.page.cursor.selected = 1;
 
-    const client::SettingsResult result =
-        client::settingsPage(rig.context({.left = true}), rig.cursor, settings);
+    const client::SettingsResult result = rig.frame({.left = true});
 
     EXPECT_TRUE(result.changed);
     EXPECT_FALSE(result.back);
-    EXPECT_FLOAT_EQ(settings.musicVolume, 0.35F);
+    EXPECT_FLOAT_EQ(rig.settings.musicVolume, 0.35F);
     EXPECT_EQ(rig.played(), std::vector<std::string>{MoveSound});
 }
 
 TEST(MenuPages, SettingsTestTheSoundVolume)
 {
-    MenuRig rig;
-    client::Settings settings;
-    rig.cursor.selected = 1;
+    SettingsRig rig;
+    rig.page.cursor.selected = 2;
 
-    const client::SettingsResult result =
-        client::settingsPage(rig.context({.left = true}), rig.cursor, settings);
+    const client::SettingsResult result = rig.frame({.left = true});
 
     EXPECT_TRUE(result.changed);
-    EXPECT_FLOAT_EQ(settings.soundVolume, 0.95F);
+    EXPECT_FLOAT_EQ(rig.settings.soundVolume, 0.95F);
     EXPECT_EQ(rig.played(), std::vector<std::string>{ShotSound});
 }
 
 TEST(MenuPages, SettingsReportNothingWithoutInput)
 {
-    MenuRig rig;
-    client::Settings settings;
+    SettingsRig rig;
 
-    const client::SettingsResult result =
-        client::settingsPage(rig.context(), rig.cursor, settings);
+    const client::SettingsResult result = rig.frame();
 
     EXPECT_FALSE(result.changed);
+    EXPECT_FALSE(result.controlsChanged);
     EXPECT_FALSE(result.back);
     EXPECT_TRUE(rig.played().empty());
 }
 
 TEST(MenuPages, SettingsGoBack)
 {
-    MenuRig rig;
-    client::Settings settings;
-    rig.cursor.selected = 2;
+    SettingsRig rig;
+    rig.page.cursor.selected = 3;
 
-    const client::SettingsResult result = client::settingsPage(
-        rig.context({.confirm = true}), rig.cursor, settings);
+    const client::SettingsResult result = rig.frame({.confirm = true});
 
     EXPECT_TRUE(result.back);
     EXPECT_FALSE(result.changed);
     EXPECT_EQ(rig.played(), std::vector<std::string>{BackSound});
+}
+
+TEST(MenuPages, SettingsSwitchToControlsWithTheTabs)
+{
+    SettingsRig rig;
+
+    static_cast<void>(rig.frame({.right = true}));
+    EXPECT_EQ(rig.page.tab, 1U);
+
+    rig.graphics.texts.clear();
+    static_cast<void>(rig.frame());
+    EXPECT_TRUE(rig.drew("[Controls]"));
+    EXPECT_TRUE(rig.drew("Fire: Space"));
+    EXPECT_TRUE(rig.drew("Fire: RightCtrl"));
+}
+
+TEST(MenuPages, ControlsTabShowsTwoKeysPerControl)
+{
+    SettingsRig rig;
+    rig.page.tab = 1;
+
+    static_cast<void>(rig.frame());
+
+    // The tabs, two keys per control, Reset keys and Back.
+    EXPECT_EQ(rig.page.cursor.count, 1 + (client::ControlCount * 2) + 2);
+}
+
+TEST(MenuPages, ChoosingAKeyStartsItsCapture)
+{
+    SettingsRig rig;
+    rig.page.tab = 1;
+    rig.page.cursor.selected = FireSecondKey;
+
+    static_cast<void>(rig.frame({.confirm = true}));
+
+    const client::KeySlot slot = rig.page.capture.slot().value_or(
+        client::KeySlot{.control = Control::Up, .index = 0});
+    EXPECT_EQ(slot.control, Control::Fire);
+    EXPECT_EQ(slot.index, 1U);
+
+    rig.graphics.texts.clear();
+    static_cast<void>(rig.frame());
+    EXPECT_TRUE(rig.drew("Fire: press a key..."));
+}
+
+TEST(MenuPages, CaptureWaitsForTheKeyThatStartedIt)
+{
+    SettingsRig rig;
+    rig.page.tab = 1;
+    rig.page.cursor.selected = FireSecondKey;
+    rig.graphics.held = {gfx::Key::Enter};
+    static_cast<void>(rig.frame({.confirm = true}));
+
+    // Enter is still held: it must not become the new key.
+    EXPECT_FALSE(rig.frame().controlsChanged);
+    EXPECT_TRUE(rig.page.capture.slot().has_value());
+
+    rig.graphics.held.clear();
+    EXPECT_FALSE(rig.frame().controlsChanged);
+
+    rig.graphics.held = {gfx::Key::G};
+    EXPECT_TRUE(rig.frame().controlsChanged);
+    EXPECT_FALSE(rig.page.capture.slot().has_value());
+    EXPECT_EQ(rig.keysOf(Control::Fire),
+              (std::vector<gfx::Key>{gfx::Key::Space, gfx::Key::G}));
+}
+
+TEST(MenuPages, CaptureNeverTakesEscape)
+{
+    SettingsRig rig;
+    rig.page.tab = 1;
+    rig.page.capture.start({.control = Control::Fire, .index = 0});
+    static_cast<void>(rig.frame());
+
+    rig.graphics.held = {gfx::Key::Escape};
+
+    EXPECT_FALSE(rig.frame().controlsChanged);
+    EXPECT_TRUE(rig.page.capture.slot().has_value());
+}
+
+TEST(MenuPages, TheCapturedKeyDoesNotReachTheWidgets)
+{
+    SettingsRig rig;
+    rig.page.tab = 1;
+    rig.page.cursor.selected = FireSecondKey;
+    rig.page.capture.start({.control = Control::Fire, .index = 1});
+    static_cast<void>(rig.frame());
+
+    rig.graphics.held = {gfx::Key::Enter};
+    EXPECT_TRUE(rig.frame({.confirm = true}).controlsChanged);
+
+    // Enter is the new key: it does not start another capture.
+    EXPECT_FALSE(rig.page.capture.slot().has_value());
+    EXPECT_EQ(rig.played(), std::vector<std::string>{ConfirmSound});
+}
+
+TEST(MenuPages, AKeyUsedElsewhereIsReported)
+{
+    SettingsRig rig;
+    rig.page.tab = 1;
+    rig.page.capture.start({.control = Control::Fire, .index = 1});
+    static_cast<void>(rig.frame());
+
+    rig.graphics.held = {gfx::Key::F};
+    EXPECT_TRUE(rig.frame().controlsChanged);
+
+    EXPECT_EQ(rig.page.notice, "F is also used by Auto-fire");
+    EXPECT_EQ(rig.keysOf(Control::Fire),
+              (std::vector<gfx::Key>{gfx::Key::Space, gfx::Key::F}));
+}
+
+TEST(MenuPages, ResetKeysBringsBackTheDefaults)
+{
+    SettingsRig rig;
+    rig.page.tab = 1;
+    rig.controls.at(static_cast<std::size_t>(Control::Fire)) = {gfx::Key::G};
+    rig.page.notice = "old";
+    rig.page.cursor.selected = 1 + (client::ControlCount * 2);
+
+    EXPECT_TRUE(rig.frame({.confirm = true}).controlsChanged);
+
+    EXPECT_EQ(rig.controls, client::defaultControls());
+    EXPECT_TRUE(rig.page.notice.empty());
+}
+
+TEST(MenuPages, LeavingTheControlsTabCancelsTheCapture)
+{
+    SettingsRig rig;
+    rig.page.tab = 1;
+    rig.page.capture.start({.control = Control::Fire, .index = 0});
+    rig.page.tab = 0;
+
+    static_cast<void>(rig.frame());
+
+    EXPECT_FALSE(rig.page.capture.slot().has_value());
 }
 
 TEST(MenuPages, AccessibilityShowsEveryToggle)

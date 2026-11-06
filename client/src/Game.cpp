@@ -75,7 +75,8 @@ Game::Game(const std::string &host, std::uint16_t port,
       m_autoJoin(options.bench && !options.room
                      ? std::optional<std::uint32_t>{rtype::protocol::AnyRoom}
                      : options.room),
-      m_controls(options.controls), m_settings(options.settings)
+      m_controls(options.controls), m_controlsPath(options.controlsPath),
+      m_settings(options.settings)
 {
     m_sync.interpolate = options.interpolate;
     m_sync.predict = options.predict;
@@ -306,9 +307,9 @@ void Game::leaveRoom()
 }
 
 /**
- * @brief Handles the back key: it leaves the room or goes back to the main
- * menu. It does nothing in the main menu or while a room is being joined, and
- * quits during a benchmark.
+ * @brief Handles the back key: it leaves the room, stops waiting for a new key
+ * or goes back to the main menu. It does nothing in the main menu or while a
+ * room is being joined, and quits during a benchmark.
  **/
 void Game::handleBackKey()
 {
@@ -320,6 +321,9 @@ void Game::handleBackKey()
     } else if (inRoom()) {
         m_sounds.play(audio::SoundEvent::MenuBack);
         leaveRoom();
+    } else if (m_menu.settings.capture.slot()) {
+        m_sounds.play(audio::SoundEvent::MenuBack);
+        m_menu.settings.capture.cancel();
     } else if (m_menu.page != MenuPage::Main &&
                m_lobby.screen != LobbyState::Screen::Joining) {
         m_sounds.play(audio::SoundEvent::MenuBack);
@@ -386,6 +390,9 @@ void Game::finishSettingsPage(const SettingsResult &result)
     if (result.changed) {
         saveSettingsFile(SettingsPath, m_settings);
     }
+    if (result.controlsChanged) {
+        saveControlsFile(m_controlsPath, m_controls);
+    }
     if (result.back) {
         m_menu.page = MenuPage::Main;
     }
@@ -397,7 +404,7 @@ void Game::finishSettingsPage(const SettingsResult &result)
 void Game::drawSettings()
 {
     const SettingsResult result =
-        settingsPage(menuContext(), m_menu.settingsCursor, m_settings);
+        settingsPage(menuContext(), m_menu.settings, m_settings, m_controls);
     if (result.changed) {
         applyVolumes();
     }

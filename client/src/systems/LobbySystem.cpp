@@ -18,8 +18,6 @@ namespace {
 using rtype::protocol::RoomInfo;
 using rtype::protocol::RoomStatus;
 
-/** @brief The space between two columns, in pixels. */
-constexpr float ColumnGap = 12.0F;
 /** @brief The items before the rooms of the list: Quick match and New room. */
 constexpr std::size_t FixedItems = 2;
 
@@ -39,27 +37,6 @@ std::string roomLabel(const RoomInfo &room)
     return "Room " + std::to_string(room.room) + "  " +
            std::to_string(room.players) + "/" +
            std::to_string(rtype::protocol::MaxPlayers) + "  " + status;
-}
-
-/**
- * @brief Returns the rectangle of an item of the lobby: two columns, so that
- * the 16 rooms fit in a 720-pixel window.
- * @param screen The size of the window.
- * @param top The top of the first row.
- * @param index The index of the item.
- * @return The rectangle.
- **/
-gfx::Rect itemAt(engine::Vec2f screen, float top, std::size_t index)
-{
-    const float left = (screen.x - (2.0F * MenuRowWidth) - ColumnGap) / 2.0F;
-    const std::size_t column = index % 2;
-    const std::size_t row = index / 2;
-    return {
-        .x = left + (static_cast<float>(column) * (MenuRowWidth + ColumnGap)),
-        .y = top + (static_cast<float>(row) * (MenuRowHeight + MenuRowGap)),
-        .width = MenuRowWidth,
-        .height = MenuRowHeight,
-    };
 }
 
 } // namespace
@@ -92,15 +69,15 @@ std::optional<std::uint32_t> lobbyScreen(LobbyState &state,
     y += MenuLineHeight;
 
     std::optional<std::uint32_t> choice;
-    if (panel.button(itemAt(screen, y, 0), "Quick match", !joining)) {
+    if (panel.button(menuGridCell(screen, y, 0), "Quick match", !joining)) {
         choice = rtype::protocol::AnyRoom;
     }
-    if (panel.button(itemAt(screen, y, 1), "New room", !joining)) {
+    if (panel.button(menuGridCell(screen, y, 1), "New room", !joining)) {
         choice = rtype::protocol::NewRoom;
     }
     std::size_t index = FixedItems;
     for (const RoomInfo &room : state.rooms) {
-        if (panel.button(itemAt(screen, y, index), roomLabel(room),
+        if (panel.button(menuGridCell(screen, y, index), roomLabel(room),
                          !joining && canJoin(room))) {
             choice = room.room;
         }

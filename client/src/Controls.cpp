@@ -196,4 +196,77 @@ std::vector<std::string> readControls(std::istream &in, Controls &controls)
     return errors;
 }
 
+void writeControls(std::ostream &out, const Controls &controls)
+{
+    out << "# R-Type controls\n";
+    for (std::size_t i = 0; i < ControlCount; ++i) {
+        if (controls.at(i).empty()) {
+            continue;
+        }
+        out << ControlNames.at(i) << " =";
+        for (const Key key : controls.at(i)) {
+            out << ' ' << keyName(key);
+        }
+        out << '\n';
+    }
+}
+
+Controls loadControlsFile(const std::optional<std::string> &path)
+{
+    Controls controls = defaultControls();
+    const std::string file = path.value_or(DefaultControlsPath);
+    std::ifstream in(file);
+    if (!in) {
+        if (path) {
+            throw std::runtime_error("cannot open " + file);
+        }
+        return controls;
+    }
+    for (const std::string &error : readControls(in, controls)) {
+        std::cerr << "r-type_client: " << file << ": " << error << '\n';
+    }
+    return controls;
+}
+
+bool saveControlsFile(const std::string &path, const Controls &controls)
+{
+    std::ofstream out(path);
+    writeControls(out, controls);
+    out.flush();
+    if (!out) {
+        std::cerr << "r-type_client: cannot write " << path << '\n';
+        return false;
+    }
+    return true;
+}
+
+void bindKey(Controls &controls, Control control, std::size_t slot, Key key)
+{
+    std::vector<Key> &keys = controls.at(static_cast<std::size_t>(control));
+    const auto existing = std::ranges::find(keys, key);
+    if (slot >= keys.size()) {
+        if (existing == keys.end()) {
+            keys.push_back(key);
+        }
+        return;
+    }
+    if (existing != keys.end()) {
+        *existing = keys.at(slot);
+    }
+    keys.at(slot) = key;
+}
+
+std::optional<Control> otherControlWith(const Controls &controls,
+                                        Control control, Key key)
+{
+    for (std::size_t i = 0; i < ControlCount; ++i) {
+        const auto other = static_cast<Control>(i);
+        if (other != control &&
+            std::ranges::find(controls.at(i), key) != controls.at(i).end()) {
+            return other;
+        }
+    }
+    return std::nullopt;
+}
+
 } // namespace client

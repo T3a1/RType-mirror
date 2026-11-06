@@ -32,9 +32,15 @@ hand only.
 
 In the menus, the arrow keys move the selection, and Space or Enter chooses.
 
-**Choose your own keys**: write a `controls.cfg` file in the folder you start
-the game from (or give its path with `--controls FILE`). Each line gives the
-keys of one action and replaces its default keys:
+**Choose your own keys**: open Settings in the main menu, then the Controls tab.
+Each action has two keys: choose one, then press the new key, or Escape to
+cancel. The game tells you if another action uses the same key, and Reset keys
+brings back the default ones. The arrow keys, Space, Enter and Escape always
+work in the menus.
+
+Your choice is saved in a `controls.cfg` file in the folder you start the game
+from (or in the file given with `--controls FILE`), which you can also edit by
+hand. Each line gives the keys of one action and replaces its default keys:
 
 ```text
 # action = key key...

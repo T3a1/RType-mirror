@@ -43,6 +43,130 @@ constexpr std::array CreditsLines{
     "DejaVu font. Sounds generated for this project.",
 };
 
+/** @brief The text of each control in the menus, in the order of Control. */
+constexpr std::array<const char *, ControlCount> ControlLabels{
+    "Up", "Down", "Left", "Right", "Fire", "Auto-fire",
+};
+/** @brief How many keys of each control the Controls tab shows: one per hand.
+ */
+constexpr std::size_t KeysPerRow = 2;
+/** @brief The index of the Audio tab. */
+constexpr std::size_t AudioTab = 0;
+/** @brief The height a row takes in a column, in pixels. */
+constexpr float RowStep = MenuRowHeight + MenuRowGap;
+
+/**
+ * @brief Binds the key the player just pressed, if any, and reports if another
+ * control uses it too.
+ * @param context What the menu needs for this frame.
+ * @param state The state of the Settings page, updated.
+ * @param controls The keys bound to each control, updated.
+ * @return Whether the keys changed.
+ **/
+bool applyCapture(const MenuContext &context, SettingsPageState &state,
+                  Controls &controls)
+{
+    const std::optional<gfx::Key> key = state.capture.update(*context.graphics);
+    const std::optional<KeySlot> slot = state.capture.slot();
+    if (!key || !slot) {
+        return false;
+    }
+    bindKey(controls, slot->control, slot->index, *key);
+    state.capture.cancel();
+    context.sounds->play(audio::SoundEvent::MenuConfirm);
+    const std::optional<Control> other =
+        otherControlWith(controls, slot->control, *key);
+    state.notice.clear();
+    if (other) {
+        state.notice = keyName(*key) + " is also used by " +
+                       ControlLabels.at(static_cast<std::size_t>(*other));
+    }
+    return true;
+}
+
+/**
+ * @brief Returns the text of the button of one key of a control.
+ * @param state The state of the Settings page.
+ * @param controls The keys bound to each control.
+ * @param slot The key.
+ * @return The control and its key, or a request while the key is changing.
+ **/
+std::string keyLabel(const SettingsPageState &state, const Controls &controls,
+                     KeySlot slot)
+{
+    const auto control = static_cast<std::size_t>(slot.control);
+    const std::string name = std::string{ControlLabels.at(control)} + ": ";
+    const std::optional<KeySlot> waiting = state.capture.slot();
+    if (waiting && waiting->control == slot.control &&
+        waiting->index == slot.index) {
+        return name + "press a key...";
+    }
+    const std::vector<gfx::Key> &keys = controls.at(control);
+    return name +
+           (slot.index < keys.size() ? keyName(keys.at(slot.index)) : "-");
+}
+
+/**
+ * @brief Draws the Audio tab.
+ * @param panel The panel of the page.
+ * @param screen The size of the window.
+ * @param top The top of the tab.
+ * @param settings The settings, updated.
+ * @param result What the player did, updated.
+ * @return The height below the tab.
+ **/
+float audioTab(MenuPanel &panel, engine::Vec2f screen, float top,
+               Settings &settings, SettingsResult &result)
+{
+    float y = top;
+    result.changed =
+        panel.slider(menuRow(screen, y), "Music volume", settings.musicVolume);
+    y += RowStep;
+    result.changed =
+        panel.slider(menuRow(screen, y), "Sound volume", settings.soundVolume,
+                     audio::SoundEvent::PlayerShot) ||
+        result.changed;
+    return y + RowStep;
+}
+
+/**
+ * @brief Draws the Controls tab.
+ * @param panel The panel of the page.
+ * @param context What the menu needs for this frame.
+ * @param top The top of the tab.
+ * @param state The state of the Settings page, updated.
+ * @param controls The keys bound to each control, updated.
+ * @param result What the player did, updated.
+ * @return The height below the tab.
+ **/
+float controlsTab(MenuPanel &panel, const MenuContext &context, float top,
+                  SettingsPageState &state, Controls &controls,
+                  SettingsResult &result)
+{
+    gfx::IGraphics &graphics = *context.graphics;
+    const engine::Vec2f screen = graphics.screenSize();
+    for (std::size_t i = 0; i < ControlCount * KeysPerRow; ++i) {
+        const KeySlot slot{.control = static_cast<Control>(i / KeysPerRow),
+                           .index = i % KeysPerRow};
+        if (panel.button(menuGridCell(screen, top, i),
+                         keyLabel(state, controls, slot))) {
+            state.capture.start(slot);
+            state.notice.clear();
+        }
+    }
+    float y = top + (static_cast<float>(ControlCount) * RowStep);
+    drawCentered(graphics, state.notice, screen.x / 2.0F, y, MenuTextFontSize,
+                 gfx::colors::OffWhite);
+    y += MenuLineHeight;
+    if (panel.button(menuRow(screen, y), "Reset keys")) {
+        controls = defaultControls();
+        state.capture.cancel();
+        state.notice.clear();
+        result.controlsChanged = true;
+    }
+    return y + RowStep;
+}
+
 /**
  * @brief Returns the keys of a control, as text.
  * @param controls The keys bound to each control.
@@ -105,24 +229,35 @@ MainChoice mainMenuPage(const MenuContext &context, MenuCursor &cursor,
     return choice;
 }
 
-SettingsResult settingsPage(const MenuContext &context, MenuCursor &cursor,
-                            Settings &settings)
+SettingsResult settingsPage(const MenuContext &context,
+                            SettingsPageState &state, Settings &settings,
+                            Controls &controls)
 {
-    MenuPanel panel(context, cursor);
+    SettingsResult result;
+    // The widgets must not take the keys pressed for the capture.
+    MenuContext frame = context;
+    if (state.capture.slot()) {
+        result.controlsChanged = applyCapture(context, state, controls);
+        frame.keys = MenuKeys{};
+    }
+    MenuPanel panel(frame, state.cursor);
     gfx::IGraphics &graphics = *context.graphics;
     const engine::Vec2f screen = graphics.screenSize();
 
     float y = drawMenuTitle(graphics, "SETTINGS");
-    SettingsResult result;
-    result.changed =
-        panel.slider(menuRow(screen, y), "Music volume", settings.musicVolume);
-    y += MenuRowHeight + MenuRowGap;
-    result.changed =
-        panel.slider(menuRow(screen, y), "Sound volume", settings.soundVolume,
-                     audio::SoundEvent::PlayerShot) ||
-        result.changed;
-    y += MenuRowHeight + MenuRowGap;
+    const std::array<std::string, 2> tabs{"Audio", "Controls"};
+    panel.tabs(menuRow(screen, y), tabs, state.tab);
+    y += RowStep;
+    if (state.tab == AudioTab) {
+        state.capture.cancel();
+        y = audioTab(panel, screen, y, settings, result);
+    } else {
+        y = controlsTab(panel, frame, y, state, controls, result);
+    }
     result.back = panel.backButton(menuRow(screen, y), "Back");
+    if (result.back) {
+        state.capture.cancel();
+    }
     return result;
 }
 

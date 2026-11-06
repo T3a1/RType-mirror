@@ -9,11 +9,14 @@
 #define CLIENT_MENUPAGES_HPP
 
 #include "Controls.hpp"
+#include "KeyCapture.hpp"
 #include "Menu.hpp"
 #include "Settings.hpp"
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 
 namespace client {
@@ -38,11 +41,26 @@ enum class MenuPage : std::uint8_t {
 };
 
 /**
+ * @struct SettingsPageState
+ * @brief What the Settings page keeps between two frames.
+ * @param cursor The keyboard selection of the page.
+ * @param tab The current tab: 0 Audio, 1 Controls.
+ * @param capture The key being changed, if any.
+ * @param notice The text under the keys, to report a key used twice.
+ **/
+struct SettingsPageState {
+    MenuCursor cursor;
+    std::size_t tab = 0;
+    KeyCapture capture;
+    std::string notice;
+};
+
+/**
  * @struct MenuState
  * @brief Where the player is in the menus.
  * @param page The page shown.
  * @param mainCursor The keyboard selection of the main menu.
- * @param settingsCursor The keyboard selection of the Settings page.
+ * @param settings The state of the Settings page.
  * @param accessibilityCursor The keyboard selection of the Accessibility page.
  * @param howToPlayCursor The keyboard selection of the How to play page.
  * @param creditsCursor The keyboard selection of the Credits page.
@@ -50,7 +68,7 @@ enum class MenuPage : std::uint8_t {
 struct MenuState {
     MenuPage page = MenuPage::Main;
     MenuCursor mainCursor;
-    MenuCursor settingsCursor;
+    SettingsPageState settings;
     MenuCursor accessibilityCursor;
     MenuCursor howToPlayCursor;
     MenuCursor creditsCursor;
@@ -92,24 +110,29 @@ enum class MainChoice : std::uint8_t {
  * @struct SettingsResult
  * @brief What the player did on a page of settings this frame.
  * @param changed Whether a setting changed.
+ * @param controlsChanged Whether the keys changed.
  * @param back Whether the player chose to go back.
  **/
 struct SettingsResult {
     bool changed = false;
+    bool controlsChanged = false;
     bool back = false;
 };
 
 /**
- * @brief Draws the settings of the player, in screen pixels. The sound volume
- * plays a sound of the game when it changes, so the player can hear it.
+ * @brief Draws the settings of the player, in screen pixels, in two tabs. On
+ * Audio, the sound volume plays a sound of the game when it changes, so the
+ * player can hear it. On Controls, each control has two keys to change.
  * @param context What the menu needs for this frame.
- * @param cursor The keyboard selection of this menu, updated.
+ * @param state The state of this page, updated.
  * @param settings The settings, updated.
+ * @param controls The keys bound to each control, updated.
  * @return What the player did.
  **/
 [[nodiscard]] SettingsResult settingsPage(const MenuContext &context,
-                                          MenuCursor &cursor,
-                                          Settings &settings);
+                                          SettingsPageState &state,
+                                          Settings &settings,
+                                          Controls &controls);
 
 /**
  * @brief Draws one checkbox per line of Toggles, in screen pixels.
