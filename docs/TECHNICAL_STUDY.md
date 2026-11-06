@@ -297,10 +297,10 @@ Measured on 2026-11-06, against the `v1.0` tag (2026-10-18).
 
 | | Part 1 (`v1.0`) | Now |
 |---|----------------|-----|
-| C++ code (lines, with headers) | 8,210 | 26,600 |
-| Unit tests | 86 | 290 |
-| ECS systems (source files) | 20 | 34 |
-| Protocol version | 1 | 11 |
+| C++ code (lines, with headers) | 8,210 | 30,000 |
+| Unit tests | 86 | 375 |
+| ECS systems (source files) | 20 | 33 |
+| Protocol version | 1 | 12 |
 | Games on one server | 1 | Up to 16 rooms, with a lobby |
 | Graphics libraries | Raylib, called directly | Raylib, SFML, ncurses, behind an interface |
 | Network library | Asio, visible in the code | Hidden behind an interface, tested on a fake network |
