@@ -489,7 +489,9 @@ def serve(args: argparse.Namespace) -> int:
 
 def play(args: argparse.Namespace) -> int:
     """Default mode: starts the server and the clients, waits until every
-    client is closed, then stops everything (also on Ctrl+C or an error)."""
+    client is closed, then stops everything (also on Ctrl+C or an error).
+    With --clients-only, no server is started: the clients join the one at
+    args.host:args.port."""
     server: subprocess.Popen | None = None
     clients: list[subprocess.Popen] = []
     container_started = False
@@ -503,7 +505,9 @@ def play(args: argparse.Namespace) -> int:
                             "here (-c 1) and the others from other terminals")
     try:
         client_bin = ensure_binary("r-type_client", CLIENT_BIN, "-DBUILD_CLIENT=ON")
-        if args.native:
+        if args.only == "clients":
+            log(f"No server started: the clients join the one at {args.host}:{args.port}")
+        elif args.native:
             server = start_native_server(args.port, in_terminal, access_args(args))
         else:
             start_docker_server(args.port)
@@ -746,6 +750,9 @@ def parse_args() -> argparse.Namespace:
     only.add_argument("-S", "--server-only", dest="only", action="store_const",
                       const="server", help="start only the server, until Ctrl+C (for "
                                            "players on other machines)")
+    only.add_argument("-O", "--clients-only", dest="only", action="store_const",
+                      const="clients", help="start only the clients, connected to a "
+                                            "server already running at -H and -p")
     game.add_argument("-n", "--native", action="store_true",
                       help="run the server natively instead of in Docker")
     game.add_argument("-c", "--clients", type=positive, default=1, metavar="N",
