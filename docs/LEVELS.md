@@ -15,6 +15,8 @@ rebuild of the code, only a restart of the server.
    away without a boss. The next level starts 3 seconds later.
 4. After the last level comes the **endless mode**: random waves, until the
    game is over.
+5. Once the game is over, the level stops where it is: no new wave, obstacle or
+   boss comes during the final scores.
 
 A level can also bring in **obstacles**, at the times of its file: walls and
 destroyable tiles that scroll from the right edge (see

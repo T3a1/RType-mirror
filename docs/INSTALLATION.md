@@ -115,7 +115,7 @@ the options. Before building, it sets up everything that is missing:
 |--------|--------|
 | *(none)* | Starts the server in Docker and one client. |
 | `-G`, `--gui` | Opens the [graphical launcher](#graphical-launcher). |
-| `-S`, `--server-only` | Starts only the server, in Docker or with `--native`, until Ctrl+C (or `quit` in its console with `--native`). It prints the command the players run. Refuses the client options (`-c`, `-r`, `-H`). |
+| `-S`, `--server-only` | Starts only the server, in Docker or with `--native`, until Ctrl+C (or `quit` in its console). It prints the command the players run. Refuses the client options (`-c`, `-r`, `-H`). |
 | `-O`, `--clients-only` | Starts only the clients, connected to a server already running at `-H` and `-p`. Refuses the server options (`-n`, `--banlist`, `--whitelist`). |
 | `-n`, `--native` | Runs the server natively instead of in Docker. |
 | `-c N`, `--clients N` | Starts `N` clients (default: 1). |
@@ -129,7 +129,7 @@ the options. Before building, it sets up everything that is missing:
 | `-f`, `--fix` | Applies the clang-tidy fixes, then runs clang-format. |
 | `-F`, `--format` | Runs clang-format on the project (same version as the CI). |
 | `--check-format [FILE...]` | Checks the formatting like the CI, without changing anything. |
-| `-d`, `--docs` | Generates the documentation website with Doxygen: the pages of `docs/` and the code reference. |
+| `-d`, `--docs` | Generates the documentation website with Doxygen: the pages of `docs/` and `docs/fr/`, and the code reference. |
 
 > In Docker mode, `--port` changes the port published on your machine; inside the
 > container, the server stays on 4242.
@@ -153,8 +153,11 @@ library.
 - **Start** runs that command and shows its output in the window. **Stop**
   stops it like Ctrl+C: the server and the clients it started are stopped too.
   Closing the window also stops it.
-- **Server console**: with a native server, a line typed there goes to its
-  administration console (`help`, `status`, `kick`, `ban`...).
+- **Server console**: a line typed there goes to the administration console of
+  the server, in Docker or native (`help`, `status`, `kick`, `ban`...).
+- **On a very high resolution screen**, the window enlarges itself from the
+  resolution and the DPI of the screen. If the result does not suit you, set
+  `RTYPE_GUI_SCALE`, for example `RTYPE_GUI_SCALE=2 ./rtype.py --gui`.
 - To **create a game**, start the server and clients with a room number, or
   room 0 to choose one in the lobby. To **join a game** on another machine,
   choose "Clients only" with its address. Several rooms are several games run
@@ -171,6 +174,7 @@ Without tkinter, `--gui` says how to install it (see
 | `COVERAGE_DIR` | `build-coverage` | Build directory of `--coverage`. |
 | `SERVER_BIN`, `CLIENT_BIN` | *(found in `BUILD_DIR`)* | Paths to existing binaries. |
 | `IMAGE`, `CONTAINER` | `rtype-server` | Docker image and container names. |
+| `RTYPE_GUI_SCALE` | *(from the screen)* | How much the graphical launcher enlarges its window, from `0.5` to `4`. |
 | `GRAPHICS` | `raylib` | Default of `--graphics`. |
 | `CONAN_SYSTEM_PACKAGES` | `install` | Linux only: `check` only checks the X11/OpenGL packages, `report` only lists them. |
 | `TOOLS_DIR` | `.venv` | Virtual environment for the build tools. |
@@ -231,7 +235,11 @@ docker stop rtype-server        # stop and remove it
 
 #### Administration console
 
-Type these commands in the terminal of the server, while it runs:
+Type these commands in the terminal of the server, while it runs. With
+`rtype.py`, in Docker as natively, that is the terminal it was started from (or
+the **Server console** of the graphical launcher). Next to an ncurses client, or
+for a server started by hand in Docker, the container is detached: use
+`docker attach rtype-server`.
 
 | Command | Effect |
 |---------|--------|
@@ -310,7 +318,7 @@ library, but the game is degraded:
 | `./rtype.py --tidy` | clang-tidy, with the same rules as the CI. |
 | `./rtype.py --fix` | clang-tidy fixes, then clang-format. |
 | `./rtype.py --format` | clang-format only. |
-| `./rtype.py --docs` | Documentation website in `build/docs/html/index.html`. A broken link between pages is an error. |
+| `./rtype.py --docs` | Documentation website in `build/docs/html/index.html`, the French version under `fr/`. A broken link between pages, or a page without its French version, is an error. |
 | `./tools/generate_sounds.py` | Generates the sound effects and musics again, in `client/assets/`. |
 
 Every clang-format version formats a little differently, so the launcher, the
