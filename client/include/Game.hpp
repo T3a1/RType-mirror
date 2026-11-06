@@ -32,6 +32,9 @@
 
 namespace client {
 
+/** @brief The number of scrolling background layers (planets, stars). */
+inline constexpr std::size_t BackgroundLayerCount = 2;
+
 /**
  * @struct GameOptions
  * @brief The command-line options of the client.
@@ -113,11 +116,12 @@ class Game {
     void leaveRoom();
     void createBackground();
     /**
-     * @brief Loads the background texture and creates the entity scrolling it.
+     * @brief Loads the background layers and creates the entities scrolling
+     * them.
      *
-     * The texture is loaded from the assets directory next to the executable
-     * and stays owned by the Game, which unloads it in its destructor. If it
-     * cannot be loaded, the window simply has no background.
+     * The textures are loaded from the assets directory next to the
+     * executable and stay owned by the Game, which unloads them in its
+     * destructor. A layer that cannot be loaded is simply not drawn.
      */
     void spawnBackground();
     void drawStatus() const;
@@ -127,7 +131,7 @@ class Game {
     audio::SoundBoard m_sounds;
     SpriteSheets m_sheets;
     engine::Registry m_registry;
-    gfx::Texture m_backgroundTexture;
+    std::array<gfx::Texture, BackgroundLayerCount> m_backgroundTextures{};
     SyncState m_sync;
     bool m_quitRequested = false;
     LobbyState m_lobby;

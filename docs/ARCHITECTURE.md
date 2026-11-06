@@ -312,6 +312,11 @@ coordinates, `endFrame`) because it gives each layer its meaning. The lobby,
 waiting room and game over screens also act on the game, so they stay together in
 a single `screens` system of the `Overlay` layer.
 
+The background is two tileable images scrolling forever (`Background`
+components, drawn by `depth`): planets far behind, and stars in front that
+scroll three times faster, for a feeling of depth (parallax). The layers, their
+images and speeds are listed in `client/src/Game.cpp` (`BackgroundLayers`).
+
 ### 4.3 Overview
 
 ```mermaid
