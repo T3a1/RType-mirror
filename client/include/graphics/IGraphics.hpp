@@ -42,7 +42,7 @@ class IGraphics {
 
     /**
      * @brief Processes the window events.
-     * @return `true` once the user closed the window or pressed Escape.
+     * @return `true` once the user closed the window.
      **/
     [[nodiscard]] virtual bool shouldClose() = 0;
     /**

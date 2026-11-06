@@ -107,6 +107,7 @@ class Game {
     void registerRenderSystems();
     void addRender(Layer layer, std::string name, engine::System system);
     [[nodiscard]] bool inRoom() const;
+    void handleBackKey();
     void drawScreens();
     void handleLobbyMessages(const std::vector<rtype::protocol::Payload> &all);
     void applyLobbyChoice(std::optional<std::uint32_t> room);

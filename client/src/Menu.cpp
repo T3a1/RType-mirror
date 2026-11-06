@@ -58,6 +58,7 @@ MenuKeys MenuInput::update(const gfx::IGraphics &graphics)
         .up = pressed(graphics.isKeyDown(gfx::Key::Up), m_up),
         .down = pressed(graphics.isKeyDown(gfx::Key::Down), m_down),
         .confirm = pressed(graphics.isKeyDown(gfx::Key::Space), m_confirm),
+        .back = pressed(graphics.isKeyDown(gfx::Key::Escape), m_back),
     };
 }
 

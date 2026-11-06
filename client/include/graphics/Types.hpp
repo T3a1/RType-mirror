@@ -156,6 +156,8 @@ enum class TextureFilter : std::uint8_t {
  * @param Num7 The digit 7.
  * @param Num8 The digit 8.
  * @param Num9 The digit 9.
+ * @param Escape The Escape key: it goes back in the menus and cannot be bound
+ * to a control.
  * @param Count The number of keys, not a key.
  */
 enum class Key : std::uint8_t {
@@ -208,6 +210,7 @@ enum class Key : std::uint8_t {
     Num7,
     Num8,
     Num9,
+    Escape,
     /** @brief The number of keys, not a key. */
     Count,
 };

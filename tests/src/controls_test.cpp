@@ -42,6 +42,9 @@ TEST(Controls, KeyNamesRoundTrip)
 {
     for (std::size_t i = 0; i < client::gfx::KeyCount; ++i) {
         const auto key = static_cast<Key>(i);
+        if (key == Key::Escape) {
+            continue;
+        }
         EXPECT_EQ(client::keyFromName(client::keyName(key)), key)
             << client::keyName(key);
     }

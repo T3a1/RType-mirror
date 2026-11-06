@@ -20,11 +20,13 @@ namespace client {
  * @param up Move up.
  * @param down Move down.
  * @param confirm Choose the selected item.
+ * @param back Go back.
  **/
 struct MenuKeys {
     bool up = false;
     bool down = false;
     bool confirm = false;
+    bool back = false;
 };
 
 /**
@@ -46,6 +48,7 @@ class MenuInput {
     bool m_up = false;
     bool m_down = false;
     bool m_confirm = false;
+    bool m_back = false;
 };
 
 /**

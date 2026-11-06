@@ -254,7 +254,7 @@ library, but the game is degraded:
   key counts as held for about half a second after it is pressed, then as long
   as it repeats. Only one key works at a time: you cannot move and fire
   together.
-- Quit with Escape, `q` or Ctrl+C.
+- Quit with `q` or Ctrl+C. Escape leaves the room, then quits from the room list.
 - The logs go to `r-type_client.log` in the current directory instead of the
   terminal. With `--native`, `rtype.py` writes the server's output to
   `build/server.log`, and it starts one client only (start others from other

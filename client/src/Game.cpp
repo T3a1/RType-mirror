@@ -298,8 +298,26 @@ void Game::leaveRoom()
     m_gameOverTime = 0.0F;
 }
 
+/**
+ * @brief Handles the back key: it leaves the room, or quits from the lobby or
+ * during a benchmark.
+ **/
+void Game::handleBackKey()
+{
+    if (!m_menuKeys.back) {
+        return;
+    }
+    if (inRoom() && !m_bench) {
+        m_sounds.play(audio::SoundEvent::MenuBack);
+        leaveRoom();
+    } else {
+        m_quitRequested = true;
+    }
+}
+
 void Game::drawScreens()
 {
+    handleBackKey();
     const bool moved = m_menuKeys.up || m_menuKeys.down;
     if (!inRoom()) {
         if (m_network.state() == NetworkClient::State::Connected) {

@@ -212,6 +212,8 @@ std::optional<Key> toKey(int character)
         return Key::Enter;
     case '\t':
         return Key::Tab;
+    case Escape:
+        return Key::Escape;
     default:
         return std::nullopt;
     }
@@ -322,8 +324,7 @@ bool NcursesGraphics::shouldClose()
                                .y = static_cast<float>(mouse.y) * CellHeight};
             m_mousePressed = true;
         }
-        if (character == 'q' || character == 'Q' || character == CtrlC ||
-            character == Escape) {
+        if (character == 'q' || character == 'Q' || character == CtrlC) {
             m_closeRequested = true;
         } else if (const std::optional<Key> key = toKey(character)) {
             press(*key, now);

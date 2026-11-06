@@ -71,6 +71,8 @@ sf::Keyboard::Key toSfml(Key key)
         return sf::Keyboard::Key::Enter;
     case Key::Tab:
         return sf::Keyboard::Key::Tab;
+    case Key::Escape:
+        return sf::Keyboard::Key::Escape;
     case Key::LeftShift:
         return sf::Keyboard::Key::LShift;
     case Key::RightShift:
@@ -118,9 +120,7 @@ bool SfmlGraphics::shouldClose()
 {
     m_mousePressed = false;
     while (const std::optional event = m_window.pollEvent()) {
-        const auto *key = event->getIf<sf::Event::KeyPressed>();
-        if (event->is<sf::Event::Closed>() ||
-            (key != nullptr && key->code == sf::Keyboard::Key::Escape)) {
+        if (event->is<sf::Event::Closed>()) {
             m_closeRequested = true;
         }
         const auto *mouse = event->getIf<sf::Event::MouseButtonPressed>();
