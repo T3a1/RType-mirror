@@ -40,6 +40,8 @@ SERVER_BIN = os.environ.get("SERVER_BIN")
 CLIENT_BIN = os.environ.get("CLIENT_BIN")
 IMAGE = os.environ.get("IMAGE", "rtype-server")
 CONTAINER = os.environ.get("CONTAINER", "rtype-server")
+# Address the clients connect to when -H is not given.
+DEFAULT_HOST = "127.0.0.1"
 # What Conan does with missing system packages (X11/OpenGL headers for the
 # graphics library): install (with sudo), check (fail if missing) or report
 # (only list them).
@@ -755,12 +757,12 @@ def parse_args() -> argparse.Namespace:
                                             "server already running at -H and -p")
     game.add_argument("-n", "--native", action="store_true",
                       help="run the server natively instead of in Docker")
-    game.add_argument("-c", "--clients", type=positive, default=1, metavar="N",
+    game.add_argument("-c", "--clients", type=positive, metavar="N",
                       help="number of clients to launch (default: 1)")
     game.add_argument("-p", "--port", type=port, default=4242,
                       help="UDP port of the server (default: 4242)")
-    game.add_argument("-H", "--host", default="127.0.0.1",
-                      help="address the clients connect to (default: 127.0.0.1)")
+    game.add_argument("-H", "--host", default=DEFAULT_HOST,
+                      help=f"address the clients connect to (default: {DEFAULT_HOST})")
     game.add_argument("-r", "--room", type=positive, metavar="N",
                       help="room the clients join (default: the first with a free slot)")
     game.add_argument("--banlist", metavar="FILE",
@@ -789,6 +791,29 @@ def parse_args() -> argparse.Namespace:
     mode.add_argument("-d", "--docs", dest="action", action="store_const", const="docs",
                       help="generate the HTML documentation with Doxygen")
     return parser.parse_args()
+
+
+def check_game_options(args: argparse.Namespace) -> None:
+    """Rejects the options that do nothing in the chosen game mode, so that a
+    mistake is reported instead of ignored, then sets the defaults that depend
+    on the mode."""
+    if args.only == "clients":
+        server_options = [name for name, given in (
+            ("--native", args.native), ("--banlist", args.banlist),
+            ("--whitelist", args.whitelist)) if given]
+        if server_options:
+            raise LauncherError(f"{', '.join(server_options)}: only for the server, but "
+                                "--clients-only starts none")
+    if args.only == "server":
+        client_options = [name for name, given in (
+            ("--clients", args.clients is not None), ("--room", args.room),
+            ("--host", args.host != DEFAULT_HOST)) if given]
+        if client_options:
+            raise LauncherError(f"{', '.join(client_options)}: only for the clients, but "
+                                "--server-only starts none (the server listens on "
+                                "every address)")
+    if args.clients is None:
+        args.clients = 1
 
 
 ACTIONS = {
@@ -826,6 +851,7 @@ def main() -> int:
             return check_format(args.check_format)
         if args.action:
             return ACTIONS[args.action]()
+        check_game_options(args)
         if args.only == "server":
             return serve(args)
         return play(args)
