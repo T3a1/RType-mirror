@@ -530,7 +530,7 @@ All bytes in hexadecimal.
 Unreliable sequence 298, acknowledging reliable packet 17, input number 1000:
 
 ```text
-52 54 0A 10 00 00 2A 01 11 00 05 00   header: "RT", v10, Input, no flags,
+52 54 0B 10 00 00 2A 01 11 00 05 00   header: "RT", v11, Input, no flags,
                                               sequence 298, ack 17, size 5
 E8 03 00 00                           sequence 1000
 11                                    actions 0x11 = Up | Fire
@@ -541,7 +541,7 @@ E8 03 00 00                           sequence 1000
 Reliable sequence 2, slot 2, ship 58, tick 1200:
 
 ```text
-52 54 0A 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
+52 54 0B 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
                                               sequence 2, ack 0, size 9
 02                                    slot 2
 3A 00 00 00                           shipId 58
@@ -551,7 +551,7 @@ B0 04 00 00                           tick 1200
 ### `Snapshot` with one player and one entity
 
 ```text
-52 54 0A 20 00 00 2B 01 11 00 26 00   header: Snapshot, size 38
+52 54 0B 20 00 00 2B 01 11 00 26 00   header: Snapshot, size 38
 2C 01 00 00                           tick 300
 00 01                                 part 0 of 1
 01 00                                 1 entity
