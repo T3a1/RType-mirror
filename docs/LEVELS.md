@@ -69,7 +69,7 @@ crashes the server.
 |-----|:--------:|-------|
 | `name` | yes | The name of the level, 1 to 64 characters. |
 | `waves` | yes | The list of its waves, 1 to 1000. Their order in the file does not matter: they are sorted by `time`. |
-| `boss` | no | The boss that comes after the waves: `warship` or `hive`. Without it, the level ends with its last wave. The game settings can replace it with another boss. |
+| `boss` | no | The boss that comes after the waves: `warship`, `hive`, or a boss of [`enemies.json`](ENEMIES.md) such as `dreadnought`. Without it, the level ends with its last wave. The game settings can replace it with another boss. |
 | `obstacles` | no | The list of its groups of walls and tiles, at most 1000, see [Obstacles](#obstacles). Their order does not matter: they are sorted by `time`. |
 
 ### Bosses
@@ -98,7 +98,7 @@ screen. The playfield is 1920 units wide and 1080 high, `y` going down.
 | Key | Required | Default | Value |
 |-----|:--------:|---------|-------|
 | `time` | yes | | When the wave starts, in seconds from the start of the level (0 to 3600). |
-| `enemy` | yes | | The enemy type: `basic`, `wave`, `shooter`, `small`, `medium` or `large`. |
+| `enemy` | yes | | The enemy: `basic`, `wave`, `shooter`, `small`, `medium`, `large`, or an enemy of [`enemies.json`](ENEMIES.md) such as `kamikaze` or `gunship`. |
 | `count` | no | `1` | How many enemies, a whole number from 1 to 20. |
 | `spacing` | no | `0` | Seconds between two enemies (0 to 10). With the same height, a spacing makes a snake. |
 | `stepY` | no | `0` | Vertical distance between two enemies (0 to 1080). Without spacing, it makes a column. |

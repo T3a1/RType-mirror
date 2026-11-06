@@ -45,7 +45,8 @@ struct EnemyDef {
 };
 
 /**
- * @brief An array of all enemy definitions, in the order of rtype::EnemyType.
+ * @brief The default stats of the built-in enemies, in the order of
+ * rtype::EnemyType, used when server/enemies.json does not change them.
  *The colliders match the sizes the clients draw (client/src/SpriteSheets.cpp).
  **/
 inline constexpr std::array<EnemyDef, 8> ENEMY_DEFS = {
@@ -128,14 +129,21 @@ inline constexpr std::array<EnemyDef, 8> ENEMY_DEFS = {
 };
 
 /**
- * @brief Returns the stats of an enemy type from ENEMY_DEFS.
+ * @brief Returns the stats of a built-in enemy type in the catalog of the
+ * server (see EnemyCatalog.hpp): those of ENEMY_DEFS, or of
+ * server/enemies.json once it is loaded.
  * @param type The type of the enemy.
  * @return The definition of that type.
  **/
-constexpr const EnemyDef &enemyDef(rtype::EnemyType type)
-{
-    return ENEMY_DEFS.at(static_cast<std::size_t>(type));
-}
+[[nodiscard]] const EnemyDef &enemyDef(rtype::EnemyType type);
+
+/**
+ * @brief Returns the stats of an enemy: those of its kind in the catalog of
+ * the server, or of its type when its kind is a built-in one.
+ * @param enemy The Enemy component of the entity.
+ * @return Its definition.
+ **/
+[[nodiscard]] const EnemyDef &enemyDef(const rtype::Enemy &enemy);
 
 } // namespace server
 

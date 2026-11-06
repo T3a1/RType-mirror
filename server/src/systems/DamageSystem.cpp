@@ -30,7 +30,7 @@ void awardKill(engine::Registry &registry, engine::Entity projectile,
         return;
     }
     if (const auto *enemy = registry.tryGet<rtype::Enemy>(target)) {
-        shooter->score += enemyDef(enemy->type).score;
+        shooter->score += enemyDef(*enemy).score;
     } else if (registry.has<Obstacle>(target)) {
         shooter->score += rtype::TileScore;
     }

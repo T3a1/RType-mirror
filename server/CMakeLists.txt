@@ -56,6 +56,8 @@ endif()
 # Spawning, levels and combat (collisions, damage, deaths) are a library so
 # the tests can run them without the game loop.
 add_library(r-type_server_spawn STATIC
+    src/EnemyCatalog.cpp
+    src/EnemyFile.cpp
     src/EntityFactory.cpp
     src/Formations.cpp
     src/Level.cpp
@@ -97,13 +99,27 @@ target_link_libraries(${PROJECT_NAME}
     PRIVATE r-type_server_game_over
 )
 
-# The levels and the weapons are read next to the executable.
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+# The levels, the weapons and the enemies are read next to the executable.
+# A target of their own copies them at every build, so that a change to a
+# data file reaches the build directory even when no code was rebuilt. It
+# names the executable's directory itself: $<TARGET_FILE_DIR> would make it
+# depend on the server, which depends on it.
+get_property(MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(MULTI_CONFIG)
+    set(SERVER_DATA_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>)
+else()
+    set(SERVER_DATA_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+endif()
+add_custom_target(r-type_server_data ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/levels
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>/levels
+        ${SERVER_DATA_DIR}/levels
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_SOURCE_DIR}/weapons.json
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>/weapons.json
-    COMMENT "Copying the server levels and weapons"
+        ${SERVER_DATA_DIR}/weapons.json
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_SOURCE_DIR}/enemies.json
+        ${SERVER_DATA_DIR}/enemies.json
+    COMMENT "Copying the server levels, weapons and enemies"
 )
+add_dependencies(${PROJECT_NAME} r-type_server_data)

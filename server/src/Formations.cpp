@@ -6,6 +6,7 @@
 */
 
 #include "Formations.hpp"
+#include "EnemyCatalog.hpp"
 #include "EnemyDefs.hpp"
 #include "common/Playfield.hpp"
 
@@ -15,9 +16,24 @@
 
 namespace server {
 
+namespace {
+
+/**
+ * @brief Returns the stats of the enemies of a formation.
+ * @param formation The formation.
+ * @return The stats of its catalog kind, or of its built-in type.
+ **/
+const EnemyDef &statsOf(const Formation &formation)
+{
+    return formation.kind ? enemyCatalog().at(*formation.kind).def
+                          : enemyDef(formation.type);
+}
+
+} // namespace
+
 float formationExtent(const Formation &formation)
 {
-    const EnemyDef &stat = enemyDef(formation.type);
+    const EnemyDef &stat = statsOf(formation);
     const rtype::MovementPattern pattern =
         formation.pattern.value_or(stat.pattern);
     const float rows = static_cast<float>(formation.count - 1) / 2.0F;
@@ -38,7 +54,7 @@ float randomCenterY(const Formation &formation, rtype::Spawner &spawner)
 std::vector<PendingSpawn> formationSpawns(const Formation &formation,
                                           float centerY)
 {
-    const EnemyDef &stat = enemyDef(formation.type);
+    const EnemyDef &stat = statsOf(formation);
     const float middle = static_cast<float>(formation.count - 1) / 2.0F;
     std::vector<PendingSpawn> spawns;
 
@@ -58,6 +74,7 @@ std::vector<PendingSpawn> formationSpawns(const Formation &formation,
                             .y = centerY + (rank * formation.stepY),
                         },
                     .pattern = formation.pattern,
+                    .kind = formation.kind,
                 },
         });
     }

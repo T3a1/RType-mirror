@@ -146,7 +146,7 @@ void bossSystem(engine::Registry &registry, SpawnCommands &commands,
                                      const rtype::Transform &transform,
                                      rtype::Velocity &velocity,
                                      const rtype::Health &health) {
-        const EnemyDef &stat = enemyDef(enemy.type);
+        const EnemyDef &stat = enemyDef(enemy);
         const float top = (stat.size.y / 2.0F) + VerticalMargin;
         const float bottom = rtype::PlayfieldHeight - top;
         const std::uint8_t phase = bossPhase(health.current, health.max);

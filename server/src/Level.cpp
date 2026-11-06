@@ -44,23 +44,50 @@ constexpr float MaxDiveDelay = 60.0F;
 /** @brief The largest speed of a dive, in playfield units per second. */
 constexpr float MaxDiveSpeed = 5000.0F;
 
-/** @brief The enemy names a wave may use. */
-constexpr std::array<std::pair<std::string_view, rtype::EnemyType>, 6>
-    EnemyNames{{
-        {"basic", rtype::EnemyType::Basic},
-        {"wave", rtype::EnemyType::Wave},
-        {"shooter", rtype::EnemyType::Shooter},
-        {"small", rtype::EnemyType::Small},
-        {"medium", rtype::EnemyType::Medium},
-        {"large", rtype::EnemyType::Large},
-    }};
+/**
+ * @brief Reads the name of a kind of the enemy catalog (see EnemyCatalog.hpp:
+ * the built-in names and those of enemies.json).
+ * @param object The JSON object holding it.
+ * @param key Its key.
+ * @param boss Whether it must be a boss, or must not be one.
+ * @param where Where the object is in the file, for the error message.
+ * @return Its id in the catalog.
+ * @throws LevelError If it is missing, not a string or not a kind of the
+ * right family.
+ **/
+EnemyKindId kindNamed(const Json &object, const char *key, bool boss,
+                      const std::string &where)
+{
+    const EnemyCatalog &catalog = enemyCatalog();
+    const auto it = object.find(key);
+    if (it != object.end() && it->is_string()) {
+        const auto id = catalog.find(it->get_ref<const std::string &>());
+        if (id && rtype::isBoss(catalog.at(*id).behavior) == boss) {
+            return *id;
+        }
+    }
+    std::string list;
+    for (const EnemyKind &kind : catalog.kinds()) {
+        if (rtype::isBoss(kind.behavior) == boss) {
+            list += (list.empty() ? "" : ", ") + kind.name;
+        }
+    }
+    throw LevelError(where + "." + key + ": must be one of " + list);
+}
 
-/** @brief The boss names a level may use. */
-constexpr std::array<std::pair<std::string_view, rtype::EnemyType>, 2>
-    BossNames{{
-        {"warship", rtype::EnemyType::Boss},
-        {"hive", rtype::EnemyType::Hive},
-    }};
+/**
+ * @brief Returns the catalog kind to store for an id: nothing for a built-in
+ * kind, which its type already gives.
+ * @param id The id in the catalog.
+ * @return The id, or nothing.
+ **/
+std::optional<EnemyKindId> customKind(EnemyKindId id)
+{
+    if (id < ENEMY_DEFS.size()) {
+        return std::nullopt;
+    }
+    return id;
+}
 
 /** @brief The obstacle kinds a level may use: is it destroyable. */
 constexpr std::array<std::pair<std::string_view, bool>, 2> ObstacleKinds{{
@@ -242,12 +269,13 @@ Wave readWave(const Json &wave, const std::string &where)
         throw LevelError(where + ".count: must be a whole number from 1 to " +
                          std::to_string(MaxWaveCount));
     }
+    const EnemyKindId enemy = kindNamed(wave, "enemy", false, where);
     Wave result{
         .time = engine::Duration{number(wave, "time", 0.0F, MaxWaveTime,
                                         std::nullopt, where)},
         .formation =
             {
-                .type = named(wave, "enemy", EnemyNames, where),
+                .type = enemyCatalog().at(enemy).behavior,
                 .count = count != wave.end() ? count->get<std::size_t>() : 1,
                 .spacing = engine::Duration{number(wave, "spacing", 0.0F,
                                                    MaxSpacing, 0.0F, where)},
@@ -255,6 +283,7 @@ Wave readWave(const Json &wave, const std::string &where)
                                 0.0F, where),
                 .fromCenter =
                     fromCenter != wave.end() && fromCenter->get<bool>(),
+                .kind = customKind(enemy),
             },
     };
     if (wave.contains("y")) {
@@ -327,7 +356,9 @@ Level readLevel(const Json &root)
     }
     std::ranges::stable_sort(level.waves, {}, &Wave::time);
     if (root.contains("boss")) {
-        level.boss = named(root, "boss", BossNames, "level");
+        const EnemyKindId boss = kindNamed(root, "boss", true, "level");
+        level.boss = enemyCatalog().at(boss).behavior;
+        level.bossKind = customKind(boss);
     }
     if (const auto obstacles = root.find("obstacles");
         obstacles != root.end()) {
