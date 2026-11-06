@@ -94,7 +94,7 @@ The names are the `DecodeError` values of the reference implementation.
 | 1 | At most 1200 bytes | `TooLarge` |
 | 2 | At least 12 bytes | `TooShort` |
 | 3 | Magic is `"RT"` | `BadMagic` |
-| 4 | Version is 11 | `BadVersion` |
+| 4 | Version is 12 | `BadVersion` |
 | 5 | Type is listed in section 5 | `UnknownType` |
 | 6 | No reserved flag bit, and Reliable set exactly on reliable types | `BadFlags` |
 | 7 | Reserved byte is 0 | `BadReserved` |

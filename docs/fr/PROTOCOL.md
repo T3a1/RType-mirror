@@ -92,7 +92,7 @@ Un récepteur vérifie un datagramme dans cet ordre et le rejette au premier éc
 | 1 | 1200 octets au maximum | `TooLarge` |
 | 2 | 12 octets au minimum | `TooShort` |
 | 3 | Le magic est `"RT"` | `BadMagic` |
-| 4 | La version est 11 | `BadVersion` |
+| 4 | La version est 12 | `BadVersion` |
 | 5 | Le type figure à la section 5 | `UnknownType` |
 | 6 | Aucun bit de drapeau réservé, et Reliable mis exactement sur les types fiables | `BadFlags` |
 | 7 | L'octet réservé vaut 0 | `BadReserved` |
