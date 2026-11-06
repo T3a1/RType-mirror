@@ -13,6 +13,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -114,6 +115,29 @@ constexpr EnemyKindId builtinKind(rtype::EnemyType type)
  * @param catalog The new catalog.
  **/
 void setEnemyCatalog(EnemyCatalog catalog);
+
+/**
+ * @brief Reads a catalog from the text of an enemies.json file (see
+ * docs/ENEMIES.md): new stats for the built-in kinds, and new kinds based on
+ * a built-in one. Every key is optional except the base of a new kind;
+ * unknown keys and out-of-range values are errors.
+ * @param text The content of the file.
+ * @param error Set to what is wrong when the text cannot be read.
+ * @return The catalog, or nothing if the text is not valid.
+ **/
+[[nodiscard]] std::optional<EnemyCatalog> parseEnemies(std::string_view text,
+                                                       std::string &error);
+
+/**
+ * @brief Reads a catalog from a file; never throws.
+ * @param file The enemies.json file.
+ * @param error Set to what is wrong when the built-in catalog is used
+ * instead.
+ * @return The catalog of the file, or the built-in one if the file is
+ * missing, too large or invalid.
+ **/
+[[nodiscard]] EnemyCatalog loadEnemies(const std::filesystem::path &file,
+                                       std::string &error);
 
 } // namespace server
 
