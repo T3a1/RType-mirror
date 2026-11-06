@@ -315,47 +315,70 @@ void Game::handleBackKey()
     }
 }
 
+/**
+ * @brief Draws the menu of the rooms once connected, and joins the chosen room.
+ **/
+void Game::drawLobby()
+{
+    if (m_network.state() != NetworkClient::State::Connected) {
+        return;
+    }
+    if (m_menuKeys.up || m_menuKeys.down) {
+        m_sounds.play(audio::SoundEvent::MenuMove);
+    }
+    const auto room = lobbyScreen(m_lobby, *m_graphics, m_menuKeys);
+    if (room) {
+        m_sounds.play(audio::SoundEvent::MenuConfirm);
+    }
+    applyLobbyChoice(room);
+}
+
+/**
+ * @brief Draws the waiting room, and starts the game or leaves the room.
+ **/
+void Game::drawWaitingRoom()
+{
+    if (m_menuKeys.up || m_menuKeys.down) {
+        m_sounds.play(audio::SoundEvent::MenuMove);
+    }
+    const WaitingChoice choice =
+        waitingRoomScreen(m_lobby, m_sync, *m_graphics, m_menuKeys);
+    if (choice == WaitingChoice::Start) {
+        m_sounds.play(audio::SoundEvent::MenuConfirm);
+        m_network.startGame(m_lobby.settings, std::chrono::steady_clock::now());
+    } else if (choice == WaitingChoice::Leave) {
+        m_sounds.play(audio::SoundEvent::MenuBack);
+        leaveRoom();
+    }
+}
+
+/**
+ * @brief Draws the HUD of a running game, then its banners or game over screen.
+ **/
+void Game::drawGame()
+{
+    hudSystem(m_sync, m_autoFire.enabled, *m_graphics);
+    if (!m_sync.gameOver) {
+        bossHealthBar(m_registry, *m_graphics);
+        levelBannerScreen(m_sync, *m_graphics);
+    }
+    const bool keyboard =
+        m_menuKeys.confirm && m_gameOverTime >= GameOverKeyDelay;
+    if (m_sync.gameOver && gameOverScreen(m_sync, *m_graphics, keyboard)) {
+        m_sounds.play(audio::SoundEvent::MenuBack);
+        leaveRoom();
+    }
+}
+
 void Game::drawScreens()
 {
     handleBackKey();
-    const bool moved = m_menuKeys.up || m_menuKeys.down;
     if (!inRoom()) {
-        if (m_network.state() == NetworkClient::State::Connected) {
-            if (moved) {
-                m_sounds.play(audio::SoundEvent::MenuMove);
-            }
-            const auto room = lobbyScreen(m_lobby, *m_graphics, m_menuKeys);
-            if (room) {
-                m_sounds.play(audio::SoundEvent::MenuConfirm);
-            }
-            applyLobbyChoice(room);
-        }
+        drawLobby();
     } else if (!m_sync.started) {
-        if (moved) {
-            m_sounds.play(audio::SoundEvent::MenuMove);
-        }
-        const WaitingChoice choice =
-            waitingRoomScreen(m_lobby, m_sync, *m_graphics, m_menuKeys);
-        if (choice == WaitingChoice::Start) {
-            m_sounds.play(audio::SoundEvent::MenuConfirm);
-            m_network.startGame(m_lobby.settings,
-                                std::chrono::steady_clock::now());
-        } else if (choice == WaitingChoice::Leave) {
-            m_sounds.play(audio::SoundEvent::MenuBack);
-            leaveRoom();
-        }
+        drawWaitingRoom();
     } else {
-        hudSystem(m_sync, m_autoFire.enabled, *m_graphics);
-        if (!m_sync.gameOver) {
-            bossHealthBar(m_registry, *m_graphics);
-            levelBannerScreen(m_sync, *m_graphics);
-        }
-        const bool keyboard =
-            m_menuKeys.confirm && m_gameOverTime >= GameOverKeyDelay;
-        if (m_sync.gameOver && gameOverScreen(m_sync, *m_graphics, keyboard)) {
-            m_sounds.play(audio::SoundEvent::MenuBack);
-            leaveRoom();
-        }
+        drawGame();
     }
     playerNoticeSystem(m_sync, *m_graphics);
 }
