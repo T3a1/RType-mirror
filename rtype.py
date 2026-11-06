@@ -729,6 +729,7 @@ examples:
   ./rtype.py                    server in Docker + 1 client
   ./rtype.py --native -c 2      server built and run here + 2 clients
   ./rtype.py -g sfml            client built with SFML
+  ./rtype.py --gui              the same options in a window
   ./rtype.py -S -n              only the server, built and run here
   ./rtype.py -O -H 10.0.0.5 -c 2
                                 2 clients joining the server at 10.0.0.5
@@ -751,6 +752,9 @@ def parse_args() -> argparse.Namespace:
         description="Builds and starts the R-Type server (in Docker by default, or\n"
                     "natively) and its clients, or runs one developer tool.")
     game = parser.add_argument_group("game (default mode)")
+    game.add_argument("-G", "--gui", action="store_true",
+                      help="open the graphical launcher: a window with these "
+                           "options, which shows and runs the matching command")
     only = game.add_mutually_exclusive_group()
     only.add_argument("-S", "--server-only", dest="only", action="store_const",
                       const="server", help="start only the server, until Ctrl+C (for "
@@ -819,6 +823,14 @@ def check_game_options(args: argparse.Namespace) -> None:
         args.clients = 1
 
 
+def open_gui() -> int:
+    """--gui: opens the window of rtype_gui.py, which runs this script with the
+    options chosen in it."""
+    sys.path.insert(0, str(ROOT))
+    import rtype_gui
+    return rtype_gui.main()
+
+
 ACTIONS = {
     "test": run_tests,
     "coverage": run_coverage,
@@ -848,12 +860,18 @@ def main() -> int:
     # Turns `docker stop`/`kill` of the launcher into a normal exit, so the
     # server and the clients are stopped too.
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(128 + signal.SIGTERM))
+    if hasattr(signal, "SIGBREAK"):
+        # Windows: the graphical launcher stops us with Ctrl+Break, which
+        # would otherwise end Python without stopping the server and clients.
+        signal.signal(signal.SIGBREAK, signal.default_int_handler)
     try:
         install_hooks()
         if args.check_format is not None:
             return check_format(args.check_format)
         if args.action:
             return ACTIONS[args.action]()
+        if args.gui:
+            return open_gui()
         check_game_options(args)
         if args.only == "server":
             return serve(args)
