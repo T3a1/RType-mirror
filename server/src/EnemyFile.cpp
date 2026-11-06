@@ -168,15 +168,20 @@ void readPattern(const Json &object, const std::string &where,
     checkKeys(*it, {"kind", "amplitude", "frequency", "diveDelay", "diveSpeed"},
               at);
     const auto kind = it->find("kind");
-    const auto name = std::ranges::find_if(PatternNames, [&](const auto &item) {
-        return kind != it->end() && kind->is_string() &&
-               kind->template get_ref<const std::string &>() == item.first;
-    });
-    if (name == PatternNames.end()) {
+    const std::string name = kind != it->end() && kind->is_string()
+                                 ? kind->get<std::string>()
+                                 : std::string{};
+    bool known = false;
+    for (const auto &[patternName, value] : PatternNames) {
+        if (name == patternName) {
+            pattern = rtype::MovementPattern{.kind = value};
+            known = true;
+        }
+    }
+    if (!known) {
         throw EnemiesError(
             at + ".kind: must be one of straight, sine, zigzag, dive");
     }
-    pattern = rtype::MovementPattern{.kind = name->second};
     read(*it, "amplitude", 0.0, rtype::PlayfieldHeight, at, pattern.amplitude);
     read(*it, "frequency", 0.0, 10.0, at, pattern.frequency);
     readSeconds(*it, "diveDelay", 60.0, at, pattern.diveDelay);
