@@ -28,11 +28,19 @@ hand only.
 | W A S D | Arrow keys | Move the ship |
 | Space | Right Ctrl | Shoot: one shot per press. Held for 1 second, then released: a charged shot that goes through enemies |
 | F | Right Shift | Auto-fire on or off: the ship shoots on its own, 4 times per second |
-| Escape | Escape | Quit |
+| Escape | Escape | Leave the room. In the room list: back to the main menu |
 
-**Choose your own keys**: write a `controls.cfg` file in the folder you start
-the game from (or give its path with `--controls FILE`). Each line gives the
-keys of one action and replaces its default keys:
+In the menus, the arrow keys move the selection, and Space or Enter chooses.
+
+**Choose your own keys**: open Settings in the main menu, then the Controls tab.
+Each action has two keys: choose one, then press the new key, or Escape to
+cancel. The game tells you if another action uses the same key, and Reset keys
+brings back the default ones. The arrow keys, Space, Enter and Escape always
+work in the menus.
+
+Your choice is saved in a `controls.cfg` file in the folder you start the game
+from (or in the file given with `--controls FILE`), which you can also edit by
+hand. Each line gives the keys of one action and replaces its default keys:
 
 ```text
 # action = key key...
@@ -48,6 +56,28 @@ autofire = Tab
   Z Q S D of a French AZERTY keyboard.
 - A line the game cannot read is reported when it starts, and that action
   keeps its default keys.
+
+**Change the volume**: open Settings in the main menu. The game saves your
+choice in a `settings.cfg` file in the folder you start it from, which you can
+also edit by hand. A volume goes from 0 to 1:
+
+```text
+# name = value
+music_volume = 0.4
+sound_volume = 1
+auto_fire = off
+player_labels = on
+```
+
+A line the game cannot read is reported when it starts, and that setting keeps
+its value. Saving replaces the whole file, so your comments are not kept.
+
+**Accessibility options**: open Accessibility in the main menu.
+
+- **Auto-fire**: auto-fire is on when the game starts. The auto-fire key still
+  turns it on or off during a session, without changing this option.
+- **Player labels**: shows "P1" and "(you)" above the ships. Without them, only
+  the color tells the ships apart during a game.
 
 ## Getting started
 
@@ -87,7 +117,7 @@ locally). A button on each page switches to its French version
 | [Architecture](docs/ARCHITECTURE.md) | How the code is organized: game engine, subsystems, game loop, threads. |
 | [Network protocol](docs/PROTOCOL.md) | The messages exchanged between the server and the clients. |
 | [Technical study](docs/TECHNICAL_STUDY.md) | Why these technologies: comparisons, storage, security, accessibility, before and after. |
-| [How-to guides](docs/HOWTO.md) | Adding a component, a system, an enemy or a packet; building and debugging. |
+| [How-to guides](docs/HOWTO.md) | Adding a component, a system, an enemy, a packet, a sound, a menu page or a setting; building and debugging. |
 | [Levels](docs/LEVELS.md) | Writing a level: the JSON file of its enemy waves, and how the server plays the levels. |
 | [Weapons](docs/WEAPONS.md) | The charged shot, the power-ups and the weapon settings file. |
 | [Enemies](docs/ENEMIES.md) | The enemy file: the stats of every enemy, and new enemies and bosses without writing code. |

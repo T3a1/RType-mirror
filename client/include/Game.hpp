@@ -10,6 +10,9 @@
 
 #include "Bench.hpp"
 #include "Controls.hpp"
+#include "MenuPages.hpp"
+#include "RoomPages.hpp"
+#include "Settings.hpp"
 #include "SpriteSheets.hpp"
 #include "audio/IAudio.hpp"
 #include "audio/SoundBoard.hpp"
@@ -19,7 +22,6 @@
 #include "graphics/IGraphics.hpp"
 #include "network/NetworkClient.hpp"
 #include "systems/InputSystem.hpp"
-#include "systems/LobbySystem.hpp"
 #include "systems/NetworkSyncSystem.hpp"
 
 #include <array>
@@ -46,6 +48,8 @@ inline constexpr std::size_t BackgroundLayerCount = 2;
  * @param bench The network benchmark to run instead of the keyboard, if
  * any.
  * @param controls The keys bound to each control.
+ * @param controlsPath The file the keys are saved in when they change.
+ * @param settings The settings of the player.
  **/
 struct GameOptions {
     bool interpolate = true;
@@ -53,6 +57,8 @@ struct GameOptions {
     std::optional<std::uint32_t> room;
     std::optional<BenchConfig> bench;
     Controls controls = defaultControls();
+    std::string controlsPath = DefaultControlsPath;
+    Settings settings;
 };
 
 /**
@@ -108,8 +114,20 @@ class Game {
     void render(engine::Duration dt);
     void registerSystems();
     void registerRenderSystems();
-    void addRender(Layer layer, std::string name, engine::System system);
+    void addRender(Layer layer, std::string name, engine::System system,
+                   engine::SystemOptions options = {});
     [[nodiscard]] bool inRoom() const;
+    void handleBackKey();
+    [[nodiscard]] MenuContext menuContext();
+    void applyMainChoice(MainChoice choice);
+    void applyVolumes();
+    void drawMenu();
+    void finishSettingsPage(const SettingsResult &result);
+    void drawSettings();
+    void drawAccessibility();
+    void drawLobby();
+    void drawWaitingRoom();
+    void drawGame();
     void drawScreens();
     void handleLobbyMessages(const std::vector<rtype::protocol::Payload> &all);
     void applyLobbyChoice(std::optional<std::uint32_t> room);
@@ -135,11 +153,14 @@ class Game {
     SyncState m_sync;
     bool m_quitRequested = false;
     LobbyState m_lobby;
+    MenuState m_menu;
     MenuInput m_menuInput;
     std::optional<std::uint32_t> m_autoJoin;
     float m_gameOverTime = 0.0F;
     std::optional<Bench> m_bench;
     Controls m_controls;
+    std::string m_controlsPath;
+    Settings m_settings;
     AutoFire m_autoFire;
     NetworkClient::TimePoint m_now;
     std::vector<rtype::protocol::Payload> m_payloads;

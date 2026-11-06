@@ -66,6 +66,8 @@ KeyboardKey toRaylib(Key key)
         return KEY_ENTER;
     case Key::Tab:
         return KEY_TAB;
+    case Key::Escape:
+        return KEY_ESCAPE;
     case Key::LeftShift:
         return KEY_LEFT_SHIFT;
     case Key::RightShift:
@@ -105,7 +107,8 @@ RaylibGraphics::RaylibGraphics(const WindowConfig &config)
     if (!IsWindowReady()) {
         throw std::runtime_error("cannot open the window");
     }
-    SetExitKey(KEY_ESCAPE);
+    // Escape goes back in the menus: the game decides when to quit.
+    SetExitKey(KEY_NULL);
 }
 
 RaylibGraphics::~RaylibGraphics()

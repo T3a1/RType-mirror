@@ -195,7 +195,8 @@ its room. What remains to store is configuration:
 | Weapon settings | `server/weapons.json` | JSON | The developers |
 | Enemy and boss kinds | `server/enemies.json` | JSON | The developers |
 | Banned and allowed addresses | `--banlist`, `--whitelist` files | Text, one address per line | The server (console commands) |
-| Key bindings | `controls.cfg` | Text, `action = keys` | The player |
+| Key bindings | `controls.cfg` | Text, `action = keys` | The client (Settings page), or the player by hand |
+| Volumes and accessibility options | `settings.cfg` | Text, `name = value` | The client (menu pages), or the player by hand |
 | Benchmark results | `build/netbench/*.csv` | CSV | The client, with `--bench` |
 
 ### Comparison
@@ -264,10 +265,10 @@ the rest is tracked in the project's issues.
 
 | Category | What exists | Inspired by | Still to do |
 |----------|-------------|-------------|-------------|
-| **Physical and motor** | All keys remappable (`controls.cfg`). Default keys for either hand, so the game can be played with one hand. Auto-fire, so firing needs no repeated presses. | Remapping and toggle options of most PC games | Game speed, controller |
-| **Visual** | Player colors from the Okabe-Ito palette, which color-blind players can tell apart. Never color alone: each ship shows "P1" and "(you)", and notices name the player. | Color-blind modes of multiplayer games | Scalable game UI, high contrast |
-| **Audio** | Sound is never the only cue: shots, explosions, the charge glow, the level banner and the game over screen show on screen what the sounds tell. | Visual cues in most action games | Volume settings, turning sound off |
-| **Mental and cognitive** | One-page menus, a few clear actions, a "Level 2" banner and final scores. Three difficulty levels and the choice of the starting level, picked in the waiting room. | Difficulty settings of most action games | A control reminder, reducing flashing effects |
+| **Physical and motor** | All keys remappable in the Settings page or in `controls.cfg`, with two keys per action. Default keys for either hand, so the game can be played with one hand. Auto-fire, so firing needs no repeated presses, which an option can turn on at the start. Menus work with the keyboard alone or the mouse. | Remapping and toggle options of most PC games | Game speed, controller |
+| **Visual** | Player colors from the Okabe-Ito palette, which color-blind players can tell apart. Not color alone: by default, each ship shows "P1" and "(you)", an option the player can turn off, and notices name the player. The keyboard selection is marked with `>`, not only by a color. | Color-blind modes of multiplayer games | Scalable game UI, high contrast |
+| **Audio** | Sound is never the only cue: shots, explosions, the charge glow, the level banner and the game over screen show on screen what the sounds tell. Separate volumes for the music and the sounds, saved between sessions; a volume of 0 turns it off. | Volume settings and visual cues in most action games | Nothing planned |
+| **Mental and cognitive** | Short menus, a few clear actions, a "Level 2" banner and final scores. A How to play page shows the rules and the player's own keys. Three difficulty levels and the choice of the starting level, picked in the waiting room. | Difficulty settings of most action games | Reducing flashing effects |
 
 **The documentation**: online pages with a search bar and an outline; a light or dark
 theme that follows the reader's system; images with a visible caption; headings in
@@ -296,10 +297,10 @@ Measured on 2026-11-06, against the `v1.0` tag (2026-10-18).
 
 | | Part 1 (`v1.0`) | Now |
 |---|----------------|-----|
-| C++ code (lines, with headers) | 8,210 | 26,600 |
-| Unit tests | 86 | 290 |
-| ECS systems (source files) | 20 | 34 |
-| Protocol version | 1 | 11 |
+| C++ code (lines, with headers) | 8,210 | 30,000 |
+| Unit tests | 86 | 375 |
+| ECS systems (source files) | 20 | 33 |
+| Protocol version | 1 | 12 |
 | Games on one server | 1 | Up to 16 rooms, with a lobby |
 | Graphics libraries | Raylib, called directly | Raylib, SFML, ncurses, behind an interface |
 | Network library | Asio, visible in the code | Hidden behind an interface, tested on a fake network |
@@ -325,7 +326,8 @@ types with movement patterns; levels, weapons and enemies in JSON files; two
 end-level bosses; obstacles and destroyable tiles; charged shot and power-ups; game
 over and final scores; difficulty, starting level and boss chosen in the waiting
 room; sound effects and music; lobby, rooms and a waiting room; administration
-console with bans and a white list; key remapping and auto-fire; a graphical
+console with bans and a white list; key remapping and auto-fire; a main menu
+with settings, accessibility options, how to play and credits; a graphical
 launcher; a Windows build in the CI.
 
 ## 10. What we would do differently

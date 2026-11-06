@@ -75,7 +75,8 @@ Thumbs.db
 skills-lock.json
 CLAUDE.md
 
-# Personal key bindings of the client
+# Personal key bindings and settings of the client
 controls.cfg
+settings.cfg
 
 __pycache__/

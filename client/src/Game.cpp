@@ -51,10 +51,6 @@ constexpr std::array<BackgroundLayer, BackgroundLayerCount> BackgroundLayers{{
  * Space also fires, so a player still firing does not leave it by accident. */
 constexpr float GameOverKeyDelay = 1.5F;
 
-/** @brief The volume of the music, until the settings let the player choose
- * it. */
-constexpr float DefaultMusicVolume = 0.4F;
-
 /** @brief The left margin of the connection status, in pixels. */
 constexpr float statusX = 20.0F;
 /** @brief The distance between the status and the bottom, in pixels. */
@@ -95,15 +91,21 @@ Game::Game(const std::string &host, std::uint16_t port,
       m_autoJoin(options.bench && !options.room
                      ? std::optional<std::uint32_t>{rtype::protocol::AnyRoom}
                      : options.room),
-      m_controls(options.controls)
+      m_controls(options.controls), m_controlsPath(options.controlsPath),
+      m_settings(options.settings)
 {
     m_sync.interpolate = options.interpolate;
     m_sync.predict = options.predict;
-    m_audio->setMusicVolume(DefaultMusicVolume);
+    if (m_autoJoin) {
+        m_menu.page = MenuPage::Lobby;
+    }
+    applyVolumes();
+    m_autoFire.enabled = m_settings.autoFire;
     if (options.bench) {
         m_bench.emplace(*options.bench);
         m_audio->setSoundVolume(0.0F);
         m_audio->setMusicVolume(0.0F);
+        m_autoFire.enabled = false;
     }
     spawnBackground();
     registerSystems();
@@ -225,11 +227,14 @@ void Game::registerSystems()
  * @param layer The layer the system draws in.
  * @param name The name of the system, for logs and debugging.
  * @param system The system to run.
+ * @param options When the system runs.
  **/
-void Game::addRender(Layer layer, std::string name, engine::System system)
+void Game::addRender(Layer layer, std::string name, engine::System system,
+                     engine::SystemOptions options)
 {
     m_layers.at(static_cast<std::size_t>(layer))
-        .add(engine::Stage::Output, std::move(name), std::move(system));
+        .add(engine::Stage::Output, std::move(name), std::move(system),
+             std::move(options));
 }
 
 /**
@@ -248,9 +253,11 @@ void Game::registerRenderSystems()
     addRender(Layer::World, "chargeGlow", [this](Registry &r, Duration) {
         chargeGlowSystem(r, m_sheets, *m_graphics);
     });
-    addRender(Layer::World, "playerLabels", [this](Registry &r, Duration) {
-        playerLabelSystem(r, m_sync, *m_graphics);
-    });
+    addRender(Layer::World, "playerLabels",
+              [this](Registry &r, Duration) {
+                  playerLabelSystem(r, m_sync, *m_graphics);
+              },
+              {.when = [this] { return m_settings.playerLabels; }});
     addRender(Layer::World, "powerUpLabels", [this](Registry &r, Duration) {
         powerUpLabelSystem(r, *m_graphics);
     });
@@ -318,50 +325,219 @@ void Game::leaveRoom()
     m_registry = engine::Registry{};
     createBackground();
     m_lobby.screen = LobbyState::Screen::Lobby;
-    m_lobby.selected = 0;
+    m_lobby.lobbyCursor = MenuCursor{};
+    m_lobby.waitingCursor = MenuCursor{};
     m_gameOverTime = 0.0F;
+}
+
+/**
+ * @brief Handles the back key: it leaves the room, stops waiting for a new key
+ * or goes back to the main menu. It does nothing in the main menu or while a
+ * room is being joined, and quits during a benchmark.
+ **/
+void Game::handleBackKey()
+{
+    if (!m_menuKeys.back) {
+        return;
+    }
+    if (m_bench) {
+        m_quitRequested = true;
+    } else if (inRoom()) {
+        m_sounds.play(audio::SoundEvent::MenuBack);
+        leaveRoom();
+    } else if (m_menu.settings.capture.slot()) {
+        m_sounds.play(audio::SoundEvent::MenuBack);
+        m_menu.settings.capture.cancel();
+    } else if (m_menu.page != MenuPage::Main &&
+               m_lobby.screen != LobbyState::Screen::Joining) {
+        m_sounds.play(audio::SoundEvent::MenuBack);
+        m_menu.page = MenuPage::Main;
+    }
+}
+
+/**
+ * @brief Returns what the menus need for this frame.
+ * @return The graphics backend, the sounds and the menu keys.
+ **/
+MenuContext Game::menuContext()
+{
+    return {
+        .graphics = m_graphics.get(), .sounds = &m_sounds, .keys = m_menuKeys};
+}
+
+/**
+ * @brief Applies the choice of the main menu.
+ * @param choice What the player chose.
+ **/
+void Game::applyMainChoice(MainChoice choice)
+{
+    switch (choice) {
+    case MainChoice::None:
+        break;
+    case MainChoice::Play:
+        m_menu.page = MenuPage::Lobby;
+        break;
+    case MainChoice::Settings:
+        m_menu.page = MenuPage::Settings;
+        break;
+    case MainChoice::Accessibility:
+        m_menu.page = MenuPage::Accessibility;
+        break;
+    case MainChoice::HowToPlay:
+        m_menu.page = MenuPage::HowToPlay;
+        break;
+    case MainChoice::Credits:
+        m_menu.page = MenuPage::Credits;
+        break;
+    case MainChoice::Quit:
+        m_quitRequested = true;
+        break;
+    }
+}
+
+/**
+ * @brief Gives the volumes of the settings to the audio backend.
+ **/
+void Game::applyVolumes()
+{
+    m_audio->setMusicVolume(m_settings.musicVolume);
+    m_audio->setSoundVolume(m_settings.soundVolume);
+}
+
+/**
+ * @brief Ends a frame of a page of settings: saves what changed, and goes back
+ * to the main menu if the player chose to.
+ * @param result What the player did on the page.
+ **/
+void Game::finishSettingsPage(const SettingsResult &result)
+{
+    if (result.changed) {
+        saveSettingsFile(SettingsPath, m_settings);
+    }
+    if (result.controlsChanged) {
+        saveControlsFile(m_controlsPath, m_controls);
+    }
+    if (result.back) {
+        m_menu.page = MenuPage::Main;
+    }
+}
+
+/**
+ * @brief Draws the Settings page, and applies and saves what changed.
+ **/
+void Game::drawSettings()
+{
+    const SettingsResult result =
+        settingsPage(menuContext(), m_menu.settings, m_settings, m_controls);
+    if (result.changed) {
+        applyVolumes();
+    }
+    finishSettingsPage(result);
+}
+
+/**
+ * @brief Draws the Accessibility page, and applies and saves what changed.
+ * Auto-fire only follows its own checkbox, so that changing another option
+ * keeps what the player chose with its key.
+ **/
+void Game::drawAccessibility()
+{
+    const bool autoFire = m_settings.autoFire;
+    const SettingsResult result = accessibilityPage(
+        menuContext(), m_menu.accessibilityCursor, m_settings);
+    if (m_settings.autoFire != autoFire) {
+        m_autoFire.enabled = m_settings.autoFire;
+    }
+    finishSettingsPage(result);
+}
+
+/**
+ * @brief Draws the page of the menus the player is on.
+ **/
+void Game::drawMenu()
+{
+    const MenuContext context = menuContext();
+    switch (m_menu.page) {
+    case MenuPage::Main:
+        applyMainChoice(
+            mainMenuPage(context, m_menu.mainCursor,
+                         m_network.state() == NetworkClient::State::Connected));
+        break;
+    case MenuPage::Lobby:
+        drawLobby();
+        break;
+    case MenuPage::Settings:
+        drawSettings();
+        break;
+    case MenuPage::Accessibility:
+        drawAccessibility();
+        break;
+    case MenuPage::HowToPlay:
+        if (howToPlayPage(context, m_menu.howToPlayCursor, m_controls)) {
+            m_menu.page = MenuPage::Main;
+        }
+        break;
+    case MenuPage::Credits:
+        if (creditsPage(context, m_menu.creditsCursor)) {
+            m_menu.page = MenuPage::Main;
+        }
+        break;
+    }
+}
+
+/**
+ * @brief Draws the menu of the rooms once connected, and joins the chosen room.
+ **/
+void Game::drawLobby()
+{
+    if (m_network.state() != NetworkClient::State::Connected) {
+        return;
+    }
+    applyLobbyChoice(lobbyScreen(m_lobby, menuContext()));
+}
+
+/**
+ * @brief Draws the waiting room, and starts the game or leaves the room.
+ **/
+void Game::drawWaitingRoom()
+{
+    const WaitingChoice choice =
+        waitingRoomScreen(m_lobby, m_sync, menuContext());
+    if (choice == WaitingChoice::Start) {
+        m_network.startGame(m_lobby.settings, std::chrono::steady_clock::now());
+    } else if (choice == WaitingChoice::Leave) {
+        leaveRoom();
+    }
+}
+
+/**
+ * @brief Draws the HUD of a running game, then its banners or game over screen.
+ **/
+void Game::drawGame()
+{
+    hudSystem(m_sync, m_autoFire.enabled, *m_graphics);
+    if (!m_sync.gameOver) {
+        bossHealthBar(m_registry, *m_graphics);
+        levelBannerScreen(m_sync, *m_graphics);
+    }
+    // The fire key also confirms: wait before listening to it on this screen.
+    MenuContext context = menuContext();
+    context.keys.confirm =
+        context.keys.confirm && m_gameOverTime >= GameOverKeyDelay;
+    if (m_sync.gameOver && gameOverScreen(m_sync, context)) {
+        leaveRoom();
+    }
 }
 
 void Game::drawScreens()
 {
-    const bool moved = m_menuKeys.up || m_menuKeys.down;
+    handleBackKey();
     if (!inRoom()) {
-        if (m_network.state() == NetworkClient::State::Connected) {
-            if (moved) {
-                m_sounds.play(audio::SoundEvent::MenuMove);
-            }
-            const auto room = lobbyScreen(m_lobby, *m_graphics, m_menuKeys);
-            if (room) {
-                m_sounds.play(audio::SoundEvent::MenuConfirm);
-            }
-            applyLobbyChoice(room);
-        }
+        drawMenu();
     } else if (!m_sync.started) {
-        if (moved) {
-            m_sounds.play(audio::SoundEvent::MenuMove);
-        }
-        const WaitingChoice choice =
-            waitingRoomScreen(m_lobby, m_sync, *m_graphics, m_menuKeys);
-        if (choice == WaitingChoice::Start) {
-            m_sounds.play(audio::SoundEvent::MenuConfirm);
-            m_network.startGame(m_lobby.settings,
-                                std::chrono::steady_clock::now());
-        } else if (choice == WaitingChoice::Leave) {
-            m_sounds.play(audio::SoundEvent::MenuBack);
-            leaveRoom();
-        }
+        drawWaitingRoom();
     } else {
-        hudSystem(m_sync, m_autoFire.enabled, *m_graphics);
-        if (!m_sync.gameOver) {
-            bossHealthBar(m_registry, *m_graphics);
-            levelBannerScreen(m_sync, *m_graphics);
-        }
-        const bool keyboard =
-            m_menuKeys.confirm && m_gameOverTime >= GameOverKeyDelay;
-        if (m_sync.gameOver && gameOverScreen(m_sync, *m_graphics, keyboard)) {
-            m_sounds.play(audio::SoundEvent::MenuBack);
-            leaveRoom();
-        }
+        drawGame();
     }
     playerNoticeSystem(m_sync, *m_graphics);
 }

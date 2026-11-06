@@ -42,8 +42,9 @@ set(SOURCE_FILES
 # built.
 if(TARGET r-type_client_network)
     list(APPEND SOURCE_FILES src/network_client_test.cpp src/controls_test.cpp src/sound_board_test.cpp
-        src/player_notices_test.cpp)
-    set(CLIENT_NETWORK_LIBRARY r-type_client_network r-type_client_controls r-type_client_audio)
+        src/player_notices_test.cpp src/menu_test.cpp src/settings_test.cpp)
+    set(CLIENT_NETWORK_LIBRARY r-type_client_network r-type_client_controls r-type_client_audio
+        r-type_client_menu r-type_client_settings)
 endif()
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})

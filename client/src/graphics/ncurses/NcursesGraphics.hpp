@@ -35,7 +35,7 @@ namespace client::gfx {
  * A terminal only sends key presses and their auto-repeat, never releases:
  * a key counts as held for a short time after each press, and only one key
  * can be held at once, and Shift, Ctrl and Alt alone are never seen.
- * Escape, q or Ctrl+C closes the client, so Q cannot be bound. The mouse is
+ * q or Ctrl+C closes the client, so Q cannot be bound. The mouse is
  * only known where it clicks, and only in terminals that report it.
  *
  * While it runs, stderr (the logs) is redirected to r-type_client.log in the
