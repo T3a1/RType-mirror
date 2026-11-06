@@ -103,7 +103,7 @@ the options. Before building, it sets up everything that is missing:
 | *(none)* | Starts the server in Docker and one client. |
 | `-n`, `--native` | Runs the server natively instead of in Docker. |
 | `-c N`, `--clients N` | Starts `N` clients (default: 1). |
-| `-r N`, `--room N` | The clients enter room `N` directly, created if needed (default: they start in the lobby, where they choose a room). One server runs up to 16 independent games. |
+| `-r N`, `--room N` | The clients enter room `N` directly, created if needed (default: they start in the main menu, and Play leads to the lobby, where they choose a room). One server runs up to 16 independent games. |
 | `-p PORT`, `--port PORT` | UDP port used by the clients (default: 4242). |
 | `-H HOST`, `--host HOST` | Address the clients connect to (default: 127.0.0.1). |
 | `-g LIB`, `--graphics LIB` | Graphics library of the client: `raylib` (default), `sfml` or `ncurses` (see [Terminal client](#terminal-client-ncurses)). Changing it reconfigures and rebuilds `build/`. |
@@ -254,7 +254,8 @@ library, but the game is degraded:
   key counts as held for about half a second after it is pressed, then as long
   as it repeats. Only one key works at a time: you cannot move and fire
   together.
-- Quit with `q` or Ctrl+C. Escape leaves the room, then quits from the room list.
+- Quit with `q` or Ctrl+C. Escape leaves the room, then goes back to the main
+  menu from the room list.
 - The logs go to `r-type_client.log` in the current directory instead of the
   terminal. With `--native`, `rtype.py` writes the server's output to
   `build/server.log`, and it starts one client only (start others from other

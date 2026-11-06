@@ -7,6 +7,7 @@
 
 #include "FakeAudio.hpp"
 #include "Menu.hpp"
+#include "MenuPages.hpp"
 
 #include <gtest/gtest.h>
 
@@ -19,6 +20,7 @@
 
 namespace {
 
+using client::MainChoice;
 using client::MenuCursor;
 using client::MenuInput;
 using client::MenuKeys;
@@ -92,10 +94,15 @@ struct MenuRig {
         return files;
     }
 
+    [[nodiscard]] client::MenuContext context(const MenuKeys &keys = {})
+    {
+        return {.graphics = &graphics, .sounds = &board, .keys = keys};
+    }
+
     // One frame of a menu of a few buttons; returns which were chosen.
     std::vector<bool> buttons(std::size_t count, const MenuKeys &keys = {})
     {
-        MenuPanel panel(graphics, keys, board, cursor);
+        MenuPanel panel(context(keys), cursor);
         std::vector<bool> chosen;
         for (std::size_t i = 0; i < count; ++i) {
             chosen.push_back(panel.button(Row, "Item"));
@@ -244,7 +251,7 @@ TEST(MenuPanel, ClickChoosesAButtonWithoutTheSelection)
     rig.cursor.selected = 5;
     rig.click(Row.x + 1.0F);
 
-    MenuPanel panel(rig.graphics, {}, rig.board, rig.cursor);
+    MenuPanel panel(rig.context(), rig.cursor);
 
     EXPECT_TRUE(panel.button(Row, "Item"));
     EXPECT_EQ(rig.played(), std::vector<std::string>{ConfirmSound});
@@ -255,7 +262,7 @@ TEST(MenuPanel, ADisabledButtonCannotBeChosen)
     MenuRig rig;
     rig.click(Row.x + 1.0F);
 
-    MenuPanel panel(rig.graphics, {.confirm = true}, rig.board, rig.cursor);
+    MenuPanel panel(rig.context({.confirm = true}), rig.cursor);
 
     EXPECT_FALSE(panel.button(Row, "Item", false));
     EXPECT_TRUE(rig.played().empty());
@@ -265,7 +272,7 @@ TEST(MenuPanel, ABackButtonPlaysTheBackSound)
 {
     MenuRig rig;
 
-    MenuPanel panel(rig.graphics, {.confirm = true}, rig.board, rig.cursor);
+    MenuPanel panel(rig.context({.confirm = true}), rig.cursor);
 
     EXPECT_TRUE(panel.backButton(Row, "Back"));
     EXPECT_EQ(rig.played(), std::vector<std::string>{BackSound});
@@ -279,7 +286,7 @@ TEST(MenuPanel, MarksTheSelectedWidgetWithText)
 
     rig.graphics.texts.clear();
     rig.cursor.selected = 1;
-    MenuPanel panel(rig.graphics, {}, rig.board, rig.cursor);
+    MenuPanel panel(rig.context(), rig.cursor);
     static_cast<void>(panel.button(Row, "First"));
     EXPECT_FALSE(rig.drew(">"));
 }
@@ -289,7 +296,7 @@ TEST(MenuPanel, ConfirmTogglesACheckbox)
     MenuRig rig;
     bool value = false;
 
-    MenuPanel panel(rig.graphics, {.confirm = true}, rig.board, rig.cursor);
+    MenuPanel panel(rig.context({.confirm = true}), rig.cursor);
 
     EXPECT_TRUE(panel.checkbox(Row, "Labels", value));
     EXPECT_TRUE(value);
@@ -303,7 +310,7 @@ TEST(MenuPanel, ClickTogglesACheckboxOff)
     bool value = true;
     rig.click(Row.x + 1.0F);
 
-    MenuPanel panel(rig.graphics, {}, rig.board, rig.cursor);
+    MenuPanel panel(rig.context(), rig.cursor);
 
     EXPECT_TRUE(panel.checkbox(Row, "Labels", value));
     EXPECT_FALSE(value);
@@ -315,7 +322,7 @@ TEST(MenuPanel, ACheckboxStaysAloneWithoutInput)
     MenuRig rig;
     bool value = true;
 
-    MenuPanel panel(rig.graphics, {}, rig.board, rig.cursor);
+    MenuPanel panel(rig.context(), rig.cursor);
 
     EXPECT_FALSE(panel.checkbox(Row, "Labels", value));
     EXPECT_TRUE(value);
@@ -327,12 +334,12 @@ TEST(MenuPanel, LeftAndRightMoveASliderBySteps)
     MenuRig rig;
     float value = 0.4F;
     {
-        MenuPanel panel(rig.graphics, {.right = true}, rig.board, rig.cursor);
+        MenuPanel panel(rig.context({.right = true}), rig.cursor);
         EXPECT_TRUE(panel.slider(Row, "Music", value));
     }
     EXPECT_FLOAT_EQ(value, 0.45F);
     {
-        MenuPanel panel(rig.graphics, {.left = true}, rig.board, rig.cursor);
+        MenuPanel panel(rig.context({.left = true}), rig.cursor);
         EXPECT_TRUE(panel.slider(Row, "Music", value));
     }
     EXPECT_FLOAT_EQ(value, 0.4F);
@@ -346,11 +353,11 @@ TEST(MenuPanel, ASliderStopsAtItsBounds)
     float low = 0.0F;
     float high = 1.0F;
     {
-        MenuPanel panel(rig.graphics, {.left = true}, rig.board, rig.cursor);
+        MenuPanel panel(rig.context({.left = true}), rig.cursor);
         EXPECT_FALSE(panel.slider(Row, "Low", low));
     }
     {
-        MenuPanel panel(rig.graphics, {.right = true}, rig.board, rig.cursor);
+        MenuPanel panel(rig.context({.right = true}), rig.cursor);
         EXPECT_FALSE(panel.slider(Row, "High", high));
     }
     EXPECT_FLOAT_EQ(low, 0.0F);
@@ -364,7 +371,7 @@ TEST(MenuPanel, OnlyTheSelectedSliderMoves)
     float first = 0.5F;
     float second = 0.5F;
 
-    MenuPanel panel(rig.graphics, {.right = true}, rig.board, rig.cursor);
+    MenuPanel panel(rig.context({.right = true}), rig.cursor);
     panel.slider(Row, "First", first);
     panel.slider(Row, "Second", second);
 
@@ -380,7 +387,7 @@ TEST(MenuPanel, ClickOnTheBarSetsASlider)
     const float start = Row.x + (Row.width / 2.0F);
     rig.click(start);
 
-    MenuPanel panel(rig.graphics, {}, rig.board, rig.cursor);
+    MenuPanel panel(rig.context(), rig.cursor);
 
     EXPECT_FALSE(panel.slider(Row, "Music", value));
     rig.click(start + 100.0F);
@@ -395,7 +402,7 @@ TEST(MenuPanel, ClickOnTheLabelDoesNotMoveASlider)
     float value = 0.5F;
     rig.click(Row.x + 1.0F);
 
-    MenuPanel panel(rig.graphics, {}, rig.board, rig.cursor);
+    MenuPanel panel(rig.context(), rig.cursor);
 
     EXPECT_FALSE(panel.slider(Row, "Music", value));
     EXPECT_FLOAT_EQ(value, 0.5F);
@@ -407,13 +414,13 @@ TEST(MenuPanel, LeftAndRightChangeTheTabAndWrap)
     const std::array<std::string, 2> labels{"Audio", "Controls"};
     std::size_t current = 0;
     {
-        MenuPanel panel(rig.graphics, {.left = true}, rig.board, rig.cursor);
+        MenuPanel panel(rig.context({.left = true}), rig.cursor);
         panel.tabs(Row, labels, current);
     }
     EXPECT_EQ(current, 1U);
     EXPECT_TRUE(rig.drew("[Controls]"));
     {
-        MenuPanel panel(rig.graphics, {.right = true}, rig.board, rig.cursor);
+        MenuPanel panel(rig.context({.right = true}), rig.cursor);
         panel.tabs(Row, labels, current);
     }
     EXPECT_EQ(current, 0U);
@@ -428,7 +435,7 @@ TEST(MenuPanel, TabsOnlyListenToTheKeysWhenSelected)
     rig.cursor.selected = 1;
     rig.cursor.count = 2;
 
-    MenuPanel panel(rig.graphics, {.right = true}, rig.board, rig.cursor);
+    MenuPanel panel(rig.context({.right = true}), rig.cursor);
     panel.tabs(Row, labels, current);
 
     EXPECT_EQ(current, 0U);
@@ -441,7 +448,7 @@ TEST(MenuPanel, ClickChoosesATab)
     std::size_t current = 0;
     rig.click(Row.x + Row.width - 1.0F);
 
-    MenuPanel panel(rig.graphics, {}, rig.board, rig.cursor);
+    MenuPanel panel(rig.context(), rig.cursor);
     panel.tabs(Row, labels, current);
 
     EXPECT_EQ(current, 1U);
@@ -453,9 +460,113 @@ TEST(MenuPanel, EmptyTabsStillCountAsAWidget)
     MenuRig rig;
     std::size_t current = 3;
     {
-        MenuPanel panel(rig.graphics, {}, rig.board, rig.cursor);
+        MenuPanel panel(rig.context(), rig.cursor);
         panel.tabs(Row, {}, current);
     }
     EXPECT_EQ(rig.cursor.count, 1U);
     EXPECT_EQ(current, 3U);
+}
+
+TEST(MenuPages, MainMenuOffersItsChoicesInOrder)
+{
+    MenuRig rig;
+    static_cast<void>(client::mainMenuPage(rig.context(), rig.cursor, true));
+
+    const MenuKeys confirm{.confirm = true};
+    EXPECT_EQ(client::mainMenuPage(rig.context(confirm), rig.cursor, true),
+              MainChoice::Play);
+    const std::array<MainChoice, 3> others{
+        MainChoice::HowToPlay, MainChoice::Credits, MainChoice::Quit};
+    for (const MainChoice expected : others) {
+        static_cast<void>(client::mainMenuPage(rig.context({.down = true}),
+                                               rig.cursor, true));
+        EXPECT_EQ(client::mainMenuPage(rig.context(confirm), rig.cursor, true),
+                  expected);
+    }
+}
+
+TEST(MenuPages, MainMenuChoosesNothingWithoutInput)
+{
+    MenuRig rig;
+
+    EXPECT_EQ(client::mainMenuPage(rig.context(), rig.cursor, true),
+              MainChoice::None);
+}
+
+TEST(MenuPages, PlayNeedsAConnection)
+{
+    MenuRig rig;
+
+    EXPECT_EQ(
+        client::mainMenuPage(rig.context({.confirm = true}), rig.cursor, false),
+        MainChoice::None);
+    EXPECT_TRUE(rig.played().empty());
+}
+
+TEST(MenuPages, TheOtherEntriesWorkWithoutAConnection)
+{
+    MenuRig rig;
+    static_cast<void>(client::mainMenuPage(rig.context(), rig.cursor, false));
+    static_cast<void>(
+        client::mainMenuPage(rig.context({.up = true}), rig.cursor, false));
+
+    EXPECT_EQ(
+        client::mainMenuPage(rig.context({.confirm = true}), rig.cursor, false),
+        MainChoice::Quit);
+}
+
+TEST(MenuPages, HowToPlayShowsTheDefaultKeys)
+{
+    const auto lines = client::howToPlayLines(client::defaultControls());
+
+    EXPECT_EQ(lines.at(1), "Move: Up, W / Down, S / Left, A / Right, D");
+    EXPECT_EQ(lines.at(2), "Shoot: Space, RightCtrl");
+    EXPECT_EQ(lines.at(4), "Auto-fire on or off: F, RightShift");
+}
+
+TEST(MenuPages, HowToPlayFollowsTheControls)
+{
+    client::Controls controls = client::defaultControls();
+    controls.at(static_cast<std::size_t>(client::Control::Fire)) = {
+        gfx::Key::Enter};
+    controls.at(static_cast<std::size_t>(client::Control::AutoFire)).clear();
+
+    const auto lines = client::howToPlayLines(controls);
+
+    EXPECT_EQ(lines.at(2), "Shoot: Enter");
+    EXPECT_EQ(lines.at(4), "Auto-fire on or off: no key");
+}
+
+TEST(MenuPages, HowToPlayDrawsItsLines)
+{
+    MenuRig rig;
+    const client::Controls controls = client::defaultControls();
+
+    static_cast<void>(
+        client::howToPlayPage(rig.context(), rig.cursor, controls));
+
+    EXPECT_TRUE(rig.drew(client::howToPlayLines(controls).at(2)));
+}
+
+TEST(MenuPages, HowToPlayGoesBack)
+{
+    MenuRig rig;
+    const client::Controls controls = client::defaultControls();
+
+    EXPECT_FALSE(client::howToPlayPage(rig.context(), rig.cursor, controls));
+    EXPECT_TRUE(client::howToPlayPage(rig.context({.confirm = true}),
+                                      rig.cursor, controls));
+    EXPECT_EQ(rig.played(), std::vector<std::string>{BackSound});
+}
+
+TEST(MenuPages, CreditsNameTheTeamAndGoBack)
+{
+    MenuRig rig;
+
+    EXPECT_FALSE(client::creditsPage(rig.context(), rig.cursor));
+    EXPECT_TRUE(
+        rig.drew("Leandre Fouret, Romane Cauvez, Thomas Peze, David Caron"));
+    EXPECT_TRUE(
+        client::creditsPage(rig.context({.confirm = true}), rig.cursor));
+    EXPECT_EQ(rig.played(), std::vector<std::string>{BackSound});
 }

@@ -63,6 +63,30 @@ class MenuInput {
 };
 
 /**
+ * @struct MenuContext
+ * @brief What every menu needs for one frame.
+ * @param graphics The graphics backend, which must outlive the menu.
+ * @param sounds The sounds of the game, which must outlive the menu.
+ * @param keys The menu keys of this frame.
+ **/
+struct MenuContext {
+    gfx::IGraphics *graphics = nullptr;
+    audio::SoundBoard *sounds = nullptr;
+    MenuKeys keys;
+};
+
+/** @brief The width of a row of the menus, in pixels. */
+inline constexpr float MenuRowWidth = 520.0F;
+/** @brief The height of a row of the menus, in pixels. */
+inline constexpr float MenuRowHeight = 40.0F;
+/** @brief The space between two rows of the menus, in pixels. */
+inline constexpr float MenuRowGap = 6.0F;
+/** @brief The height of a line of text of the menus, in pixels. */
+inline constexpr float MenuLineHeight = 34.0F;
+/** @brief The font size of the text of the menus, in pixels. */
+inline constexpr int MenuTextFontSize = 24;
+
+/**
  * @brief Draws one line of text centered around a point.
  * @param graphics The graphics backend to draw with.
  * @param text The text.
@@ -73,6 +97,22 @@ class MenuInput {
  **/
 void drawCentered(gfx::IGraphics &graphics, const std::string &text,
                   float centerX, float y, int fontSize, gfx::Color color);
+
+/**
+ * @brief Draws the title of a menu at the top of the window.
+ * @param graphics The graphics backend to draw with.
+ * @param title The title.
+ * @return The height below which the menu can continue, in pixels.
+ **/
+float drawMenuTitle(gfx::IGraphics &graphics, const std::string &title);
+
+/**
+ * @brief Returns the rectangle of a row of a centered column.
+ * @param screen The size of the window.
+ * @param y The top of the row.
+ * @return The rectangle.
+ **/
+[[nodiscard]] gfx::Rect menuRow(engine::Vec2f screen, float y);
 
 /**
  * @struct MenuCursor
@@ -98,13 +138,10 @@ class MenuPanel {
   public:
     /**
      * @brief Starts a frame of a menu and moves its selection.
-     * @param graphics The graphics backend, which must outlive the panel.
-     * @param keys The menu keys of this frame.
-     * @param sounds The sounds of the game, which must outlive the panel.
+     * @param context What the menu needs for this frame.
      * @param cursor The state of this menu, which must outlive the panel.
      **/
-    MenuPanel(gfx::IGraphics &graphics, const MenuKeys &keys,
-              audio::SoundBoard &sounds, MenuCursor &cursor);
+    MenuPanel(const MenuContext &context, MenuCursor &cursor);
     /**
      * @brief Ends the frame: keeps the number of widgets for the next one.
      **/

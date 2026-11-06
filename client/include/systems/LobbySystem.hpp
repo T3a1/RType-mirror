@@ -75,14 +75,11 @@ enum class WaitingChoice : std::uint8_t { None, Start, Leave };
  * @brief Draws the menu of the rooms, in screen pixels, and handles its mouse
  * and keyboard choices: quick match, new room, or a room of the list.
  * @param state The lobby state; the keyboard selection is updated.
- * @param graphics The graphics backend.
- * @param keys The menu keys of this frame.
- * @param sounds The sounds of the game, for the menu sounds.
+ * @param context What the menu needs for this frame.
  * @return The room to ask for (or AnyRoom or NewRoom), if one was chosen.
  **/
 [[nodiscard]] std::optional<std::uint32_t>
-lobbyScreen(LobbyState &state, gfx::IGraphics &graphics, const MenuKeys &keys,
-            audio::SoundBoard &sounds);
+lobbyScreen(LobbyState &state, const MenuContext &context);
 
 /**
  * @brief Draws the panel of a waiting room, in screen pixels: its players,
@@ -90,16 +87,12 @@ lobbyScreen(LobbyState &state, gfx::IGraphics &graphics, const MenuKeys &keys,
  * the next value) and the Start and Leave buttons.
  * @param state The lobby state; the keyboard selection is updated.
  * @param sync The sync state, for the players of the room.
- * @param graphics The graphics backend.
- * @param keys The menu keys of this frame.
- * @param sounds The sounds of the game, for the menu sounds.
+ * @param context What the menu needs for this frame.
  * @return What the player chose.
  **/
 [[nodiscard]] WaitingChoice waitingRoomScreen(LobbyState &state,
                                               const SyncState &sync,
-                                              gfx::IGraphics &graphics,
-                                              const MenuKeys &keys,
-                                              audio::SoundBoard &sounds);
+                                              const MenuContext &context);
 
 } // namespace client
 

@@ -18,24 +18,8 @@ namespace {
 using rtype::protocol::RoomInfo;
 using rtype::protocol::RoomStatus;
 
-/** @brief The width of a row of the screens, in pixels. */
-constexpr float RowWidth = 520.0F;
 /** @brief The space between two columns, in pixels. */
 constexpr float ColumnGap = 12.0F;
-/** @brief The height of a row, in pixels. */
-constexpr float RowHeight = 40.0F;
-/** @brief The space between two rows, in pixels. */
-constexpr float RowGap = 6.0F;
-/** @brief The space above the title, in pixels. */
-constexpr float TopMargin = 24.0F;
-/** @brief The height of the title, in pixels. */
-constexpr float TitleHeight = 64.0F;
-/** @brief The height of a line of text, in pixels. */
-constexpr float LineHeight = 34.0F;
-/** @brief The font size of the title, in pixels. */
-constexpr int TitleFontSize = 48;
-/** @brief The font size of the text, in pixels. */
-constexpr int TextFontSize = 24;
 /** @brief The items before the rooms of the list: Quick match and New room. */
 constexpr std::size_t FixedItems = 2;
 
@@ -58,22 +42,6 @@ std::string roomLabel(const RoomInfo &room)
 }
 
 /**
- * @brief Returns the rectangle of a row of a centered column.
- * @param screen The size of the window.
- * @param y The top of the row.
- * @return The rectangle.
- **/
-gfx::Rect rowAt(engine::Vec2f screen, float y)
-{
-    return {
-        .x = (screen.x - RowWidth) / 2.0F,
-        .y = y,
-        .width = RowWidth,
-        .height = RowHeight,
-    };
-}
-
-/**
  * @brief Returns the rectangle of an item of the lobby: two columns, so that
  * the 16 rooms fit in a 720-pixel window.
  * @param screen The size of the window.
@@ -83,14 +51,14 @@ gfx::Rect rowAt(engine::Vec2f screen, float y)
  **/
 gfx::Rect itemAt(engine::Vec2f screen, float top, std::size_t index)
 {
-    const float left = (screen.x - (2.0F * RowWidth) - ColumnGap) / 2.0F;
+    const float left = (screen.x - (2.0F * MenuRowWidth) - ColumnGap) / 2.0F;
     const std::size_t column = index % 2;
     const std::size_t row = index / 2;
     return {
-        .x = left + (static_cast<float>(column) * (RowWidth + ColumnGap)),
-        .y = top + (static_cast<float>(row) * (RowHeight + RowGap)),
-        .width = RowWidth,
-        .height = RowHeight,
+        .x = left + (static_cast<float>(column) * (MenuRowWidth + ColumnGap)),
+        .y = top + (static_cast<float>(row) * (MenuRowHeight + MenuRowGap)),
+        .width = MenuRowWidth,
+        .height = MenuRowHeight,
     };
 }
 
@@ -103,19 +71,15 @@ bool canJoin(const RoomInfo &room)
 }
 
 std::optional<std::uint32_t> lobbyScreen(LobbyState &state,
-                                         gfx::IGraphics &graphics,
-                                         const MenuKeys &keys,
-                                         audio::SoundBoard &sounds)
+                                         const MenuContext &context)
 {
-    MenuPanel panel(graphics, keys, sounds, state.lobbyCursor);
+    MenuPanel panel(context, state.lobbyCursor);
+    gfx::IGraphics &graphics = *context.graphics;
     const engine::Vec2f screen = graphics.screenSize();
     const bool joining = state.screen == LobbyState::Screen::Joining;
 
-    float y = TopMargin;
-    drawCentered(graphics, "R-TYPE", screen.x / 2.0F, y, TitleFontSize,
-                 gfx::colors::OffWhite);
-    y += TitleHeight;
-    std::string hint = "Up, Down and Enter, or the mouse. Esc quits.";
+    float y = drawMenuTitle(graphics, "R-TYPE");
+    std::string hint = "Up, Down and Enter, or the mouse. Esc goes back.";
     if (joining) {
         hint = "Joining...";
     } else if (state.refused) {
@@ -123,9 +87,9 @@ std::optional<std::uint32_t> lobbyScreen(LobbyState &state,
     } else if (state.closed) {
         hint = "An administrator closed your room.";
     }
-    drawCentered(graphics, hint, screen.x / 2.0F, y, TextFontSize,
+    drawCentered(graphics, hint, screen.x / 2.0F, y, MenuTextFontSize,
                  gfx::colors::OffWhite);
-    y += LineHeight;
+    y += MenuLineHeight;
 
     std::optional<std::uint32_t> choice;
     if (panel.button(itemAt(screen, y, 0), "Quick match", !joining)) {
@@ -219,23 +183,20 @@ void nextSetting(LobbyState &state, std::size_t setting)
 } // namespace
 
 WaitingChoice waitingRoomScreen(LobbyState &state, const SyncState &sync,
-                                gfx::IGraphics &graphics, const MenuKeys &keys,
-                                audio::SoundBoard &sounds)
+                                const MenuContext &context)
 {
-    MenuPanel panel(graphics, keys, sounds, state.waitingCursor);
+    MenuPanel panel(context, state.waitingCursor);
+    gfx::IGraphics &graphics = *context.graphics;
     const engine::Vec2f screen = graphics.screenSize();
 
-    float y = TopMargin;
-    drawCentered(graphics, "Room " + std::to_string(state.room),
-                 screen.x / 2.0F, y, TitleFontSize, gfx::colors::OffWhite);
-    y += TitleHeight;
+    float y = drawMenuTitle(graphics, "Room " + std::to_string(state.room));
     for (const auto &player : sync.players) {
         const bool local = player.slot == sync.localSlot;
         drawCentered(
             graphics,
             "P" + std::to_string(player.slot) + (local ? "  (you)" : ""),
-            screen.x / 2.0F, y, TextFontSize, playerColor(player.slot));
-        y += LineHeight;
+            screen.x / 2.0F, y, MenuTextFontSize, playerColor(player.slot));
+        y += MenuLineHeight;
     }
 
     // Each setting is a button that goes to its next value.
@@ -245,18 +206,18 @@ WaitingChoice waitingRoomScreen(LobbyState &state, const SyncState &sync,
         "Boss: " + bossName(state.settings.boss),
     };
     for (std::size_t i = 0; i < SettingCount; ++i) {
-        if (panel.button(rowAt(screen, y), labels.at(i))) {
+        if (panel.button(menuRow(screen, y), labels.at(i))) {
             nextSetting(state, i);
         }
-        y += RowHeight + RowGap;
+        y += MenuRowHeight + MenuRowGap;
     }
     drawCentered(graphics, "The settings of the player who starts are used",
-                 screen.x / 2.0F, y, TextFontSize, HintColor);
-    y += LineHeight;
+                 screen.x / 2.0F, y, MenuTextFontSize, HintColor);
+    y += MenuLineHeight;
 
-    const bool start = panel.button(rowAt(screen, y), "Start the game");
-    y += RowHeight + RowGap;
-    const bool leave = panel.backButton(rowAt(screen, y), "Back to lobby");
+    const bool start = panel.button(menuRow(screen, y), "Start the game");
+    y += MenuRowHeight + MenuRowGap;
+    const bool leave = panel.backButton(menuRow(screen, y), "Back to lobby");
     if (start) {
         return WaitingChoice::Start;
     }

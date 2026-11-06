@@ -10,6 +10,7 @@
 
 #include "Bench.hpp"
 #include "Controls.hpp"
+#include "MenuPages.hpp"
 #include "SpriteSheets.hpp"
 #include "audio/IAudio.hpp"
 #include "audio/SoundBoard.hpp"
@@ -108,6 +109,9 @@ class Game {
     void addRender(Layer layer, std::string name, engine::System system);
     [[nodiscard]] bool inRoom() const;
     void handleBackKey();
+    [[nodiscard]] MenuContext menuContext();
+    void applyMainChoice(MainChoice choice);
+    void drawMenu();
     void drawLobby();
     void drawWaitingRoom();
     void drawGame();
@@ -135,6 +139,7 @@ class Game {
     SyncState m_sync;
     bool m_quitRequested = false;
     LobbyState m_lobby;
+    MenuState m_menu;
     MenuInput m_menuInput;
     std::optional<std::uint32_t> m_autoJoin;
     float m_gameOverTime = 0.0F;

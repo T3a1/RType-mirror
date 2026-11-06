@@ -195,11 +195,11 @@ void playerNoticeSystem(const SyncState &state, gfx::IGraphics &graphics)
     }
 }
 
-bool gameOverScreen(const SyncState &state, gfx::IGraphics &graphics,
-                    const MenuKeys &keys, audio::SoundBoard &sounds)
+bool gameOverScreen(const SyncState &state, const MenuContext &context)
 {
     MenuCursor cursor;
-    MenuPanel panel(graphics, keys, sounds, cursor);
+    MenuPanel panel(context, cursor);
+    gfx::IGraphics &graphics = *context.graphics;
     const engine::Vec2f screen = graphics.screenSize();
     const auto lines = static_cast<float>(state.players.size() + 1);
     const float height = (PanelPadding * 3.0F) + TitleHeight +

@@ -26,6 +26,12 @@ constexpr gfx::Color ButtonActiveColor = gfx::rgb(110, 110, 140);
 constexpr gfx::Color ButtonDisabledColor = gfx::rgb(40, 40, 50);
 /** @brief The color of the label of a disabled button. */
 constexpr gfx::Color LabelDisabledColor = gfx::rgb(130, 130, 140);
+/** @brief The space above the title of a menu, in pixels. */
+constexpr float TitleTop = 24.0F;
+/** @brief The height of the title of a menu, in pixels. */
+constexpr float TitleHeight = 64.0F;
+/** @brief The font size of the title of a menu, in pixels. */
+constexpr int TitleFontSize = 48;
 /** @brief The space inside a row, on its left and right, in pixels. */
 constexpr float RowPadding = 12.0F;
 /** @brief Where the bar of a slider starts, as a share of its row. */
@@ -179,6 +185,23 @@ void drawCentered(gfx::IGraphics &graphics, const std::string &text,
                       color);
 }
 
+float drawMenuTitle(gfx::IGraphics &graphics, const std::string &title)
+{
+    drawCentered(graphics, title, graphics.screenSize().x / 2.0F, TitleTop,
+                 TitleFontSize, gfx::colors::OffWhite);
+    return TitleTop + TitleHeight;
+}
+
+gfx::Rect menuRow(engine::Vec2f screen, float y)
+{
+    return {
+        .x = (screen.x - MenuRowWidth) / 2.0F,
+        .y = y,
+        .width = MenuRowWidth,
+        .height = MenuRowHeight,
+    };
+}
+
 namespace {
 
 /**
@@ -225,9 +248,9 @@ bool menuButton(gfx::IGraphics &graphics, const gfx::Rect &rect,
 
 } // namespace
 
-MenuPanel::MenuPanel(gfx::IGraphics &graphics, const MenuKeys &keys,
-                     audio::SoundBoard &sounds, MenuCursor &cursor)
-    : m_graphics(&graphics), m_keys(keys), m_sounds(&sounds), m_cursor(&cursor)
+MenuPanel::MenuPanel(const MenuContext &context, MenuCursor &cursor)
+    : m_graphics(context.graphics), m_keys(context.keys),
+      m_sounds(context.sounds), m_cursor(&cursor)
 {
     if (m_cursor->count == 0) {
         return;

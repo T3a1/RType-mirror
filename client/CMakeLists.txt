@@ -74,14 +74,14 @@ target_include_directories(r-type_client_audio
 )
 
 # The menu widgets are a library so the tests can run them on a fake backend.
-add_library(r-type_client_menu STATIC src/Menu.cpp)
+add_library(r-type_client_menu STATIC src/Menu.cpp src/MenuPages.cpp)
 
 target_include_directories(r-type_client_menu
     PUBLIC include
 )
 
 target_link_libraries(r-type_client_menu
-    PUBLIC r-type_engine r-type_client_audio
+    PUBLIC r-type_engine r-type_client_audio r-type_client_controls
 )
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})

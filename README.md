@@ -28,7 +28,7 @@ hand only.
 | W A S D | Arrow keys | Move the ship |
 | Space | Right Ctrl | Shoot: one shot per press. Held for 1 second, then released: a charged shot that goes through enemies |
 | F | Right Shift | Auto-fire on or off: the ship shoots on its own, 4 times per second |
-| Escape | Escape | Leave the room. In the room list: quit |
+| Escape | Escape | Leave the room. In the room list: back to the main menu |
 
 In the menus, the arrow keys move the selection, and Space or Enter chooses.
 

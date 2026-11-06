@@ -83,6 +83,9 @@ Game::Game(const std::string &host, std::uint16_t port,
 {
     m_sync.interpolate = options.interpolate;
     m_sync.predict = options.predict;
+    if (m_autoJoin) {
+        m_menu.page = MenuPage::Lobby;
+    }
     m_audio->setMusicVolume(DefaultMusicVolume);
     if (options.bench) {
         m_bench.emplace(*options.bench);
@@ -300,19 +303,86 @@ void Game::leaveRoom()
 }
 
 /**
- * @brief Handles the back key: it leaves the room, or quits from the lobby or
- * during a benchmark.
+ * @brief Handles the back key: it leaves the room or goes back to the main
+ * menu. It does nothing in the main menu or while a room is being joined, and
+ * quits during a benchmark.
  **/
 void Game::handleBackKey()
 {
     if (!m_menuKeys.back) {
         return;
     }
-    if (inRoom() && !m_bench) {
+    if (m_bench) {
+        m_quitRequested = true;
+    } else if (inRoom()) {
         m_sounds.play(audio::SoundEvent::MenuBack);
         leaveRoom();
-    } else {
+    } else if (m_menu.page != MenuPage::Main &&
+               m_lobby.screen != LobbyState::Screen::Joining) {
+        m_sounds.play(audio::SoundEvent::MenuBack);
+        m_menu.page = MenuPage::Main;
+    }
+}
+
+/**
+ * @brief Returns what the menus need for this frame.
+ * @return The graphics backend, the sounds and the menu keys.
+ **/
+MenuContext Game::menuContext()
+{
+    return {
+        .graphics = m_graphics.get(), .sounds = &m_sounds, .keys = m_menuKeys};
+}
+
+/**
+ * @brief Applies the choice of the main menu.
+ * @param choice What the player chose.
+ **/
+void Game::applyMainChoice(MainChoice choice)
+{
+    switch (choice) {
+    case MainChoice::None:
+        break;
+    case MainChoice::Play:
+        m_menu.page = MenuPage::Lobby;
+        break;
+    case MainChoice::HowToPlay:
+        m_menu.page = MenuPage::HowToPlay;
+        break;
+    case MainChoice::Credits:
+        m_menu.page = MenuPage::Credits;
+        break;
+    case MainChoice::Quit:
         m_quitRequested = true;
+        break;
+    }
+}
+
+/**
+ * @brief Draws the page of the menus the player is on.
+ **/
+void Game::drawMenu()
+{
+    const MenuContext context = menuContext();
+    switch (m_menu.page) {
+    case MenuPage::Main:
+        applyMainChoice(
+            mainMenuPage(context, m_menu.mainCursor,
+                         m_network.state() == NetworkClient::State::Connected));
+        break;
+    case MenuPage::Lobby:
+        drawLobby();
+        break;
+    case MenuPage::HowToPlay:
+        if (howToPlayPage(context, m_menu.howToPlayCursor, m_controls)) {
+            m_menu.page = MenuPage::Main;
+        }
+        break;
+    case MenuPage::Credits:
+        if (creditsPage(context, m_menu.creditsCursor)) {
+            m_menu.page = MenuPage::Main;
+        }
+        break;
     }
 }
 
@@ -324,7 +394,7 @@ void Game::drawLobby()
     if (m_network.state() != NetworkClient::State::Connected) {
         return;
     }
-    applyLobbyChoice(lobbyScreen(m_lobby, *m_graphics, m_menuKeys, m_sounds));
+    applyLobbyChoice(lobbyScreen(m_lobby, menuContext()));
 }
 
 /**
@@ -333,7 +403,7 @@ void Game::drawLobby()
 void Game::drawWaitingRoom()
 {
     const WaitingChoice choice =
-        waitingRoomScreen(m_lobby, m_sync, *m_graphics, m_menuKeys, m_sounds);
+        waitingRoomScreen(m_lobby, m_sync, menuContext());
     if (choice == WaitingChoice::Start) {
         m_network.startGame(m_lobby.settings, std::chrono::steady_clock::now());
     } else if (choice == WaitingChoice::Leave) {
@@ -352,10 +422,10 @@ void Game::drawGame()
         levelBannerScreen(m_sync, *m_graphics);
     }
     // The fire key also confirms: wait before listening to it on this screen.
-    MenuKeys keys = m_menuKeys;
-    keys.confirm = keys.confirm && m_gameOverTime >= GameOverKeyDelay;
-    if (m_sync.gameOver &&
-        gameOverScreen(m_sync, *m_graphics, keys, m_sounds)) {
+    MenuContext context = menuContext();
+    context.keys.confirm =
+        context.keys.confirm && m_gameOverTime >= GameOverKeyDelay;
+    if (m_sync.gameOver && gameOverScreen(m_sync, context)) {
         leaveRoom();
     }
 }
@@ -364,7 +434,7 @@ void Game::drawScreens()
 {
     handleBackKey();
     if (!inRoom()) {
-        drawLobby();
+        drawMenu();
     } else if (!m_sync.started) {
         drawWaitingRoom();
     } else {
