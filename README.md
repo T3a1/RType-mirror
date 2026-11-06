@@ -79,6 +79,7 @@ locally).
 | [How-to guides](docs/HOWTO.md) | Adding a component, a system, an enemy or a packet; building and debugging. |
 | [Levels](docs/LEVELS.md) | Writing a level: the JSON file of its enemy waves, and how the server plays the levels. |
 | [Weapons](docs/WEAPONS.md) | The charged shot, the power-ups and the weapon settings file. |
+| [Enemies](docs/ENEMIES.md) | The enemy file: the stats of every enemy, and new enemies and bosses without writing code. |
 | [Network testing](docs/NETWORK_TESTING.md) | Playing with added latency, packet loss, duplication and low bandwidth on one machine. |
 | [Network performance comparison](docs/NETWORK_COMPARISON.md) | Measured effect of interpolation and prediction on a degraded network, compared with the Part 1 prototype. |
 | [Contributing](docs/CONTRIBUTING.md) | How to work on the project: workflow, conventions, tools. |

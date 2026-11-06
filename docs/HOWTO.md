@@ -105,20 +105,26 @@ travel in a packet ([section 3](#3-add-a-packet-type)).
 
 ## 2. Add an enemy type
 
-A new enemy needs a new value on both sides, so clients and server must be rebuilt
-together. Here is what each step changes, for an enemy called `Turret`:
+**Most new enemies need no code.** A kind of enemy or boss that reuses the
+behavior and the sprite of a built-in one (with other stats, size, path or
+points) is a few lines of
+[`server/enemies.json`](ENEMIES.md#add-an-enemy-without-writing-c), then its name
+in a level file. Write code only for a **new sprite** or a **new behavior**.
+
+A new sprite needs a new value on both sides, so clients and server must be
+rebuilt together. Here is what each step changes, for an enemy called `Turret`:
 
 | Step | File | What to do |
 |------|------|------------|
 | 1 | `common/include/common/components/Enemy.hpp` | Add `Turret` to `EnemyType`, before `Boss` |
 | 2 | `common/include/common/components/EntityType.hpp` | Add `EnemyTurret` at the **end** of `EntityType`: the values are sent on the network |
 | 3 | `common/src/protocol/Messages.cpp` | If it is the new last value, change the upper bound of `readEnum(in, EntityType::..., entity.type)`, or clients and server reject it |
-| 4 | `server/include/EnemyDefs.hpp` | Add its stats to `ENEMY_DEFS`, **in the order of `EnemyType`**, and change the size of the array |
-| 5 | `server/src/Level.cpp` | Add `{"turret", rtype::EnemyType::Turret}` to `EnemyNames`, and change its size, so that level files can use it |
+| 4 | `server/include/EnemyDefs.hpp` | Add its default stats to `ENEMY_DEFS`, **in the order of `EnemyType`**, and change the size of the array |
+| 5 | `server/src/EnemyCatalog.cpp` | Add `"turret"` to `BuiltinNames`, in the same order, so that `enemies.json` and the level files can use it |
 | 6 | `client/src/SpriteSheets.cpp` | Add its frames and a `case` in `lookOf()`. A new image also needs a value in `Sheet` (`client/include/SpriteSheets.hpp`) and a line in the list of files, in the same order |
 | 7 | `common/include/common/protocol/PacketHeader.hpp` | Add 1 to `ProtocolVersion` |
 | 8 | `docs/PROTOCOL.md` | Add the entity type, the version in the header table and a line in the [versioning table](PROTOCOL.md#12-versioning) |
-| 9 | `docs/LEVELS.md` | Add its name to the list of enemies |
+| 9 | `docs/ENEMIES.md` | Add it to the built-in kinds and to the sizes of the looks |
 
 The collider in `ENEMY_DEFS` should match the size the client draws, or shots will
 seem to miss. Then use it in a level ([writing levels](LEVELS.md)):
@@ -127,8 +133,8 @@ seem to miss. Then use it in a level ([writing levels](LEVELS.md)):
 { "time": 2, "enemy": "turret", "count": 2, "stepY": 300, "y": 540 }
 ```
 
-This is the one recipe that needs too many files: levels and weapons are data files,
-enemies are not yet. Moving enemies to data files would remove most of these steps.
+Once it exists, `enemies.json` can also derive new kinds from it (`"base":
+"turret"`) without code.
 
 ## 3. Add a packet type
 
