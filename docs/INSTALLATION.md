@@ -25,6 +25,7 @@ and CMake.
 | Docker | Running the server in a container (default mode) | Optional: use `--native` to run it without Docker. |
 | clang-tidy | `--tidy`, `--fix` | Optional. |
 | Doxygen, Graphviz | Generating the documentation website | Optional. |
+| tkinter | The graphical launcher, `--gui` | Optional. Part of Python, but packaged apart on Linux (`sudo apt install python3-tk`, `sudo dnf install python3-tkinter`, `sudo pacman -S tk`) and with Homebrew's Python (`brew install python-tk`). Python from python.org already has it on Windows and macOS. |
 | ffmpeg | `tools/generate_sounds.py`, to generate the sounds again | Optional: the generated files are in the repository. |
 
 What to install by hand on each OS (everything else is installed by
@@ -113,6 +114,7 @@ the options. Before building, it sets up everything that is missing:
 | Option | Effect |
 |--------|--------|
 | *(none)* | Starts the server in Docker and one client. |
+| `-G`, `--gui` | Opens the [graphical launcher](#graphical-launcher). |
 | `-S`, `--server-only` | Starts only the server, in Docker or with `--native`, until Ctrl+C (or `quit` in its console with `--native`). It prints the command the players run. Refuses the client options (`-c`, `-r`, `-H`). |
 | `-O`, `--clients-only` | Starts only the clients, connected to a server already running at `-H` and `-p`. Refuses the server options (`-n`, `--banlist`, `--whitelist`). |
 | `-n`, `--native` | Runs the server natively instead of in Docker. |
@@ -137,6 +139,29 @@ sources at every launch, which takes a second when nothing changed. The build
 is configured again when `build/` is new, when `conanfile.py` changed, or when
 `--graphics` names another library. Docker mode builds the server inside the
 image, never into `build/`.
+
+### Graphical launcher
+
+`./rtype.py --gui` opens a window with the game options of the command line:
+what to start (server and clients, server only, or clients only), Docker or
+native server, number of clients, server address and port, room and graphics
+library.
+
+- The window shows the **command** that matches its settings, and greys out
+  the options that the chosen mode does not use. Everything it does can also
+  be typed in a terminal.
+- **Start** runs that command and shows its output in the window. **Stop**
+  stops it like Ctrl+C: the server and the clients it started are stopped too.
+  Closing the window also stops it.
+- **Server console**: with a native server, a line typed there goes to its
+  administration console (`help`, `status`, `kick`, `ban`...).
+- To **create a game**, start the server and clients with a room number, or
+  room 0 to choose one in the lobby. To **join a game** on another machine,
+  choose "Clients only" with its address. Several rooms are several games run
+  in parallel by the same server.
+
+Without tkinter, `--gui` says how to install it (see
+[Requirements](#1-requirements)); the command line does the same things.
 
 ### Environment variables
 

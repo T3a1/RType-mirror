@@ -72,6 +72,8 @@ only the clients:
 ./rtype.py --clients-only -H <host>   # on each player's machine
 ```
 
+The same options are also in a window: `./rtype.py --gui`.
+
 ## Documentation
 
 The full documentation is online, with an outline and a search bar:
