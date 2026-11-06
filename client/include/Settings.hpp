@@ -10,6 +10,7 @@
 
 #include <array>
 #include <charconv>
+#include <cstddef>
 #include <fstream>
 #include <iostream>
 #include <istream>
@@ -25,19 +26,58 @@ namespace client {
 inline constexpr const char *SettingsPath = "settings.cfg";
 
 /**
+ * @struct WindowSize
+ * @brief A size of the window.
+ * @param width Its width, in pixels.
+ * @param height Its height, in pixels.
+ **/
+struct WindowSize {
+    int width;
+    int height;
+};
+
+/** @brief The sizes the player can choose. The menus were made for the first,
+ * so none is smaller. */
+inline constexpr std::array WindowSizes{
+    WindowSize{.width = 1280, .height = 720},
+    WindowSize{.width = 1600, .height = 900},
+    WindowSize{.width = 1920, .height = 1080},
+    WindowSize{.width = 2560, .height = 1440},
+};
+
+/** @brief The frame limits the player can choose, per second; 0 is no limit. */
+inline constexpr std::array FrameLimits{15, 30, 60, 120, 0};
+
+/**
  * @struct Settings
  * @brief What the player chooses in the menus, kept in settings.cfg.
  * @param musicVolume The volume of the music, from 0 to 1.
  * @param soundVolume The volume of the sounds, from 0 to 1.
  * @param autoFire Whether auto-fire is on when the game starts.
  * @param playerLabels Whether the name of each player is shown above the ship.
+ * @param fullscreen Whether the window covers the screen.
+ * @param vsync Whether frames wait for the screen's refresh. It replaces the
+ * frame limit.
+ * @param windowSize The size of the window, as an index in WindowSizes.
+ * @param frameLimit The frame limit, as an index in FrameLimits.
  **/
 struct Settings {
     float musicVolume = 0.4F;
     float soundVolume = 1.0F;
     bool autoFire = false;
     bool playerLabels = true;
+    bool fullscreen = false;
+    bool vsync = true;
+    std::size_t windowSize = 0;
+    std::size_t frameLimit = FrameLimits.size() - 1;
 };
+
+/**
+ * @brief Returns the text of a window size, in the file and the menus.
+ * @param size The size.
+ * @return Its text, such as "1280x720".
+ **/
+[[nodiscard]] std::string windowSizeName(WindowSize size);
 
 /**
  * @struct ToggleDef
@@ -52,8 +92,8 @@ struct ToggleDef {
     bool Settings::*field;
 };
 
-/** @brief Every setting that is on or off: the file and the menus read this
- * table, so adding a line here is enough to have one more. */
+/** @brief Every accessibility setting that is on or off: the file and the menu
+ * read this table, so adding a line here is enough to have one more. */
 inline constexpr std::array Toggles{
     ToggleDef{
         .key = "auto_fire", .label = "Auto-fire", .field = &Settings::autoFire},

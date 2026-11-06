@@ -52,6 +52,8 @@ constexpr std::array<const char *, ControlCount> ControlLabels{
 constexpr std::size_t KeysPerRow = 2;
 /** @brief The index of the Audio tab. */
 constexpr std::size_t AudioTab = 0;
+/** @brief The index of the Controls tab. */
+constexpr std::size_t ControlsTab = 1;
 /** @brief The height a row takes in a column, in pixels. */
 constexpr float RowStep = MenuRowHeight + MenuRowGap;
 
@@ -168,6 +170,81 @@ float controlsTab(MenuPanel &panel, const MenuContext &context, float top,
 }
 
 /**
+ * @brief Returns the text of each window size.
+ * @return The texts, in the order of WindowSizes.
+ **/
+std::array<std::string, WindowSizes.size()> windowSizeNames()
+{
+    std::array<std::string, WindowSizes.size()> names;
+    for (std::size_t i = 0; i < names.size(); ++i) {
+        names.at(i) = windowSizeName(WindowSizes.at(i));
+    }
+    return names;
+}
+
+/**
+ * @brief Returns the text of each frame limit.
+ * @return The texts, in the order of FrameLimits.
+ **/
+std::array<std::string, FrameLimits.size()> frameLimitNames()
+{
+    std::array<std::string, FrameLimits.size()> names;
+    for (std::size_t i = 0; i < names.size(); ++i) {
+        const int limit = FrameLimits.at(i);
+        names.at(i) =
+            limit == 0 ? "No limit" : std::to_string(limit) + " per second";
+    }
+    return names;
+}
+
+/**
+ * @brief Draws the Video tab. A row that does not apply stays in its place,
+ * disabled, so that the keyboard selection does not jump.
+ * @param panel The panel of the page.
+ * @param screen The size of the window.
+ * @param top The top of the tab.
+ * @param settings The settings, updated.
+ * @param result What the player did, updated.
+ * @return The height below the tab.
+ **/
+float videoTab(MenuPanel &panel, engine::Vec2f screen, float top,
+               Settings &settings, SettingsResult &result)
+{
+    float y = top;
+    bool changed =
+        panel.checkbox(menuRow(screen, y), "Fullscreen", settings.fullscreen);
+    y += RowStep;
+    if (settings.fullscreen) {
+        static_cast<void>(panel.button(
+            menuRow(screen, y),
+            "Window size: " +
+                windowSizeName(WindowSizes.at(settings.windowSize)),
+            false));
+    } else {
+        const auto names = windowSizeNames();
+        changed = panel.selector(menuRow(screen, y), "Window size", names,
+                                 settings.windowSize) ||
+                  changed;
+    }
+    y += RowStep;
+    changed =
+        panel.checkbox(menuRow(screen, y), "V-Sync", settings.vsync) || changed;
+    y += RowStep;
+    if (settings.vsync) {
+        static_cast<void>(
+            panel.button(menuRow(screen, y), "Frame limit: V-Sync", false));
+    } else {
+        const auto names = frameLimitNames();
+        changed = panel.selector(menuRow(screen, y), "Frame limit", names,
+                                 settings.frameLimit) ||
+                  changed;
+    }
+    result.changed = changed;
+    result.videoChanged = changed;
+    return y + RowStep;
+}
+
+/**
  * @brief Returns the keys of a control, as text.
  * @param controls The keys bound to each control.
  * @param control The control.
@@ -245,14 +322,18 @@ SettingsResult settingsPage(const MenuContext &context,
     const engine::Vec2f screen = graphics.screenSize();
 
     float y = drawMenuTitle(graphics, "SETTINGS");
-    const std::array<std::string, 2> tabs{"Audio", "Controls"};
+    const std::array<std::string, 3> tabs{"Audio", "Controls", "Video"};
     panel.tabs(menuRow(screen, y), tabs, state.tab);
     y += RowStep;
-    if (state.tab == AudioTab) {
+    if (state.tab != ControlsTab) {
         state.capture.cancel();
+    }
+    if (state.tab == AudioTab) {
         y = audioTab(panel, screen, y, settings, result);
-    } else {
+    } else if (state.tab == ControlsTab) {
         y = controlsTab(panel, frame, y, state, controls, result);
+    } else {
+        y = videoTab(panel, screen, y, settings, result);
     }
     result.back = panel.backButton(menuRow(screen, y), "Back");
     if (result.back) {

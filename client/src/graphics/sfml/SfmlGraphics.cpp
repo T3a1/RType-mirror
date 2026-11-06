@@ -18,6 +18,7 @@
 #include <SFML/Window/Mouse.hpp>
 #include <SFML/Window/VideoMode.hpp>
 
+#include <algorithm>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -98,17 +99,16 @@ std::unique_ptr<IGraphics> createGraphics(const WindowConfig &config)
 }
 
 SfmlGraphics::SfmlGraphics(const WindowConfig &config)
-    : m_directory(executableDirectory())
+    : m_directory(executableDirectory()), m_title(config.title),
+      m_style(config.resizable ? sf::Style::Default
+                               : (sf::Style::Titlebar | sf::Style::Close)),
+      m_chosenSize(static_cast<unsigned int>(config.width),
+                   static_cast<unsigned int>(config.height))
 {
     // Same as Raylib's LOG_NONE: a missing file is handled, not printed.
     sf::err().rdbuf(nullptr);
 
-    const std::uint32_t style = config.resizable
-                                    ? sf::Style::Default
-                                    : (sf::Style::Titlebar | sf::Style::Close);
-    m_window.create(sf::VideoMode({static_cast<unsigned int>(config.width),
-                                   static_cast<unsigned int>(config.height)}),
-                    config.title, style);
+    m_window.create(sf::VideoMode(m_chosenSize), m_title, m_style);
     if (!m_window.isOpen()) {
         throw std::runtime_error("cannot open the window");
     }
@@ -135,6 +135,31 @@ engine::Vec2f SfmlGraphics::screenSize() const
 {
     const sf::Vector2u size = m_window.getSize();
     return {.x = static_cast<float>(size.x), .y = static_cast<float>(size.y)};
+}
+
+void SfmlGraphics::applyVideo(const VideoConfig &video)
+{
+    const sf::Vector2u size(static_cast<unsigned int>(video.width),
+                            static_cast<unsigned int>(video.height));
+    if (video.fullscreen != m_fullscreen) {
+        // SFML only changes this by creating the window again; the textures
+        // are kept.
+        m_window.create(video.fullscreen ? sf::VideoMode::getDesktopMode()
+                                         : sf::VideoMode(size),
+                        m_title, m_style,
+                        video.fullscreen ? sf::State::Fullscreen
+                                         : sf::State::Windowed);
+        m_fullscreen = video.fullscreen;
+    } else if (!video.fullscreen && size != m_chosenSize) {
+        const sf::Vector2u desktop = sf::VideoMode::getDesktopMode().size;
+        m_window.setSize(size);
+        m_window.setPosition(
+            {std::max((static_cast<int>(desktop.x) - video.width) / 2, 0),
+             std::max((static_cast<int>(desktop.y) - video.height) / 2, 0)});
+    }
+    m_chosenSize = size;
+    m_window.setVerticalSyncEnabled(video.vsync);
+    m_window.setFramerateLimit(static_cast<unsigned int>(video.frameLimit));
 }
 
 void SfmlGraphics::beginFrame(Color clear)

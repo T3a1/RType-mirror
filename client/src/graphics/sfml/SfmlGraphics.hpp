@@ -16,6 +16,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <string>
 #include <unordered_map>
 
 namespace client::gfx {
@@ -44,6 +45,7 @@ class SfmlGraphics final : public IGraphics {
 
     [[nodiscard]] bool shouldClose() override;
     [[nodiscard]] engine::Vec2f screenSize() const override;
+    void applyVideo(const VideoConfig &video) override;
 
     void beginFrame(Color clear) override;
     void endFrame() override;
@@ -70,6 +72,10 @@ class SfmlGraphics final : public IGraphics {
 
     std::filesystem::path m_directory;
     sf::RenderWindow m_window;
+    std::string m_title;
+    std::uint32_t m_style = sf::Style::Default;
+    sf::Vector2u m_chosenSize;
+    bool m_fullscreen = false;
     sf::Font m_font;
     bool m_hasFont = false;
     bool m_closeRequested = false;

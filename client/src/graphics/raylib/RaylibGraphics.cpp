@@ -93,6 +93,7 @@ std::unique_ptr<IGraphics> createGraphics(const WindowConfig &config)
 }
 
 RaylibGraphics::RaylibGraphics(const WindowConfig &config)
+    : m_chosenWidth(config.width), m_chosenHeight(config.height)
 {
     SetTraceLogLevel(LOG_NONE);
     unsigned int flags = 0;
@@ -125,6 +126,30 @@ engine::Vec2f RaylibGraphics::screenSize() const
 {
     return {.x = static_cast<float>(GetScreenWidth()),
             .y = static_cast<float>(GetScreenHeight())};
+}
+
+void RaylibGraphics::applyVideo(const VideoConfig &video)
+{
+    if (IsWindowState(FLAG_BORDERLESS_WINDOWED_MODE) != video.fullscreen) {
+        ToggleBorderlessWindowed();
+    }
+    const bool sizeChanged =
+        video.width != m_chosenWidth || video.height != m_chosenHeight;
+    if (!video.fullscreen && sizeChanged) {
+        const int monitor = GetCurrentMonitor();
+        SetWindowSize(video.width, video.height);
+        SetWindowPosition(
+            std::max((GetMonitorWidth(monitor) - video.width) / 2, 0),
+            std::max((GetMonitorHeight(monitor) - video.height) / 2, 0));
+        m_chosenWidth = video.width;
+        m_chosenHeight = video.height;
+    }
+    if (video.vsync) {
+        SetWindowState(FLAG_VSYNC_HINT);
+    } else {
+        ClearWindowState(FLAG_VSYNC_HINT);
+    }
+    SetTargetFPS(video.frameLimit);
 }
 
 void RaylibGraphics::beginFrame(Color clear)

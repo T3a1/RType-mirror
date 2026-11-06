@@ -370,6 +370,34 @@ bool MenuPanel::slider(const gfx::Rect &rect, const std::string &label,
     return changed;
 }
 
+bool MenuPanel::selector(const gfx::Rect &rect, const std::string &label,
+                         std::span<const std::string> options,
+                         std::size_t &current)
+{
+    const bool selected = nextIsSelected();
+    if (options.empty()) {
+        return false;
+    }
+    const std::size_t count = options.size();
+    const std::size_t before = std::min(current, count - 1);
+    const bool clicked = m_graphics->isMousePressed() &&
+                         contains(rect, m_graphics->mousePosition());
+    current = before;
+    if (selected && m_keys.left) {
+        current = (current + count - 1) % count;
+    }
+    if (clicked || (selected && (m_keys.right || m_keys.confirm))) {
+        current = (current + 1) % count;
+    }
+    const bool changed = current != before;
+    if (changed) {
+        m_sounds->play(audio::SoundEvent::MenuMove);
+    }
+    drawRow(*m_graphics, rect, label + ": < " + options[current] + " >",
+            selected);
+    return changed;
+}
+
 void MenuPanel::tabs(const gfx::Rect &rect, std::span<const std::string> labels,
                      std::size_t &current)
 {

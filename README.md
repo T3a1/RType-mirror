@@ -57,7 +57,9 @@ autofire = Tab
 - A line the game cannot read is reported when it starts, and that action
   keeps its default keys.
 
-**Change the volume**: open Settings in the main menu. The game saves your
+**Change the volume or the window**: open Settings in the main menu. The Audio tab
+holds the volumes. The Video tab holds the fullscreen mode, the size of the window,
+V-Sync and the frame limit, which V-Sync replaces while it is on. The game saves your
 choice in a `settings.cfg` file in the folder you start it from, which you can
 also edit by hand. A volume goes from 0 to 1:
 
@@ -65,12 +67,17 @@ also edit by hand. A volume goes from 0 to 1:
 # name = value
 music_volume = 0.4
 sound_volume = 1
+fullscreen = off
+window_size = 1280x720
+vsync = on
+frame_limit = 0
 auto_fire = off
 player_labels = on
 ```
 
-A line the game cannot read is reported when it starts, and that setting keeps
-its value. Saving replaces the whole file, so your comments are not kept.
+Window sizes: `1280x720`, `1600x900`, `1920x1080`, `2560x1440`. Frame limits: `30`,
+`60`, `120`, or `0` for no limit. A line the game cannot read is reported when it
+starts, and that setting keeps its value. Saving replaces the whole file, so your comments are not kept.
 
 **Accessibility options**: open Accessibility in the main menu.
 

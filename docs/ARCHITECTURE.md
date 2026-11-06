@@ -420,12 +420,12 @@ backend.
 | Part | File | Role |
 |------|------|------|
 | `MenuInput`, `MenuKeys` | `Menu.hpp` | The menu keys pressed this frame, rather than held. They are fixed: arrows, Space or Enter, Escape |
-| `MenuPanel`, `MenuCursor` | `Menu.hpp` | The widgets: `button`, `backButton`, `checkbox`, `slider`, `tabs` |
+| `MenuPanel`, `MenuCursor` | `Menu.hpp` | The widgets: `button`, `backButton`, `checkbox`, `slider`, `selector`, `tabs` |
 | `drawMenuTitle`, `menuRow`, `menuGridCell` | `Menu.hpp` | The layout shared by the pages |
 | Pages, `MenuState` | `MenuPages.hpp` | Main menu, Settings, Accessibility, How to play, Credits |
 | `lobbyScreen`, `waitingRoomScreen` | `RoomPages.hpp` | The list of rooms and the waiting room, which need the protocol types |
 | `gameOverScreen` | `systems/HudSystem.hpp` | The final scores |
-| `Settings`, `Toggles` | `Settings.hpp` | The player's options and `settings.cfg` |
+| `Settings`, `Toggles`, `WindowSizes`, `FrameLimits` | `Settings.hpp` | The player's options and `settings.cfg` |
 | `Controls` | `Controls.hpp` | The keys of each action and `controls.cfg` |
 | `KeyCapture` | `KeyCapture.hpp` | Waits for the key to bind to an action |
 
@@ -447,6 +447,13 @@ once, so closing the game loses nothing. A bad line in `settings.cfg` or `contro
 is reported on stderr and keeps the previous value. To add a page or a setting, see
 [Add a menu page](HOWTO.md#6-add-a-menu-page) and
 [Add a setting](HOWTO.md#7-add-a-setting).
+
+**Video.** The Video tab of Settings only changes `Settings`. `Game` turns them into a
+`gfx::VideoConfig` and calls `IGraphics::applyVideo()`, at startup and after a change.
+V-Sync replaces the frame limit, as SFML advises against using both. Each backend does
+what it can: Raylib uses a borderless window, SFML creates its window again in
+fullscreen, and ncurses only follows V-Sync, as a terminal has no window to change. A
+benchmark ignores these choices, so that its results can be compared.
 
 **Changing a key.** Each action shows two keys on the Controls tab of Settings:
 
