@@ -35,6 +35,8 @@ VENV_DIR = ROOT / os.environ.get("TOOLS_DIR", ".venv")
 VENV_PYTHON = VENV_DIR / "bin" / "python"
 RESULTS_DIR = BUILD_DIR / "netbench"
 DOC = ROOT / "docs" / "NETWORK_COMPARISON.md"
+FRENCH_DOC = ROOT / "docs" / "fr" / "NETWORK_COMPARISON.md"
+IMAGES_URL = "https://raw.githubusercontent.com/T3a1/RType-mirror/dev/docs/images/"
 IMAGES_DIR = ROOT / "docs" / "images" / "network-comparison"
 BEGIN_MARKER = "<!-- results:begin -->"
 END_MARKER = "<!-- results:end -->"
@@ -289,6 +291,15 @@ def charts(results: dict, scenarios: list[str]) -> list[str]:
     return lines
 
 
+def write_results(doc: Path, block: str) -> None:
+    """Replaces the results block of a page."""
+    text = doc.read_text(encoding="utf-8")
+    begin, end = text.find(BEGIN_MARKER), text.find(END_MARKER)
+    if begin < 0 or end < begin:
+        raise BenchError(f"{doc.name} has no {BEGIN_MARKER} ... {END_MARKER} block")
+    doc.write_text(text[:begin] + block + text[end + len(END_MARKER):], encoding="utf-8")
+
+
 def report(with_charts: bool) -> None:
     results = {}
     for scenario in SCENARIOS:
@@ -324,13 +335,10 @@ def report(with_charts: bool) -> None:
         lines += charts(results, scenarios)
     lines.append(END_MARKER)
 
-    text = DOC.read_text(encoding="utf-8")
-    begin, end = text.find(BEGIN_MARKER), text.find(END_MARKER)
-    if begin < 0 or end < begin:
-        raise BenchError(f"{DOC.name} has no {BEGIN_MARKER} ... {END_MARKER} block")
-    DOC.write_text(text[:begin] + "\n".join(lines) + text[end + len(END_MARKER):],
-                   encoding="utf-8")
-    log(f"Results written to {DOC.relative_to(ROOT)}")
+    block = "\n".join(lines)
+    write_results(DOC, block)
+    write_results(FRENCH_DOC, block.replace("(images/", f"({IMAGES_URL}"))
+    log(f"Results written to {DOC.relative_to(ROOT)} and {FRENCH_DOC.relative_to(ROOT)}")
 
 
 def main() -> int:

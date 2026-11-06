@@ -1,5 +1,6 @@
 # Doxygen configuration of the R-Type project: the documentation website, with
-# the pages of docs/ and the code reference.
+# the pages of docs/ and the code reference. `./rtype.py --docs` also generates
+# the French pages of docs/fr/ under fr/, and adds the language button.
 # Only the settings that differ from Doxygen's defaults are listed here.
 # Run from the repository root: `doxygen` or `./rtype.py --docs`.
 
@@ -19,6 +20,7 @@ INPUT                  = README.md docs engine common server client
 RECURSIVE              = YES
 FILE_PATTERNS          = *.hpp *.cpp *.md
 USE_MDFILE_AS_MAINPAGE = README.md
+EXCLUDE                = docs/fr
 STRIP_FROM_INC_PATH    = engine/include common/include server/include client/include
 BUILTIN_STL_SUPPORT    = YES
 MARKDOWN_ID_STYLE      = GITHUB
@@ -46,6 +48,7 @@ WARN_AS_ERROR          = NO
 GENERATE_HTML          = YES
 GENERATE_TREEVIEW      = YES
 HTML_COLORSTYLE        = AUTO_LIGHT
+HTML_EXTRA_FILES       = tools/lang-switch.js
 GENERATE_LATEX         = NO
 
 #---------------------------------------------------------------------------

@@ -690,31 +690,62 @@ def install_hooks() -> None:
 
 
 # ---------- Documentation (Doxygen) ----------
+def check_translations() -> None:
+    """Every page must exist in French: a missing one would break the language
+    button of the documentation website."""
+    pages = [Path("README.md"), *sorted(Path("docs").glob("*.md"))]
+    missing = [page.name for page in pages if not (Path("docs/fr") / page.name).is_file()]
+    if missing:
+        raise LauncherError(f"missing in docs/fr/ (see docs/CONTRIBUTING.md): {', '.join(missing)}")
+
+
+def language_header(output: Path) -> Path:
+    """Writes Doxygen's default page header, with the language button added."""
+    header = output / "header.html"
+    run("doxygen", "-w", "html", header, output / "footer.html", output / "stylesheet.css",
+        "Doxyfile", quiet=True, error="doxygen could not write its page header")
+    html = header.read_text(encoding="utf-8")
+    script = '<script type="text/javascript" src="$relpath^lang-switch.js"></script>\n'
+    header.write_text(html.replace("</head>", script + "</head>", 1), encoding="utf-8")
+    return header
+
+
 def run_docs() -> int:
-    """Generates the HTML documentation in BUILD_DIR/docs. Settings come from
-    the Doxyfile; the diagrams are turned off when Graphviz is missing instead
-    of failing. Warnings go to a log file, not to the terminal, but a warning
-    about a Markdown page, such as a broken link, is an error."""
+    """Generates the documentation website in BUILD_DIR/docs/html: the English
+    pages and the code reference, then the French pages under fr/. Settings
+    come from the Doxyfile; the diagrams are turned off when Graphviz is missing
+    instead of failing. Warnings go to a log file, not to the terminal, but a
+    warning about a Markdown page, such as a broken link, is an error."""
     require("doxygen", install_hint("winget install DimitriVanHeesch.Doxygen",
                                     "brew install doxygen",
                                     "install doxygen with your package manager"))
+    check_translations()
     output = (BUILD_DIR / "docs").resolve()
     output.mkdir(parents=True, exist_ok=True)
     warnings = output / "doxygen-warnings.log"
+    french_warnings = output / "doxygen-warnings-fr.log"
     config = Path("Doxyfile").read_text(encoding="utf-8")
     config += (f'\nOUTPUT_DIRECTORY = "{output.as_posix()}"\n'
-               f'WARN_LOGFILE = "{warnings.as_posix()}"\nQUIET = YES\n')
+               f'HTML_HEADER = "{language_header(output).as_posix()}"\nQUIET = YES\n')
     if shutil.which("dot") is None:
         log("Graphviz (dot) not found, generating the documentation without diagrams...")
         config += "HAVE_DOT = NO\n"
+    english = config + f'WARN_LOGFILE = "{warnings.as_posix()}"\n'
+    french = config + (f'WARN_LOGFILE = "{french_warnings.as_posix()}"\n'
+                       "OUTPUT_LANGUAGE = French\nHTML_OUTPUT = html/fr\n"
+                       "INPUT = docs/fr\nEXCLUDE =\nFILE_PATTERNS = *.md\n"
+                       "USE_MDFILE_AS_MAINPAGE = docs/fr/README.md\n"
+                       'PROJECT_BRIEF = "Shoot\'em up multijoueur en réseau (C++20, ECS, UDP)"\n')
     log("Generating the documentation...")
-    if call("doxygen", "-", input=config, text=True).returncode != 0:
-        raise LauncherError(f"doxygen failed (warnings and errors: {warnings})")
-    lines = warnings.read_text(errors="replace").splitlines() if warnings.is_file() else []
+    for settings in (english, french):
+        if call("doxygen", "-", input=settings, text=True).returncode != 0:
+            raise LauncherError(f"doxygen failed (warnings and errors: {warnings})")
+    lines = warnings.read_text(errors="replace").splitlines()
     count = sum("warning:" in line for line in lines)
     if count:
         log(f"{count} Doxygen warnings, see {warnings}")
     # In the code, a warning is a comment to complete. In a page, a broken link.
+    lines += french_warnings.read_text(errors="replace").splitlines()
     page_errors = [line for line in lines if ".md:" in line and "warning:" in line]
     if page_errors:
         raise LauncherError("broken documentation pages:\n" + "\n".join(page_errors))
