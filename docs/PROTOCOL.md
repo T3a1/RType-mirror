@@ -1,4 +1,4 @@
-# R-Type network protocol (version 10)
+# R-Type network protocol (version 11)
 
 This document specifies the binary protocol spoken between the R-Type server
 and its clients. It is precise enough to write a compatible client or server
@@ -33,7 +33,7 @@ The key words **MUST**, **MUST NOT**, **SHOULD** and **MAY** are used as in
 - Every datagram holds exactly **one packet**: a 12-byte header followed by a
   payload whose layout depends on the packet type.
 - Most traffic is **unreliable and replaced by the next packet**: inputs
-  (client to server, about 60 per second) and snapshots (server to client, 20
+  (client to server, about 30 per second) and snapshots (server to client, 20
   per second). A lost one does not matter.
 - A few packets are **reliable**: acknowledged, resent until acknowledged, and
   delivered once and in order. They carry facts that are never repeated:
@@ -73,7 +73,7 @@ Every packet starts with this 12-byte header:
 | Offset | Size | Field | Value |
 |-------:|-----:|-------|-------|
 | 0 | 2 | magic | `52 54` (ASCII `"RT"`). Recognizes our packets: a random datagram almost never starts with these bytes |
-| 2 | 1 | version | `10`. See [Versioning](#12-versioning) |
+| 2 | 1 | version | `11`. See [Versioning](#12-versioning) |
 | 3 | 1 | type | Which payload follows. See [Packet types](#5-packet-types) |
 | 4 | 1 | flags | Bit 0: **Reliable**. Bits 1 to 7 are reserved and **MUST** be 0 |
 | 5 | 1 | reserved | **MUST** be 0 |
@@ -94,7 +94,7 @@ The names are the `DecodeError` values of the reference implementation.
 | 1 | At most 1200 bytes | `TooLarge` |
 | 2 | At least 12 bytes | `TooShort` |
 | 3 | Magic is `"RT"` | `BadMagic` |
-| 4 | Version is 10 | `BadVersion` |
+| 4 | Version is 11 | `BadVersion` |
 | 5 | Type is listed in section 5 | `UnknownType` |
 | 6 | No reserved flag bit, and Reliable set exactly on reliable types | `BadFlags` |
 | 7 | Reserved byte is 0 | `BadReserved` |
@@ -192,7 +192,7 @@ client that an administrator closed its room: it is back in the lobby.
 
 | Offset | Size | Field | Values |
 |-------:|-----:|-------|--------|
-| 0 | 1 | reason | `0` Left (the player quit), `1` Timeout, `2` Kicked (protocol broken, or removed by an administrator), `3` ServerClosing |
+| 0 | 1 | reason | `0` Left (the player quit), `1` Timeout, `2` Kicked (no acknowledgment, or removed by an administrator), `3` ServerClosing |
 
 ### `Input` (0x10)
 
@@ -447,7 +447,8 @@ the player that the versions do not match.
 |------|-----------|------|
 | The player quits | Immediate | The client sends `Disconnect{Left}` (best effort, not resent) |
 | A client crashes or its network drops | No valid packet from it for **5 seconds** | None |
-| A client breaks the protocol | Too many invalid packets, or too many unacknowledged reliable packets | The server sends `Disconnect{Kicked}` |
+| A client never acknowledges | More than 256 unacknowledged reliable packets | The server sends `Disconnect{Kicked}` |
+| An administrator removes it | The `kick` and `ban` commands | The server sends `Disconnect{Kicked}` |
 | The server shuts down | Immediate | The server sends `Disconnect{ServerClosing}` to every client |
 
 In every case the server removes the session and sends
@@ -462,7 +463,7 @@ the connection lost; snapshots, 20 per second, act as a heartbeat.
 | Connect retry interval | 500 ms |
 | Reliable resend interval | 100 ms |
 | Peer timeout | 5 s |
-| Client input rate | about 60 per second |
+| Client input rate | about 30 per second, and at once when the actions change |
 | Server tick rate | 60 per second |
 | Snapshot rate | 20 per second (every 3rd tick) |
 
@@ -511,8 +512,8 @@ or make it use unbounded memory:
 
 **Known limitation.** This version has no handshake token. A `Connect` sent with
 a forged source address makes the server send `Accept`, `Welcome` and
-snapshots to that address until the 5-second timeout, and takes one of the 4
-slots meanwhile. A challenge-response handshake (the server answers
+snapshots to that address until the 5-second timeout, and takes one of the 64
+sessions meanwhile. A challenge-response handshake (the server answers
 `Connect` with a random token that the client must send back) would fix it
 in a later version.
 

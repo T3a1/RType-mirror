@@ -159,7 +159,7 @@ the past while the server decides on their real positions.
 | Reference an entity safely | **Index + generation** | Raw pointers, plain ids | A stale handle is detected instead of silently pointing at a new entity. |
 | Destroy during iteration | **Deferred destruction** | Immediate removal | Removing would invalidate the iteration in progress. |
 | Run the simulation | **Fixed time step with an accumulator** | Variable time step | The subject forbids depending on CPU speed. The same inputs give the same result on any machine. |
-| Exchange data between threads | **Mutex + swap of a vector** | Lock-free queues | The lock is held only for a swap, so contention is negligible, and it is simple enough to be sure it is correct. |
+| Exchange data between threads | **Mutex around a queue, emptied all at once** | Lock-free queues | The lock is held only for a few moves, so contention is negligible, and it is simple enough to be sure it is correct. |
 | Detect collisions | **All pairs of axis-aligned boxes**, filtered by layer | Spatial grid, quadtree | O(n²), but the game has few entities on screen. A grid would be the next step if profiling asked for it. |
 | Compare sequence numbers | **Serial number arithmetic** (as in RFC 1982) | Plain comparison | Keeps working when 16-bit sequence numbers wrap around. |
 
@@ -265,7 +265,7 @@ the rest is tracked in the project's issues.
 | Category | What exists | Inspired by | Still to do |
 |----------|-------------|-------------|-------------|
 | **Physical and motor** | All keys remappable (`controls.cfg`). Default keys for either hand, so the game can be played with one hand. Auto-fire, so firing needs no repeated presses. | Remapping and toggle options of most PC games | Game speed, controller |
-| **Visual** | Player colors from the Okabe-Ito palette, which color-blind players can tell apart. Never color alone: each ship shows "P1" and "(you)", and notices name the player. | Color-blind modes of multiplayer games | Scalable UI, high contrast |
+| **Visual** | Player colors from the Okabe-Ito palette, which color-blind players can tell apart. Never color alone: each ship shows "P1" and "(you)", and notices name the player. | Color-blind modes of multiplayer games | Scalable game UI, high contrast |
 | **Audio** | Sound is never the only cue: shots, explosions, the charge glow, the level banner and the game over screen show on screen what the sounds tell. | Visual cues in most action games | Volume settings, turning sound off |
 | **Mental and cognitive** | One-page menus, a few clear actions, a "Level 2" banner and final scores. Three difficulty levels and the choice of the starting level, picked in the waiting room. | Difficulty settings of most action games | A control reminder, reducing flashing effects |
 
@@ -288,18 +288,18 @@ later would have touched every input and drawing system.
 | Launcher | Python (`rtype.py`) | Shell script | The same script on Linux and Windows; it replaced `rtype.sh` |
 | Tests | GoogleTest | Catch2 | Includes mocks, widely known |
 | Code quality | clang-format, clang-tidy | Review only | Enforced by the CI, with one pinned clang-format version for everyone |
-| Documentation | Doxygen, for the pages and the code reference | MkDocs, Sphinx, a wiki | One tool for one website: the pages stay in Markdown beside the code and are reviewed in pull requests, and they can link to the code reference. It draws our Mermaid diagrams and has a search bar. The limit is that this search only covers titles, headings and code names, not the text of the pages. A second generator would have added full-text search and a second tool to maintain. |
+| Documentation | Doxygen, for the pages and the code reference | MkDocs, Sphinx, a wiki | One tool for one website: the pages stay in Markdown beside the code and are reviewed in pull requests, and they can link to the code reference. It draws our Mermaid diagrams and has a search bar. The limit is that this search only covers titles, headings and code names, not the text of the pages. A second generator would have added full-text search and a second tool to maintain. The French pages are a second Doxygen run, under `fr/`, and a small script adds the language button. |
 
 ## 9. Before and after: the Part 1 prototype and the final version
 
-Measured on 2026-11-05, against the `v1.0` tag (2026-10-18).
+Measured on 2026-11-06, against the `v1.0` tag (2026-10-18).
 
 | | Part 1 (`v1.0`) | Now |
 |---|----------------|-----|
-| C++ code (lines, with headers) | 8,210 | 22,300 |
-| Unit tests | 86 | 261 |
-| ECS systems (source files) | 20 | 32 |
-| Protocol version | 1 | 9 |
+| C++ code (lines, with headers) | 8,210 | 26,600 |
+| Unit tests | 86 | 290 |
+| ECS systems (source files) | 20 | 34 |
+| Protocol version | 1 | 11 |
 | Games on one server | 1 | Up to 16 rooms, with a lobby |
 | Graphics libraries | Raylib, called directly | Raylib, SFML, ncurses, behind an interface |
 | Network library | Asio, visible in the code | Hidden behind an interface, tested on a fake network |
@@ -321,9 +321,12 @@ with each technique turned off, at 100 ms of round trip:
 | Upload of the client at 240 frames per second | About 4 kB/s | About 0.5 kB/s |
 
 **Features.** Sprite sheets and animations instead of colored rectangles; new enemy
-types with movement patterns; levels in JSON files and an end-level boss; charged
-shot and power-ups; game over and final scores; lobby, rooms and a waiting room;
-administration console with bans and a white list; key remapping and auto-fire.
+types with movement patterns; levels, weapons and enemies in JSON files; two
+end-level bosses; obstacles and destroyable tiles; charged shot and power-ups; game
+over and final scores; difficulty, starting level and boss chosen in the waiting
+room; sound effects and music; lobby, rooms and a waiting room; administration
+console with bans and a white list; key remapping and auto-fire; a graphical
+launcher; a Windows build in the CI.
 
 ## 10. What we would do differently
 
@@ -331,7 +334,7 @@ administration console with bans and a white list; key remapping and auto-fire.
   limit of full snapshots.
 - **Handshake**: add the challenge token from the start. It is cheap to design and
   closes the main known weakness of the protocol.
-- **Content**: enemies still need C++ changes, while levels and weapons do not.
-  Moving them to data files would complete the extensibility of the game.
+- **Content**: levels, weapons and enemies are data files, but a new sprite or a
+  new behavior still needs C++. Scripting would be the next step.
 - **Sanitizers in the CI**: AddressSanitizer on the tests costs one CI job and would
   back up the claims of [section 6](#6-security).
