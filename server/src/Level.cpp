@@ -6,6 +6,7 @@
 */
 
 #include "Level.hpp"
+#include "common/Obstacles.hpp"
 #include "common/Playfield.hpp"
 
 #include <nlohmann/json.hpp>
@@ -267,24 +268,33 @@ Wave readWave(const Json &wave, const std::string &where)
 }
 
 /**
- * @brief Reads one group of obstacles.
+ * @brief Reads one group of obstacles and appends its columns, left first.
  * @param group The JSON object of the group.
  * @param where Where it is in the file, for the error message.
- * @return The group.
+ * @param columns Where its columns go.
  * @throws LevelError If it is not a valid group.
  **/
-ObstacleGroup readObstacles(const Json &group, const std::string &where)
+void readObstacles(const Json &group, const std::string &where,
+                   std::vector<ObstacleColumn> &columns)
 {
     checkKeys(group, {"time", "kind", "y", "rows", "columns"}, where);
-    return {
+    const ObstacleColumn first{
         .time = engine::Duration{number(group, "time", 0.0F, MaxWaveTime,
                                         std::nullopt, where)},
         .destroyable = named(group, "kind", ObstacleKinds, where),
         .top = number(group, "y", 0.0F, rtype::PlayfieldHeight, std::nullopt,
                       where),
         .rows = wholeNumber(group, "rows", MaxObstacleRows, where),
-        .columns = wholeNumber(group, "columns", MaxObstacleColumns, where),
     };
+    const std::size_t count =
+        wholeNumber(group, "columns", MaxObstacleColumns, where);
+    // The time a column takes to scroll by its own width.
+    const engine::Duration step{rtype::TileSize.x / rtype::ObstacleSpeed};
+    for (std::size_t i = 0; i < count; ++i) {
+        ObstacleColumn column = first;
+        column.time += step * static_cast<float>(i);
+        columns.push_back(column);
+    }
 }
 
 /**
@@ -325,12 +335,12 @@ Level readLevel(const Json &root)
             throw LevelError("level.obstacles: must be a list of at most " +
                              std::to_string(MaxObstacleGroups) + " groups");
         }
-        level.obstacles.reserve(obstacles->size());
         for (std::size_t i = 0; i < obstacles->size(); ++i) {
-            level.obstacles.push_back(readObstacles(
-                obstacles->at(i), "obstacles[" + std::to_string(i) + "]"));
+            readObstacles(obstacles->at(i),
+                          "obstacles[" + std::to_string(i) + "]",
+                          level.obstacles);
         }
-        std::ranges::stable_sort(level.obstacles, {}, &ObstacleGroup::time);
+        std::ranges::stable_sort(level.obstacles, {}, &ObstacleColumn::time);
     }
     return level;
 }

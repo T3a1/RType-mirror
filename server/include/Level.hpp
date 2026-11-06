@@ -53,23 +53,23 @@ struct Wave {
 };
 
 /**
- * @struct ObstacleGroup
- * @brief A rectangle of wall blocks or destroyable tiles that comes in from
- * the right edge at a given time of a level.
- * @param time When it starts to come in, counted from the start of the
- * level.
+ * @struct ObstacleColumn
+ * @brief A column of wall blocks or destroyable tiles that comes in from the
+ * right edge at a given time of a level. The file describes rectangles
+ * (groups of columns); parseLevel() splits them into columns one
+ * TileSize.x / ObstacleSpeed apart, so that they come in one after the other
+ * with no gap and none of them starts far off-screen.
+ * @param time When it comes in, counted from the start of the level.
  * @param destroyable Whether its blocks are destroyable tiles instead of
  * walls.
- * @param top The height of the center of its top row, in playfield units.
- * @param rows Its number of rows, from top to bottom.
- * @param columns Its number of columns, from left to right.
+ * @param top The height of the center of its top block, in playfield units.
+ * @param rows Its number of blocks, from top to bottom.
  **/
-struct ObstacleGroup {
+struct ObstacleColumn {
     engine::Duration time{0.0F};
     bool destroyable = false;
     float top = 0.0F;
     std::size_t rows = 1;
-    std::size_t columns = 1;
 };
 
 /**
@@ -79,14 +79,14 @@ struct ObstacleGroup {
  * @param waves Its waves, sorted by time.
  * @param boss The boss that comes once every wave is cleared, if any; the
  * level ends when it is destroyed.
- * @param obstacles Its walls and tiles, sorted by time. They do not keep
- * the level from ending.
+ * @param obstacles Its columns of walls and tiles, sorted by time. They do
+ * not keep the level from ending.
  **/
 struct Level {
     std::string name;
     std::vector<Wave> waves;
     std::optional<rtype::EnemyType> boss;
-    std::vector<ObstacleGroup> obstacles;
+    std::vector<ObstacleColumn> obstacles;
 };
 
 /**
