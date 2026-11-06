@@ -423,7 +423,7 @@ backend.
 | `MenuPanel`, `MenuCursor` | `Menu.hpp` | The widgets: `button`, `backButton`, `checkbox`, `slider`, `tabs` |
 | `drawMenuTitle`, `menuRow`, `menuGridCell` | `Menu.hpp` | The layout shared by the pages |
 | Pages, `MenuState` | `MenuPages.hpp` | Main menu, Settings, Accessibility, How to play, Credits |
-| `lobbyScreen`, `waitingRoomScreen` | `systems/LobbySystem.hpp` | The list of rooms and the waiting room, which need the protocol types |
+| `lobbyScreen`, `waitingRoomScreen` | `RoomPages.hpp` | The list of rooms and the waiting room, which need the protocol types |
 | `gameOverScreen` | `systems/HudSystem.hpp` | The final scores |
 | `Settings`, `Toggles` | `Settings.hpp` | The player's options and `settings.cfg` |
 | `Controls` | `Controls.hpp` | The keys of each action and `controls.cfg` |

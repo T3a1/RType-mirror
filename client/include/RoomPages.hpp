@@ -2,11 +2,11 @@
 ** EPITECH PROJECT, 2026
 ** r-type_client
 ** File description:
-** LobbySystem
+** RoomPages
 */
 
-#ifndef CLIENT_SYSTEMS_LOBBYSYSTEM_HPP
-#define CLIENT_SYSTEMS_LOBBYSYSTEM_HPP
+#ifndef CLIENT_ROOMPAGES_HPP
+#define CLIENT_ROOMPAGES_HPP
 
 #include "Menu.hpp"
 #include "common/protocol/Messages.hpp"
@@ -96,4 +96,4 @@ lobbyScreen(LobbyState &state, const MenuContext &context);
 
 } // namespace client
 
-#endif // CLIENT_SYSTEMS_LOBBYSYSTEM_HPP
+#endif // CLIENT_ROOMPAGES_HPP

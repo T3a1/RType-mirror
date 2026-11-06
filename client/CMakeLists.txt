@@ -9,6 +9,7 @@ set_property(CACHE RTYPE_GRAPHICS_BACKEND PROPERTY STRINGS raylib sfml ncurses)
 set(SOURCE_FILES
     src/main.cpp
     src/Game.cpp
+    src/RoomPages.cpp
     src/SpriteSheets.cpp
     src/systems/AnimationSystem.cpp
     src/systems/AudioSystem.cpp
@@ -17,7 +18,6 @@ set(SOURCE_FILES
     src/systems/BackgroundScrollSystem.cpp
     src/systems/HudSystem.cpp
     src/systems/InputSystem.cpp
-    src/systems/LobbySystem.cpp
     src/systems/NetworkSyncSystem.cpp
     src/systems/RenderSystem.cpp
 )

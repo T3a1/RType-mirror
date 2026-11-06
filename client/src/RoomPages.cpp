@@ -2,10 +2,10 @@
 ** EPITECH PROJECT, 2026
 ** r-type_client
 ** File description:
-** LobbySystem
+** RoomPages
 */
 
-#include "systems/LobbySystem.hpp"
+#include "RoomPages.hpp"
 #include "PlayerColors.hpp"
 
 #include <array>

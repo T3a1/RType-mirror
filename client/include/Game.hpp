@@ -11,6 +11,7 @@
 #include "Bench.hpp"
 #include "Controls.hpp"
 #include "MenuPages.hpp"
+#include "RoomPages.hpp"
 #include "Settings.hpp"
 #include "SpriteSheets.hpp"
 #include "audio/IAudio.hpp"
@@ -21,7 +22,6 @@
 #include "graphics/IGraphics.hpp"
 #include "network/NetworkClient.hpp"
 #include "systems/InputSystem.hpp"
-#include "systems/LobbySystem.hpp"
 #include "systems/NetworkSyncSystem.hpp"
 
 #include <array>
