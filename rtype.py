@@ -848,6 +848,10 @@ def main() -> int:
     # Turns `docker stop`/`kill` of the launcher into a normal exit, so the
     # server and the clients are stopped too.
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(128 + signal.SIGTERM))
+    if hasattr(signal, "SIGBREAK"):
+        # Windows: the graphical launcher stops us with Ctrl+Break, which
+        # would otherwise end Python without stopping the server and clients.
+        signal.signal(signal.SIGBREAK, signal.default_int_handler)
     try:
         install_hooks()
         if args.check_format is not None:
