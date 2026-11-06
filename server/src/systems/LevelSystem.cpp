@@ -6,6 +6,7 @@
 */
 
 #include "systems/LevelSystem.hpp"
+#include "EnemyCatalog.hpp"
 #include "EnemyDefs.hpp"
 #include "Formations.hpp"
 #include "common/Playfield.hpp"
@@ -61,18 +62,20 @@ void queueDueWaves(LevelProgress &progress, rtype::Spawner &spawner,
 
 /**
  * @brief Queues a boss in the middle of the right edge.
- * @param type The enemy type of the boss.
+ * @param id The kind of the boss in the enemy catalog.
  * @param queue The queue it goes to.
  **/
-void queueBoss(rtype::EnemyType type, SpawnQueue &queue)
+void queueBoss(EnemyKindId id, SpawnQueue &queue)
 {
-    const EnemyDef &stat = enemyDef(type);
+    const EnemyKind &kind = enemyCatalog().at(id);
     queue.pending.push_back({
         .request =
             {
-                .type = type,
-                .position = {.x = rtype::PlayfieldWidth + (stat.size.x / 2.0F),
+                .type = kind.behavior,
+                .position = {.x = rtype::PlayfieldWidth +
+                                  (kind.def.size.x / 2.0F),
                              .y = rtype::PlayfieldHeight / 2.0F},
+                .kind = id,
             },
     });
 }
@@ -126,7 +129,11 @@ std::optional<std::uint8_t> levelSystem(engine::Registry &registry,
                 return;
             }
             if (level.boss && !progress.bossSpawned) {
-                queueBoss(progress.boss.value_or(*level.boss), queue);
+                // The boss of the game settings replaces the one of the file.
+                queueBoss(progress.boss ? builtinKind(*progress.boss)
+                                        : level.bossKind.value_or(
+                                              builtinKind(*level.boss)),
+                          queue);
                 progress.bossSpawned = true;
                 BB_INFO("Boss of level " << progress.level + 1);
                 return;

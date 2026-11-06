@@ -8,6 +8,7 @@
 #ifndef SERVER_LEVEL_HPP
 #define SERVER_LEVEL_HPP
 
+#include "EnemyCatalog.hpp"
 #include "Formations.hpp"
 #include "engine/Clock.hpp"
 
@@ -78,7 +79,9 @@ struct ObstacleColumn {
  * @param name The name shown to the players.
  * @param waves Its waves, sorted by time.
  * @param boss The boss that comes once every wave is cleared, if any; the
- * level ends when it is destroyed.
+ * level ends when it is destroyed. For a boss of the enemy catalog, its
+ * built-in behavior.
+ * @param bossKind The catalog kind of the boss when it is not a built-in one.
  * @param obstacles Its columns of walls and tiles, sorted by time. They do
  * not keep the level from ending.
  **/
@@ -86,6 +89,7 @@ struct Level {
     std::string name;
     std::vector<Wave> waves;
     std::optional<rtype::EnemyType> boss;
+    std::optional<EnemyKindId> bossKind;
     std::vector<ObstacleColumn> obstacles;
 };
 
