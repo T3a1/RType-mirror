@@ -12,6 +12,7 @@
 
 #include <raylib.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <unordered_map>
 
@@ -35,6 +36,7 @@ class RaylibGraphics final : public IGraphics {
 
     [[nodiscard]] bool shouldClose() override;
     [[nodiscard]] engine::Vec2f screenSize() const override;
+    void applyVideo(const VideoConfig &video) override;
 
     void beginFrame(Color clear) override;
     void endFrame() override;
@@ -56,6 +58,8 @@ class RaylibGraphics final : public IGraphics {
     [[nodiscard]] bool isMousePressed() const override;
 
   private:
+    int m_chosenWidth;
+    int m_chosenHeight;
     std::unordered_map<std::uint32_t, Texture2D> m_textures;
     std::uint32_t m_nextTexture = 1;
 };

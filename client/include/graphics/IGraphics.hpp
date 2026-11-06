@@ -17,6 +17,23 @@
 namespace client::gfx {
 
 /**
+ * @struct VideoConfig
+ * @brief The window and frame rate chosen by the player.
+ * @param width The width of the window, in pixels, when not in fullscreen.
+ * @param height The height of the window, in pixels, when not in fullscreen.
+ * @param fullscreen Whether the window covers the screen.
+ * @param vsync Whether endFrame() waits for the screen's refresh.
+ * @param frameLimit The most frames per second, 0 for no limit.
+ **/
+struct VideoConfig {
+    int width = 0;
+    int height = 0;
+    bool fullscreen = false;
+    bool vsync = true;
+    int frameLimit = 0;
+};
+
+/**
  * @class IGraphics
  * @brief The window, drawing and keyboard, independent of the graphics
  * library.
@@ -50,6 +67,12 @@ class IGraphics {
      * @return Its width and height, in pixels.
      **/
     [[nodiscard]] virtual engine::Vec2f screenSize() const = 0;
+    /**
+     * @brief Changes the window and the frame rate. A size the player reached
+     * by resizing the window is kept until the chosen size changes.
+     * @param video The new settings; only some apply to a terminal.
+     **/
+    virtual void applyVideo(const VideoConfig &video) = 0;
 
     /**
      * @brief Starts a frame and fills the window with a color.

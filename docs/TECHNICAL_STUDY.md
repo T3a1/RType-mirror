@@ -196,7 +196,7 @@ its room. What remains to store is configuration:
 | Enemy and boss kinds | `server/enemies.json` | JSON | The developers |
 | Banned and allowed addresses | `--banlist`, `--whitelist` files | Text, one address per line | The server (console commands) |
 | Key bindings | `controls.cfg` | Text, `action = keys` | The client (Settings page), or the player by hand |
-| Volumes and accessibility options | `settings.cfg` | Text, `name = value` | The client (menu pages), or the player by hand |
+| Volumes, video and accessibility options | `settings.cfg` | Text, `name = value` | The client (menu pages), or the player by hand |
 | Benchmark results | `build/netbench/*.csv` | CSV | The client, with `--bench` |
 
 ### Comparison

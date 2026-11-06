@@ -6,7 +6,6 @@
 */
 
 #include "Game.hpp"
-#include "Window.hpp"
 #include "common/Playfield.hpp"
 #include "components/Background.hpp"
 #include "systems/AnimationSystem.hpp"
@@ -78,14 +77,42 @@ const char *rejectText(rtype::protocol::RejectReason reason)
     return "Connection refused by the server";
 }
 
+/**
+ * @brief Returns the window and frame rate to use for some settings.
+ * @param settings The settings.
+ * @return The values for the graphics backend. V-Sync replaces the frame limit.
+ **/
+gfx::VideoConfig videoConfig(const Settings &settings)
+{
+    const WindowSize size = WindowSizes.at(settings.windowSize);
+    return {.width = size.width,
+            .height = size.height,
+            .fullscreen = settings.fullscreen,
+            .vsync = settings.vsync,
+            .frameLimit =
+                settings.vsync ? 0 : FrameLimits.at(settings.frameLimit)};
+}
+
+/**
+ * @brief Returns the window and frame rate to start with. A benchmark ignores
+ * the choices of the player, so that its results can be compared.
+ * @param options The options of the game.
+ * @return The values for the graphics backend.
+ **/
+gfx::VideoConfig startVideo(const GameOptions &options)
+{
+    return videoConfig(options.bench ? Settings{} : options.settings);
+}
+
 } // namespace
 
 Game::Game(const std::string &host, std::uint16_t port,
            const GameOptions &options)
     : m_network(host, port), m_graphics(gfx::createGraphics({
-                                 .width = windowWidth,
-                                 .height = windowHeight,
+                                 .width = startVideo(options).width,
+                                 .height = startVideo(options).height,
                                  .title = "R-Type",
+                                 .vsync = startVideo(options).vsync,
                              })),
       m_audio(audio::createAudio()), m_sounds(*m_audio), m_sheets(*m_graphics),
       m_autoJoin(options.bench && !options.room
@@ -96,6 +123,7 @@ Game::Game(const std::string &host, std::uint16_t port,
 {
     m_sync.interpolate = options.interpolate;
     m_sync.predict = options.predict;
+    m_graphics->applyVideo(startVideo(options));
     if (m_autoJoin) {
         m_menu.page = MenuPage::Lobby;
     }
@@ -431,6 +459,9 @@ void Game::drawSettings()
         settingsPage(menuContext(), m_menu.settings, m_settings, m_controls);
     if (result.changed) {
         applyVolumes();
+    }
+    if (result.videoChanged) {
+        m_graphics->applyVideo(videoConfig(m_settings));
     }
     finishSettingsPage(result);
 }

@@ -199,6 +199,18 @@ class MenuPanel {
     bool slider(const gfx::Rect &rect, const std::string &label, float &value,
                 audio::SoundEvent feedback = audio::SoundEvent::MenuMove);
     /**
+     * @brief Draws a choice among a few values, as "label: < value >". Left
+     * and Right change it when it is selected; confirming or a click goes to
+     * the next value. Changing it plays MenuMove.
+     * @param rect Where it is, in screen pixels.
+     * @param label Its text.
+     * @param options The text of each value.
+     * @param current The index of the current value, updated.
+     * @return Whether it changed this frame.
+     **/
+    bool selector(const gfx::Rect &rect, const std::string &label,
+                  std::span<const std::string> options, std::size_t &current);
+    /**
      * @brief Draws a row of tabs: Left and Right change the tab when the row
      * is selected, and a click chooses one. Changing it plays MenuMove.
      * @param rect Where the row is, in screen pixels.

@@ -60,6 +60,7 @@ class FakeGraphics final : public gfx::IGraphics {
         return {};
     }
     void unloadTexture(gfx::Texture /*texture*/) override {}
+    void applyVideo(const gfx::VideoConfig & /*video*/) override {}
     void drawRectangle(gfx::Rect /*rect*/, gfx::Color /*color*/) override {}
     void drawTexture(gfx::Texture /*texture*/, gfx::Rect /*source*/,
                      gfx::Rect /*dest*/, gfx::Color /*tint*/) override
@@ -839,4 +840,151 @@ TEST(MenuPages, AccessibilityGoesBack)
     EXPECT_TRUE(result.back);
     EXPECT_FALSE(result.changed);
     EXPECT_EQ(rig.played(), std::vector<std::string>{BackSound});
+}
+
+TEST(MenuPanel, SelectorChangesWithLeftAndRightAndWraps)
+{
+    MenuRig rig;
+    const std::array<std::string, 3> options{"One", "Two", "Three"};
+    std::size_t current = 0;
+
+    {
+        MenuPanel panel(rig.context({.left = true}), rig.cursor);
+        EXPECT_TRUE(panel.selector(Row, "Item", options, current));
+    }
+    EXPECT_EQ(current, 2U);
+    {
+        MenuPanel panel(rig.context({.right = true}), rig.cursor);
+        EXPECT_TRUE(panel.selector(Row, "Item", options, current));
+    }
+    EXPECT_EQ(current, 0U);
+    EXPECT_TRUE(rig.drew("Item: < One >"));
+    EXPECT_EQ(rig.played(), (std::vector<std::string>{MoveSound, MoveSound}));
+}
+
+TEST(MenuPanel, SelectorGoesToTheNextValueOnConfirmOrClick)
+{
+    MenuRig rig;
+    const std::array<std::string, 2> options{"One", "Two"};
+    std::size_t current = 0;
+
+    {
+        MenuPanel panel(rig.context({.confirm = true}), rig.cursor);
+        EXPECT_TRUE(panel.selector(Row, "Item", options, current));
+    }
+    EXPECT_EQ(current, 1U);
+    rig.click(Row.x + 1.0F);
+    {
+        MenuPanel panel(rig.context(), rig.cursor);
+        EXPECT_TRUE(panel.selector(Row, "Item", options, current));
+    }
+    EXPECT_EQ(current, 0U);
+}
+
+TEST(MenuPanel, SelectorIgnoresTheKeysWhenNotSelected)
+{
+    MenuRig rig;
+    rig.cursor.selected = 1;
+    const std::array<std::string, 2> options{"One", "Two"};
+    std::size_t current = 0;
+
+    MenuPanel panel(rig.context({.right = true}), rig.cursor);
+
+    EXPECT_FALSE(panel.selector(Row, "Item", options, current));
+    EXPECT_EQ(current, 0U);
+}
+
+TEST(MenuPanel, SelectorWithoutOptionsDoesNothing)
+{
+    MenuRig rig;
+    std::size_t current = 3;
+
+    MenuPanel panel(rig.context({.right = true}), rig.cursor);
+
+    EXPECT_FALSE(panel.selector(Row, "Item", {}, current));
+    EXPECT_EQ(current, 3U);
+}
+
+TEST(MenuPages, VideoTabIsTheThirdTab)
+{
+    SettingsRig rig;
+
+    static_cast<void>(rig.frame({.left = true}));
+    EXPECT_EQ(rig.page.tab, 2U);
+
+    rig.graphics.texts.clear();
+    static_cast<void>(rig.frame());
+    EXPECT_TRUE(rig.drew("[Video]"));
+    EXPECT_TRUE(rig.drew("[ ] Fullscreen"));
+    EXPECT_TRUE(rig.drew("Window size: < 1280x720 >"));
+    EXPECT_TRUE(rig.drew("[x] V-Sync"));
+}
+
+TEST(MenuPages, VideoTabReportsAChange)
+{
+    SettingsRig rig;
+    rig.page.tab = 2;
+    rig.page.cursor.selected = 1;
+
+    const client::SettingsResult result = rig.frame({.confirm = true});
+
+    EXPECT_TRUE(rig.settings.fullscreen);
+    EXPECT_TRUE(result.changed);
+    EXPECT_TRUE(result.videoChanged);
+}
+
+TEST(MenuPages, VideoTabChangesTheWindowSize)
+{
+    SettingsRig rig;
+    rig.page.tab = 2;
+    rig.page.cursor.selected = 2;
+
+    const client::SettingsResult result = rig.frame({.right = true});
+
+    EXPECT_EQ(rig.settings.windowSize, 1U);
+    EXPECT_TRUE(result.videoChanged);
+}
+
+TEST(MenuPages, VideoTabDisablesTheWindowSizeInFullscreen)
+{
+    SettingsRig rig;
+    rig.page.tab = 2;
+    rig.page.cursor.selected = 2;
+    rig.settings.fullscreen = true;
+
+    const client::SettingsResult result = rig.frame({.confirm = true});
+
+    EXPECT_EQ(rig.settings.windowSize, 0U);
+    EXPECT_FALSE(result.videoChanged);
+}
+
+TEST(MenuPages, VSyncReplacesTheFrameLimit)
+{
+    SettingsRig rig;
+    rig.page.tab = 2;
+    rig.page.cursor.selected = 4;
+    const std::size_t limit = rig.settings.frameLimit;
+
+    const client::SettingsResult locked = rig.frame({.confirm = true});
+
+    EXPECT_EQ(rig.settings.frameLimit, limit);
+    EXPECT_FALSE(locked.videoChanged);
+    EXPECT_TRUE(rig.drew("Frame limit: V-Sync"));
+
+    rig.settings.vsync = false;
+    const client::SettingsResult free = rig.frame({.right = true});
+
+    EXPECT_EQ(rig.settings.frameLimit, 0U);
+    EXPECT_TRUE(free.videoChanged);
+}
+
+TEST(MenuPages, VideoTabCancelsAKeyCapture)
+{
+    SettingsRig rig;
+    rig.page.capture.start({.control = Control::Fire, .index = 0});
+    rig.page.tab = 2;
+
+    static_cast<void>(rig.frame());
+
+    EXPECT_FALSE(rig.page.capture.slot().has_value());
 }

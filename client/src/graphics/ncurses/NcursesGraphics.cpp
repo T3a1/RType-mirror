@@ -351,6 +351,11 @@ engine::Vec2f NcursesGraphics::screenSize() const
             .y = static_cast<float>(rows) * CellHeight};
 }
 
+void NcursesGraphics::applyVideo(const VideoConfig &video)
+{
+    m_vsync = video.vsync;
+}
+
 void NcursesGraphics::beginFrame(Color clear)
 {
     m_zoom = 1.0F;

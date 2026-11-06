@@ -44,7 +44,7 @@ enum class MenuPage : std::uint8_t {
  * @struct SettingsPageState
  * @brief What the Settings page keeps between two frames.
  * @param cursor The keyboard selection of the page.
- * @param tab The current tab: 0 Audio, 1 Controls.
+ * @param tab The current tab: 0 Audio, 1 Controls, 2 Video.
  * @param capture The key being changed, if any.
  * @param notice The text under the keys, to report a key used twice.
  **/
@@ -111,18 +111,21 @@ enum class MainChoice : std::uint8_t {
  * @brief What the player did on a page of settings this frame.
  * @param changed Whether a setting changed.
  * @param controlsChanged Whether the keys changed.
+ * @param videoChanged Whether the window or the frame rate changed.
  * @param back Whether the player chose to go back.
  **/
 struct SettingsResult {
     bool changed = false;
     bool controlsChanged = false;
+    bool videoChanged = false;
     bool back = false;
 };
 
 /**
- * @brief Draws the settings of the player, in screen pixels, in two tabs. On
- * Audio, the sound volume plays a sound of the game when it changes, so the
- * player can hear it. On Controls, each control has two keys to change.
+ * @brief Draws the settings of the player, in screen pixels, in three tabs.
+ * On Audio, the sound volume plays a sound of the game when it changes, so the
+ * player can hear it. On Controls, each control has two keys to change. Video
+ * holds the window and the frame rate.
  * @param context What the menu needs for this frame.
  * @param state The state of this page, updated.
  * @param settings The settings, updated.

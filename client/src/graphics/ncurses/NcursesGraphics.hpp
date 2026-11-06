@@ -64,6 +64,8 @@ class NcursesGraphics final : public IGraphics {
 
     [[nodiscard]] bool shouldClose() override;
     [[nodiscard]] engine::Vec2f screenSize() const override;
+    /** @brief Only V-Sync applies: a terminal has no window to change. */
+    void applyVideo(const VideoConfig &video) override;
 
     void beginFrame(Color clear) override;
     void endFrame() override;

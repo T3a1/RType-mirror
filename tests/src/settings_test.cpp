@@ -27,6 +27,16 @@ std::vector<std::string> read(const std::string &text, Settings &settings)
     return readSettings(in, settings);
 }
 
+// Whether the video settings have their default values.
+bool hasDefaultVideo(const Settings &settings)
+{
+    const Settings defaults;
+    return settings.windowSize == defaults.windowSize &&
+           settings.frameLimit == defaults.frameLimit &&
+           settings.fullscreen == defaults.fullscreen &&
+           settings.vsync == defaults.vsync;
+}
+
 } // namespace
 
 TEST(Settings, ReadsNothingFromAnEmptyFile)
@@ -195,4 +205,65 @@ TEST(Settings, ReportsAFileItCannotWrite)
                                        "rtype_no_such_folder" / "settings.cfg";
 
     EXPECT_FALSE(client::saveSettingsFile(path.string(), Settings{}));
+}
+
+TEST(Settings, HasTheSmallestWindowAndNoFrameLimitByDefault)
+{
+    const Settings settings;
+
+    EXPECT_FALSE(settings.fullscreen);
+    EXPECT_TRUE(settings.vsync);
+    EXPECT_EQ(client::WindowSizes.at(settings.windowSize).width, 1280);
+    EXPECT_EQ(client::WindowSizes.at(settings.windowSize).height, 720);
+    EXPECT_EQ(client::FrameLimits.at(settings.frameLimit), 0);
+}
+
+TEST(Settings, ReadsTheVideoSettings)
+{
+    Settings settings;
+
+    const auto errors = read("fullscreen = on\n"
+                             "window_size = 1920x1080\n"
+                             "vsync = off\n"
+                             "frame_limit = 60\n",
+                             settings);
+
+    EXPECT_TRUE(errors.empty());
+    EXPECT_TRUE(settings.fullscreen);
+    EXPECT_FALSE(settings.vsync);
+    EXPECT_EQ(client::WindowSizes.at(settings.windowSize).width, 1920);
+    EXPECT_EQ(client::FrameLimits.at(settings.frameLimit), 60);
+}
+
+TEST(Settings, KeepsTheVideoSettingsOfABadLine)
+{
+    for (const std::string line :
+         {"window_size = 800x600", "window_size = big",
+          "window_size =", "frame_limit = 59", "frame_limit = -1",
+          "frame_limit = 99999999999", "fullscreen = maybe", "vsync = 1"}) {
+        Settings settings;
+        const auto errors = read(line, settings);
+
+        EXPECT_EQ(errors.size(), 1U) << line;
+        EXPECT_TRUE(hasDefaultVideo(settings)) << line;
+    }
+}
+
+TEST(Settings, ReadsBackTheVideoSettingsItWrites)
+{
+    Settings written;
+    written.fullscreen = true;
+    written.vsync = false;
+    written.windowSize = client::WindowSizes.size() - 1;
+    written.frameLimit = 1;
+    std::ostringstream out;
+    writeSettings(out, written);
+
+    Settings settings;
+
+    EXPECT_TRUE(read(out.str(), settings).empty());
+    EXPECT_TRUE(settings.fullscreen);
+    EXPECT_FALSE(settings.vsync);
+    EXPECT_EQ(settings.windowSize, written.windowSize);
+    EXPECT_EQ(settings.frameLimit, written.frameLimit);
 }
