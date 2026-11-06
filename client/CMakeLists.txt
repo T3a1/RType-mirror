@@ -9,7 +9,6 @@ set_property(CACHE RTYPE_GRAPHICS_BACKEND PROPERTY STRINGS raylib sfml ncurses)
 set(SOURCE_FILES
     src/main.cpp
     src/Game.cpp
-    src/Menu.cpp
     src/SpriteSheets.cpp
     src/systems/AnimationSystem.cpp
     src/systems/AudioSystem.cpp
@@ -74,6 +73,17 @@ target_include_directories(r-type_client_audio
     PUBLIC include
 )
 
+# The menu widgets are a library so the tests can run them on a fake backend.
+add_library(r-type_client_menu STATIC src/Menu.cpp)
+
+target_include_directories(r-type_client_menu
+    PUBLIC include
+)
+
+target_link_libraries(r-type_client_menu
+    PUBLIC r-type_engine r-type_client_audio
+)
+
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 target_include_directories(${PROJECT_NAME}
@@ -82,7 +92,7 @@ target_include_directories(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE r-type_client_network r-type_client_controls r-type_client_audio
-    ${GRAPHICS_LIBRARIES}
+    r-type_client_menu ${GRAPHICS_LIBRARIES}
 )
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

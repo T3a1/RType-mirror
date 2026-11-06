@@ -8,7 +8,6 @@
 #include "systems/LobbySystem.hpp"
 #include "PlayerColors.hpp"
 
-#include <algorithm>
 #include <array>
 #include <string>
 
@@ -39,24 +38,6 @@ constexpr int TitleFontSize = 48;
 constexpr int TextFontSize = 24;
 /** @brief The items before the rooms of the list: Quick match and New room. */
 constexpr std::size_t FixedItems = 2;
-
-/**
- * @brief Moves the keyboard selection, wrapping around.
- * @param selected The selected item, updated.
- * @param count The number of items.
- * @param keys The menu keys of this frame.
- **/
-void moveSelection(std::size_t &selected, std::size_t count,
-                   const MenuKeys &keys)
-{
-    selected = std::min(selected, count - 1);
-    if (keys.up) {
-        selected = (selected + count - 1) % count;
-    }
-    if (keys.down) {
-        selected = (selected + 1) % count;
-    }
-}
 
 /**
  * @brief Returns the label of a room in the menu.
@@ -121,19 +102,20 @@ bool canJoin(const RoomInfo &room)
            room.players < rtype::protocol::MaxPlayers;
 }
 
-std::optional<std::uint32_t>
-lobbyScreen(LobbyState &state, gfx::IGraphics &graphics, const MenuKeys &keys)
+std::optional<std::uint32_t> lobbyScreen(LobbyState &state,
+                                         gfx::IGraphics &graphics,
+                                         const MenuKeys &keys,
+                                         audio::SoundBoard &sounds)
 {
+    MenuPanel panel(graphics, keys, sounds, state.lobbyCursor);
     const engine::Vec2f screen = graphics.screenSize();
-    const std::size_t count = FixedItems + state.rooms.size();
-    moveSelection(state.selected, count, keys);
     const bool joining = state.screen == LobbyState::Screen::Joining;
 
     float y = TopMargin;
     drawCentered(graphics, "R-TYPE", screen.x / 2.0F, y, TitleFontSize,
                  gfx::colors::OffWhite);
     y += TitleHeight;
-    std::string hint = "Up, Down and Space, or the mouse. Esc quits.";
+    std::string hint = "Up, Down and Enter, or the mouse. Esc quits.";
     if (joining) {
         hint = "Joining...";
     } else if (state.refused) {
@@ -146,37 +128,27 @@ lobbyScreen(LobbyState &state, gfx::IGraphics &graphics, const MenuKeys &keys)
     y += LineHeight;
 
     std::optional<std::uint32_t> choice;
-    for (std::size_t i = 0; i < count; ++i) {
-        std::string label = "Quick match";
-        std::uint32_t room = rtype::protocol::AnyRoom;
-        bool enabled = !joining;
-        if (i == 1) {
-            label = "New room";
-            room = rtype::protocol::NewRoom;
-        } else if (i >= FixedItems) {
-            const RoomInfo &info = state.rooms[i - FixedItems];
-            label = roomLabel(info);
-            room = info.room;
-            enabled = enabled && canJoin(info);
+    if (panel.button(itemAt(screen, y, 0), "Quick match", !joining)) {
+        choice = rtype::protocol::AnyRoom;
+    }
+    if (panel.button(itemAt(screen, y, 1), "New room", !joining)) {
+        choice = rtype::protocol::NewRoom;
+    }
+    std::size_t index = FixedItems;
+    for (const RoomInfo &room : state.rooms) {
+        if (panel.button(itemAt(screen, y, index), roomLabel(room),
+                         !joining && canJoin(room))) {
+            choice = room.room;
         }
-        const bool selected = i == state.selected;
-        const bool clicked =
-            menuButton(graphics, itemAt(screen, y, i), label,
-                       {.selected = selected, .enabled = enabled});
-        if (clicked || (selected && enabled && keys.confirm)) {
-            choice = room;
-        }
+        ++index;
     }
     return choice;
 }
 
 namespace {
 
-// Items of the waiting room: the settings, then Start and Leave.
+// The settings of the waiting room.
 constexpr std::size_t SettingCount = 3;
-constexpr std::size_t StartItem = SettingCount;
-constexpr std::size_t LeaveItem = SettingCount + 1;
-constexpr std::size_t WaitingItems = SettingCount + 2;
 constexpr gfx::Color HintColor = gfx::rgb(170, 170, 185);
 
 std::string difficultyName(rtype::protocol::Difficulty difficulty)
@@ -247,10 +219,11 @@ void nextSetting(LobbyState &state, std::size_t setting)
 } // namespace
 
 WaitingChoice waitingRoomScreen(LobbyState &state, const SyncState &sync,
-                                gfx::IGraphics &graphics, const MenuKeys &keys)
+                                gfx::IGraphics &graphics, const MenuKeys &keys,
+                                audio::SoundBoard &sounds)
 {
+    MenuPanel panel(graphics, keys, sounds, state.waitingCursor);
     const engine::Vec2f screen = graphics.screenSize();
-    moveSelection(state.selected, WaitingItems, keys);
 
     float y = TopMargin;
     drawCentered(graphics, "Room " + std::to_string(state.room),
@@ -272,10 +245,7 @@ WaitingChoice waitingRoomScreen(LobbyState &state, const SyncState &sync,
         "Boss: " + bossName(state.settings.boss),
     };
     for (std::size_t i = 0; i < SettingCount; ++i) {
-        const bool clicked =
-            menuButton(graphics, rowAt(screen, y), labels.at(i),
-                       {.selected = state.selected == i});
-        if (clicked || (keys.confirm && state.selected == i)) {
+        if (panel.button(rowAt(screen, y), labels.at(i))) {
             nextSetting(state, i);
         }
         y += RowHeight + RowGap;
@@ -284,18 +254,13 @@ WaitingChoice waitingRoomScreen(LobbyState &state, const SyncState &sync,
                  screen.x / 2.0F, y, TextFontSize, HintColor);
     y += LineHeight;
 
-    const bool start = menuButton(graphics, rowAt(screen, y), "Start the game",
-                                  {.selected = state.selected == StartItem});
+    const bool start = panel.button(rowAt(screen, y), "Start the game");
     y += RowHeight + RowGap;
-    const bool leave = menuButton(graphics, rowAt(screen, y), "Back to lobby",
-                                  {.selected = state.selected == LeaveItem});
-    if (start || (keys.confirm && state.selected == StartItem)) {
+    const bool leave = panel.backButton(rowAt(screen, y), "Back to lobby");
+    if (start) {
         return WaitingChoice::Start;
     }
-    if (leave || (keys.confirm && state.selected == LeaveItem)) {
-        return WaitingChoice::Leave;
-    }
-    return WaitingChoice::None;
+    return leave ? WaitingChoice::Leave : WaitingChoice::None;
 }
 
 } // namespace client

@@ -6,7 +6,6 @@
 */
 
 #include "systems/HudSystem.hpp"
-#include "Menu.hpp"
 #include "PlayerColors.hpp"
 #include "common/components/EntityType.hpp"
 #include "common/components/Health.hpp"
@@ -197,8 +196,10 @@ void playerNoticeSystem(const SyncState &state, gfx::IGraphics &graphics)
 }
 
 bool gameOverScreen(const SyncState &state, gfx::IGraphics &graphics,
-                    bool confirm)
+                    const MenuKeys &keys, audio::SoundBoard &sounds)
 {
+    MenuCursor cursor;
+    MenuPanel panel(graphics, keys, sounds, cursor);
     const engine::Vec2f screen = graphics.screenSize();
     const auto lines = static_cast<float>(state.players.size() + 1);
     const float height = (PanelPadding * 3.0F) + TitleHeight +
@@ -235,8 +236,7 @@ bool gameOverScreen(const SyncState &state, gfx::IGraphics &graphics,
                            .y = y,
                            .width = ButtonWidth,
                            .height = ButtonHeight};
-    return menuButton(graphics, button, "Back to lobby", {.selected = true}) ||
-           confirm;
+    return panel.backButton(button, "Back to lobby");
 }
 
 } // namespace client

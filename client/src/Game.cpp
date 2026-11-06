@@ -294,7 +294,8 @@ void Game::leaveRoom()
     m_registry = engine::Registry{};
     createBackground();
     m_lobby.screen = LobbyState::Screen::Lobby;
-    m_lobby.selected = 0;
+    m_lobby.lobbyCursor = MenuCursor{};
+    m_lobby.waitingCursor = MenuCursor{};
     m_gameOverTime = 0.0F;
 }
 
@@ -323,14 +324,7 @@ void Game::drawLobby()
     if (m_network.state() != NetworkClient::State::Connected) {
         return;
     }
-    if (m_menuKeys.up || m_menuKeys.down) {
-        m_sounds.play(audio::SoundEvent::MenuMove);
-    }
-    const auto room = lobbyScreen(m_lobby, *m_graphics, m_menuKeys);
-    if (room) {
-        m_sounds.play(audio::SoundEvent::MenuConfirm);
-    }
-    applyLobbyChoice(room);
+    applyLobbyChoice(lobbyScreen(m_lobby, *m_graphics, m_menuKeys, m_sounds));
 }
 
 /**
@@ -338,16 +332,11 @@ void Game::drawLobby()
  **/
 void Game::drawWaitingRoom()
 {
-    if (m_menuKeys.up || m_menuKeys.down) {
-        m_sounds.play(audio::SoundEvent::MenuMove);
-    }
     const WaitingChoice choice =
-        waitingRoomScreen(m_lobby, m_sync, *m_graphics, m_menuKeys);
+        waitingRoomScreen(m_lobby, m_sync, *m_graphics, m_menuKeys, m_sounds);
     if (choice == WaitingChoice::Start) {
-        m_sounds.play(audio::SoundEvent::MenuConfirm);
         m_network.startGame(m_lobby.settings, std::chrono::steady_clock::now());
     } else if (choice == WaitingChoice::Leave) {
-        m_sounds.play(audio::SoundEvent::MenuBack);
         leaveRoom();
     }
 }
@@ -362,10 +351,11 @@ void Game::drawGame()
         bossHealthBar(m_registry, *m_graphics);
         levelBannerScreen(m_sync, *m_graphics);
     }
-    const bool keyboard =
-        m_menuKeys.confirm && m_gameOverTime >= GameOverKeyDelay;
-    if (m_sync.gameOver && gameOverScreen(m_sync, *m_graphics, keyboard)) {
-        m_sounds.play(audio::SoundEvent::MenuBack);
+    // The fire key also confirms: wait before listening to it on this screen.
+    MenuKeys keys = m_menuKeys;
+    keys.confirm = keys.confirm && m_gameOverTime >= GameOverKeyDelay;
+    if (m_sync.gameOver &&
+        gameOverScreen(m_sync, *m_graphics, keys, m_sounds)) {
         leaveRoom();
     }
 }

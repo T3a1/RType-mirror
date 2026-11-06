@@ -30,6 +30,8 @@ hand only.
 | F | Right Shift | Auto-fire on or off: the ship shoots on its own, 4 times per second |
 | Escape | Escape | Leave the room. In the room list: quit |
 
+In the menus, the arrow keys move the selection, and Space or Enter chooses.
+
 **Choose your own keys**: write a `controls.cfg` file in the folder you start
 the game from (or give its path with `--controls FILE`). Each line gives the
 keys of one action and replaces its default keys:

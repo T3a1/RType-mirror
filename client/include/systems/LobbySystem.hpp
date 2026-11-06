@@ -28,7 +28,8 @@ namespace client {
  * @param room The current room, for the InRoom screen.
  * @param refused Whether the server refused the last room asked for.
  * @param closed Whether an administrator closed the room of the player.
- * @param selected The item of the menu selected with the keyboard.
+ * @param lobbyCursor The keyboard selection of the menu of the rooms.
+ * @param waitingCursor The keyboard selection of the waiting room.
  * @param levels How many levels the server has, from RoomJoined.
  * @param settings The game settings chosen in the waiting room, sent if
  * this player starts the game.
@@ -48,7 +49,8 @@ struct LobbyState {
     std::uint32_t room = rtype::protocol::AnyRoom;
     bool refused = false;
     bool closed = false;
-    std::size_t selected = 0;
+    MenuCursor lobbyCursor;
+    MenuCursor waitingCursor;
     std::uint8_t levels = 0;
     rtype::protocol::StartGame settings;
 };
@@ -75,10 +77,12 @@ enum class WaitingChoice : std::uint8_t { None, Start, Leave };
  * @param state The lobby state; the keyboard selection is updated.
  * @param graphics The graphics backend.
  * @param keys The menu keys of this frame.
+ * @param sounds The sounds of the game, for the menu sounds.
  * @return The room to ask for (or AnyRoom or NewRoom), if one was chosen.
  **/
 [[nodiscard]] std::optional<std::uint32_t>
-lobbyScreen(LobbyState &state, gfx::IGraphics &graphics, const MenuKeys &keys);
+lobbyScreen(LobbyState &state, gfx::IGraphics &graphics, const MenuKeys &keys,
+            audio::SoundBoard &sounds);
 
 /**
  * @brief Draws the panel of a waiting room, in screen pixels: its players,
@@ -88,12 +92,14 @@ lobbyScreen(LobbyState &state, gfx::IGraphics &graphics, const MenuKeys &keys);
  * @param sync The sync state, for the players of the room.
  * @param graphics The graphics backend.
  * @param keys The menu keys of this frame.
+ * @param sounds The sounds of the game, for the menu sounds.
  * @return What the player chose.
  **/
 [[nodiscard]] WaitingChoice waitingRoomScreen(LobbyState &state,
                                               const SyncState &sync,
                                               gfx::IGraphics &graphics,
-                                              const MenuKeys &keys);
+                                              const MenuKeys &keys,
+                                              audio::SoundBoard &sounds);
 
 } // namespace client
 

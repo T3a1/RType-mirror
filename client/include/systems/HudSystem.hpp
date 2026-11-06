@@ -8,6 +8,7 @@
 #ifndef CLIENT_SYSTEMS_HUDSYSTEM_HPP
 #define CLIENT_SYSTEMS_HUDSYSTEM_HPP
 
+#include "Menu.hpp"
 #include "engine/Registry.hpp"
 #include "graphics/IGraphics.hpp"
 #include "systems/NetworkSyncSystem.hpp"
@@ -72,11 +73,14 @@ void playerNoticeSystem(const SyncState &state, gfx::IGraphics &graphics);
  * It is drawn in screen pixels: call it after endWorld().
  * @param state The sync state, for the players and the local slot.
  * @param graphics The graphics backend to draw with and read the mouse from.
- * @param confirm Whether the keyboard confirmed the button.
+ * @param keys The menu keys of this frame.
+ * @param sounds The sounds of the game, for the menu sounds.
  * @return Whether the player chose to go back to the lobby.
  **/
 [[nodiscard]] bool gameOverScreen(const SyncState &state,
-                                  gfx::IGraphics &graphics, bool confirm);
+                                  gfx::IGraphics &graphics,
+                                  const MenuKeys &keys,
+                                  audio::SoundBoard &sounds);
 
 } // namespace client
 
