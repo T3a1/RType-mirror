@@ -209,6 +209,34 @@ class LauncherWindow:
         scroll.grid(row=0, column=1, sticky="ns")
         self.output.configure(yscrollcommand=scroll.set)
 
+        # The administration console of a native server reads this input.
+        console = ttk.Frame(self.root, padding=(12, 0, 12, 12))
+        console.grid(row=3, column=0, sticky="ew")
+        console.columnconfigure(1, weight=1)
+        ttk.Label(console, text="Server console").grid(row=0, column=0,
+                                                        padx=(0, 8))
+        self.console_line = self.tk.StringVar()
+        entry = ttk.Entry(console, textvariable=self.console_line)
+        entry.grid(row=0, column=1, sticky="ew")
+        entry.bind("<Return>", lambda _: self.send())
+        ttk.Button(console, text="Send", command=self.send).grid(
+            row=0, column=2, padx=(8, 0))
+
+    def send(self) -> None:
+        """Sends the console line to the running command: with a native
+        server, its administration commands (help, status, kick...)."""
+        line = self.console_line.get().strip()
+        if not line or self.process is None or self.process.stdin is None:
+            return
+        try:
+            self.process.stdin.write(line + "\n")
+            self.process.stdin.flush()
+        except OSError:
+            self.status.set("The command does not read input any more.")
+            return
+        self.write(f"> {line}\n")
+        self.console_line.set("")
+
     def write(self, text: str) -> None:
         """Appends text to the output and scrolls to it."""
         self.output.configure(state="normal")
