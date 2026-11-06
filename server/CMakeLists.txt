@@ -99,7 +99,7 @@ target_link_libraries(${PROJECT_NAME}
     PRIVATE r-type_server_game_over
 )
 
-# The levels and the weapons are read next to the executable.
+# The levels, the weapons and the enemies are read next to the executable.
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/levels
@@ -107,5 +107,8 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_SOURCE_DIR}/weapons.json
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/weapons.json
-    COMMENT "Copying the server levels and weapons"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_SOURCE_DIR}/enemies.json
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/enemies.json
+    COMMENT "Copying the server levels, weapons and enemies"
 )
