@@ -64,6 +64,14 @@ Docker); it installs the rest, such as CMake and Conan, by itself. The game uses
 Conan downloads. See the [installation guide](docs/INSTALLATION.md) for the
 requirements and all the options.
 
+To play on several machines, one of them runs only the server and the others
+only the clients:
+
+```bash
+./rtype.py --server-only --native     # on the host
+./rtype.py --clients-only -H <host>   # on each player's machine
+```
+
 ## Documentation
 
 The full documentation is online, with an outline and a search bar:
