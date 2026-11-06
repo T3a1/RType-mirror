@@ -31,6 +31,9 @@ using Json = nlohmann::json;
 
 /** @brief Enemy files larger than this are not read, in bytes. */
 constexpr std::uintmax_t MaxEnemiesFileSize = std::uintmax_t{256} * 1024U;
+/** @brief The most health an enemy can have: snapshots send it on 16 bits,
+ * and the hard difficulty raises it by half. */
+constexpr double MaxEnemyHealth = 40000.0;
 /** @brief The longest name of an enemy kind, in characters. */
 constexpr std::size_t MaxEnemyNameLength = 32;
 
@@ -191,7 +194,7 @@ void readPattern(const Json &object, const std::string &where,
 void readStats(const Json &object, const EnemyCatalog &catalog,
                const std::string &where, EnemyDef &def)
 {
-    read(object, "health", 1.0, 100000.0, where, def.health);
+    read(object, "health", 1.0, MaxEnemyHealth, where, def.health);
     read(object, "speed", 0.0, 3000.0, where, def.speed);
     read(object, "width", 1.0, rtype::PlayfieldHeight, where, def.size.x);
     read(object, "height", 1.0, rtype::PlayfieldHeight, where, def.size.y);
