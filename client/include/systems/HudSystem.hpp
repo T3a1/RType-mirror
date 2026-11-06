@@ -26,10 +26,20 @@ void playerLabelSystem(engine::Registry &registry, const SyncState &state,
                        gfx::IGraphics &graphics);
 
 /**
+ * @brief Draws the letter of each power-up's boost (S, A or B) above it, in
+ * the boost's color, in world units: call it between beginWorld() and
+ * endWorld().
+ * @param registry The client's registry, for the power-ups.
+ * @param graphics The graphics backend to draw with.
+ **/
+void powerUpLabelSystem(engine::Registry &registry, gfx::IGraphics &graphics);
+
+/**
  * @brief Draws the score of every player in the top-left corner, each in
- * the player's color, the local player marked "(you)", and "Auto-fire ON"
- * below them while auto-fire is on. It is drawn in screen pixels: call it
- * after endWorld().
+ * the player's color, the local player marked "(you)", then the local
+ * player's boosts with their seconds left, each in its color, and
+ * "Auto-fire ON" below them while auto-fire is on. It is drawn in screen
+ *pixels: call it after endWorld().
  * @param state The sync state, for the players and the local slot.
  * @param autoFire Whether auto-fire is on.
  * @param graphics The graphics backend to draw with.

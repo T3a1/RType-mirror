@@ -230,6 +230,9 @@ void Game::registerRenderSystems()
     addRender(Layer::World, "playerLabels", [this](Registry &r, Duration) {
         playerLabelSystem(r, m_sync, *m_graphics);
     });
+    addRender(Layer::World, "powerUpLabels", [this](Registry &r, Duration) {
+        powerUpLabelSystem(r, *m_graphics);
+    });
     addRender(Layer::Overlay, "screens",
               [this](Registry &, Duration) { drawScreens(); });
     addRender(Layer::Overlay, "status",

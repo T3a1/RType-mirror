@@ -6,6 +6,7 @@
 */
 
 #include "systems/NetworkSyncSystem.hpp"
+#include "PlayerColors.hpp"
 #include "SpriteSheets.hpp"
 #include "common/Playfield.hpp"
 #include "common/components/Enemy.hpp"
@@ -13,11 +14,13 @@
 #include "common/components/Health.hpp"
 #include "common/components/NetworkId.hpp"
 #include "common/components/Player.hpp"
+#include "common/components/PowerUpKind.hpp"
 #include "common/components/SnapshotHistory.hpp"
 #include "common/components/Transform.hpp"
 #include "common/systems/PredictionSystem.hpp"
 #include "components/ChargeState.hpp"
 #include "components/ShipOwner.hpp"
+#include "components/Sprite.hpp"
 #include "engine/Logger.hpp"
 
 #include <algorithm>
@@ -149,6 +152,27 @@ void explode(engine::Registry &registry, engine::Entity entity,
 }
 
 /**
+ * @brief Gives a new power-up the kind of its boost, read from its flags,
+ * and tints its sprite with the boost's color. Does nothing for another
+ * entity.
+ * @param registry The client's registry.
+ * @param created The new entity.
+ * @param entity Its record from the snapshot.
+ **/
+void setPowerUpKind(engine::Registry &registry, engine::Entity created,
+                    const EntityState &entity)
+{
+    if (entity.type != rtype::EntityType::PowerUp) {
+        return;
+    }
+    const rtype::PowerUpKind kind = EntityFlag::boostOf(entity.flags);
+    registry.emplace<rtype::PowerUpKind>(created, kind);
+    if (auto *sprite = registry.tryGet<Sprite>(created)) {
+        sprite->tint = powerUpColor(kind);
+    }
+}
+
+/**
  * @brief Starts the charge sound when the local ship starts charging, and
  * stops it when the ship stops. Call it before updating the ChargeState.
  * @param registry The client's registry.
@@ -260,6 +284,7 @@ void applyEntity(engine::Registry &registry, const EntityState &entity,
                  });
     const bool local = entity.networkId == state.localShip;
     attachSprite(registry, created, sheets, entity.type, 0);
+    setPowerUpKind(registry, created, entity);
     if (entity.type == rtype::EntityType::PlayerShip) {
         registry.emplace<ChargeState>(created, charge);
         setShipOwner(registry, created, ownerOfShip(state, entity.networkId),

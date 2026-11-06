@@ -8,6 +8,7 @@
 #include "EntityFactory.hpp"
 #include "common/Obstacles.hpp"
 #include "common/Playfield.hpp"
+#include "components/ShotStyles.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -118,6 +119,7 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
     registry.emplace<KeepInPlayfield>(player);
     registry.emplace<rtype::Weapon>(player);
     registry.emplace<SpreadShot>(player);
+    registry.emplace<Boosts>(player);
 
     BB_DEBUG("Player " << static_cast<int>(request.slot) << " spawned with id "
                        << networkId);
