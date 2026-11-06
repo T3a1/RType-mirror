@@ -80,6 +80,15 @@ const EnemyDef &enemyDef(rtype::EnemyType type)
     return catalog().at(builtinKind(type)).def;
 }
 
+const EnemyDef &enemyDef(const rtype::Enemy &enemy)
+{
+    // Enemies built without a kind (kind 0) still get the stats of their type.
+    if (enemy.kind < ENEMY_DEFS.size()) {
+        return enemyDef(enemy.type);
+    }
+    return catalog().at(enemy.kind).def;
+}
+
 const EnemyCatalog &enemyCatalog() { return catalog(); }
 
 void setEnemyCatalog(EnemyCatalog catalog)

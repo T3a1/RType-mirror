@@ -56,7 +56,7 @@ void powerUpDropSystem(engine::Registry &registry, SpawnCommands &commands)
         [&commands](engine::Entity, const rtype::Enemy &enemy,
                     const rtype::Health &health,
                     const rtype::Transform &transform) {
-            if (health.current <= 0 && enemyDef(enemy.type).dropsPowerUp) {
+            if (health.current <= 0 && enemyDef(enemy).dropsPowerUp) {
                 commands.emplace_back(
                     SpawnPowerUp{.position = transform.position});
             }

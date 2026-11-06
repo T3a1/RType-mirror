@@ -137,6 +137,14 @@ inline constexpr std::array<EnemyDef, 8> ENEMY_DEFS = {
  **/
 [[nodiscard]] const EnemyDef &enemyDef(rtype::EnemyType type);
 
+/**
+ * @brief Returns the stats of an enemy: those of its kind in the catalog of
+ * the server, or of its type when its kind is a built-in one.
+ * @param enemy The Enemy component of the entity.
+ * @return Its definition.
+ **/
+[[nodiscard]] const EnemyDef &enemyDef(const rtype::Enemy &enemy);
+
 } // namespace server
 
 #endif // SERVER_ENEMYDEFS_HPP
