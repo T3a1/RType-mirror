@@ -272,6 +272,12 @@ Le client dessine une fois par image avec un ordonnanceur de plus par couche : `
 monde, `endFrame`) car elle donne son sens à chaque couche. Les écrans de lobby, de salle d'attente et de fin de partie agissent aussi sur
 le jeu : ils restent donc ensemble dans un seul système `screens` de la couche `Overlay`.
 
+Le fond est fait de deux images raccordables qui défilent sans fin (composants
+`Background`, dessinés par `depth`) : des planètes loin derrière, et des étoiles devant
+qui défilent trois fois plus vite, pour une impression de profondeur (parallaxe). Les
+couches, leurs images et leurs vitesses sont listées dans `client/src/Game.cpp`
+(`BackgroundLayers`).
+
 ### 4.3 Vue d'ensemble
 
 ```mermaid
