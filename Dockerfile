@@ -16,6 +16,7 @@ FROM scratch
 COPY --from=build /app/build/r-type_server /r-type_server
 COPY --from=build /app/server/levels /levels
 COPY --from=build /app/server/weapons.json /weapons.json
+COPY --from=build /app/server/enemies.json /enemies.json
 USER 65534:65534
 EXPOSE 4242/udp
 ENTRYPOINT ["/r-type_server"]

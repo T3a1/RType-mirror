@@ -83,7 +83,7 @@ request as the code:
 | A library, a tool, or a technical choice | [TECHNICAL_STUDY.md](TECHNICAL_STUDY.md) |
 | Files stored, or what the server trusts | [Technical study](TECHNICAL_STUDY.md), sections 5 and 6 |
 | An accessibility feature | [Technical study](TECHNICAL_STUDY.md), section 7, and the [README](https://github.com/T3a1/RType-mirror#readme) if players use it |
-| What it takes to add content | [HOWTO.md](HOWTO.md), [LEVELS.md](LEVELS.md), [WEAPONS.md](WEAPONS.md) |
+| What it takes to add content | [HOWTO.md](HOWTO.md), [LEVELS.md](LEVELS.md), [WEAPONS.md](WEAPONS.md), [ENEMIES.md](ENEMIES.md) |
 | Controls, options, or how to run the game | The [README](https://github.com/T3a1/RType-mirror#readme) and [INSTALLATION.md](INSTALLATION.md) |
 | Network code that affects performance | Run `./tools/netbench.py`, then update the analysis of [NETWORK_COMPARISON.md](NETWORK_COMPARISON.md) |
 | A new page | Link it from the documentation table of the [README](https://github.com/T3a1/RType-mirror#readme) |

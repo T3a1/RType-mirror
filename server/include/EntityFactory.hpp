@@ -59,7 +59,8 @@ class EntityFactory {
     }
 
     /**
-     * @brief Creates an enemy with the stats of its type in ENEMY_DEFS.
+     * @brief Creates an enemy with the stats of its kind in the enemy
+     * catalog (the built-in kind of its type unless the request names one).
      *
      * The enemy moves left at its speed, collides with players and player
      * projectiles, is destroyed off-screen, and gets an unarmed Weapon if

@@ -102,7 +102,7 @@ void powerUpDropSystem(engine::Registry &registry, SpawnCommands &commands,
     registry.each<rtype::Enemy, rtype::Health, rtype::Transform>(
         [&](engine::Entity, const rtype::Enemy &enemy,
             const rtype::Health &health, const rtype::Transform &transform) {
-            if (health.current <= 0 && enemyDef(enemy.type).dropsPowerUp) {
+            if (health.current <= 0 && enemyDef(enemy).dropsPowerUp) {
                 commands.emplace_back(SpawnPowerUp{
                     .position = transform.position,
                     .kind = rtype::PowerUpKinds.at(pick(random)),

@@ -35,7 +35,10 @@ static_assert(rtype::Damage{}.points >= rtype::PlayerMaxHealth,
 engine::Entity EntityFactory::create(engine::Registry &registry,
                                      const SpawnEnemy &request)
 {
-    const EnemyDef &stat = enemyDef(request.type);
+    const EnemyKindId id = request.kind.value_or(builtinKind(request.type));
+    const EnemyKind &kind = enemyCatalog().at(id);
+    const EnemyDef &stat = kind.def;
+    const rtype::EnemyType type = kind.behavior;
     const engine::Entity enemy = registry.create();
     const std::uint32_t networkId = m_nextNetworkId++;
 
@@ -48,7 +51,7 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
     const auto health = std::max(
         1, static_cast<int>(std::lround(static_cast<float>(stat.health) *
                                         m_difficulty.enemyHealth)));
-    const bool boss = rtype::isBoss(request.type);
+    const bool boss = rtype::isBoss(type);
     if (boss) {
         // bossSystem() moves it, and it never leaves the playfield.
         registry.emplace<Boss>(enemy);
@@ -59,7 +62,8 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
     registry.emplace<rtype::Health>(
         enemy, rtype::Health{.current = health, .max = health});
     registry.emplace<rtype::Damage>(enemy);
-    registry.emplace<rtype::Enemy>(enemy, rtype::Enemy{.type = request.type});
+    registry.emplace<rtype::Enemy>(enemy,
+                                   rtype::Enemy{.type = type, .kind = id});
     registry.emplace<rtype::EntityType>(enemy, stat.entityType);
 
     registry.emplace<rtype::Collider>(
@@ -80,8 +84,8 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
                                           m_difficulty.enemyFireInterval});
     }
 
-    BB_DEBUG("Enemy " << static_cast<int>(request.type) << " spawned with id "
-                      << networkId << " at y=" << request.position.y);
+    BB_DEBUG("Enemy " << kind.name << " spawned with id " << networkId
+                      << " at y=" << request.position.y);
 
     return enemy;
 }
