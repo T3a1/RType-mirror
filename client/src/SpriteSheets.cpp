@@ -41,6 +41,7 @@ constexpr std::array<const char *, SheetCount> SheetPaths{
     "assets/sprites/r-typesheet38.gif", // Boss
     "assets/sprites/r-typesheet3.gif",  // PowerUp
     "assets/sprites/r-typesheet32.gif", // Hive
+    "assets/sprites/obstacles.png",     // Obstacles
 };
 
 /**
@@ -153,6 +154,13 @@ constexpr auto ChargeGlowFrames =
     row(evenly<4>(134.0F, 33.0F), 18.0F, 32.0F, 32.0F);
 /** @brief The frames of a power-up. */
 constexpr auto PowerUpFrames = row(evenly<12>(0.0F, 17.0F), 0.0F, 17.0F, 18.0F);
+/** @brief The frames of the obstacle sheet (tools/generate_tiles.py): wall,
+ * tile, cracked tile. */
+constexpr auto ObstacleFrames = row(evenly<3>(0.0F, 16.0F), 0.0F, 16.0F, 16.0F);
+/** @brief How much the 16 x 16 obstacle frames are enlarged to fill
+ * rtype::TileSize. */
+constexpr float ObstacleScale = 4.0F;
+
 /** @brief The frames of an explosion. */
 constexpr auto ExplosionFrames =
     row(evenly<6>(128.0F, 33.0F), 0.0F, 33.0F, 34.0F);
@@ -310,6 +318,18 @@ Look lookOf(rtype::EntityType type, std::uint8_t slot)
                 .scale = 1.8F,
                 .fallback = rgb(200, 120, 110),
                 .clip = &HiveClip};
+    case rtype::EntityType::Obstacle:
+        return {.sheet = Sheet::Obstacles,
+                .frames = std::span{ObstacleFrames}.first(1),
+                .scale = ObstacleScale,
+                .fallback = rgb(105, 112, 124),
+                .layer = 0};
+    case rtype::EntityType::DestroyableTile:
+        return {.sheet = Sheet::Obstacles,
+                .frames = std::span{ObstacleFrames}.subspan(1),
+                .scale = ObstacleScale,
+                .fallback = rgb(175, 95, 45),
+                .layer = 0};
     case rtype::EntityType::Boss:
         return {.sheet = Sheet::Boss,
                 .frames = BossFrames,
