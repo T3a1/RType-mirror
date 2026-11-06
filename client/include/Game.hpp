@@ -11,6 +11,7 @@
 #include "Bench.hpp"
 #include "Controls.hpp"
 #include "MenuPages.hpp"
+#include "Settings.hpp"
 #include "SpriteSheets.hpp"
 #include "audio/IAudio.hpp"
 #include "audio/SoundBoard.hpp"
@@ -44,6 +45,7 @@ namespace client {
  * @param bench The network benchmark to run instead of the keyboard, if
  * any.
  * @param controls The keys bound to each control.
+ * @param settings The settings of the player.
  **/
 struct GameOptions {
     bool interpolate = true;
@@ -51,6 +53,7 @@ struct GameOptions {
     std::optional<std::uint32_t> room;
     std::optional<BenchConfig> bench;
     Controls controls = defaultControls();
+    Settings settings;
 };
 
 /**

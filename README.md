@@ -51,6 +51,18 @@ autofire = Tab
 - A line the game cannot read is reported when it starts, and that action
   keeps its default keys.
 
+**Change the volume**: write a `settings.cfg` file in the folder you start the
+game from. A volume goes from 0 to 1:
+
+```text
+# name = value
+music_volume = 0.4
+sound_volume = 1
+```
+
+A line the game cannot read is reported when it starts, and that setting keeps
+its value.
+
 ## Getting started
 
 R-Type runs on **Linux** and **Windows**. A single script builds and launches

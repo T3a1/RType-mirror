@@ -35,10 +35,6 @@ constexpr float backgroundSpeed = 120.0F;
  * Space also fires, so a player still firing does not leave it by accident. */
 constexpr float GameOverKeyDelay = 1.5F;
 
-/** @brief The volume of the music, until the settings let the player choose
- * it. */
-constexpr float DefaultMusicVolume = 0.4F;
-
 /** @brief The left margin of the connection status, in pixels. */
 constexpr float statusX = 20.0F;
 /** @brief The distance between the status and the bottom, in pixels. */
@@ -86,7 +82,8 @@ Game::Game(const std::string &host, std::uint16_t port,
     if (m_autoJoin) {
         m_menu.page = MenuPage::Lobby;
     }
-    m_audio->setMusicVolume(DefaultMusicVolume);
+    m_audio->setMusicVolume(options.settings.musicVolume);
+    m_audio->setSoundVolume(options.settings.soundVolume);
     if (options.bench) {
         m_bench.emplace(*options.bench);
         m_audio->setSoundVolume(0.0F);

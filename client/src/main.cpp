@@ -7,6 +7,7 @@
 
 #include "Controls.hpp"
 #include "Game.hpp"
+#include "Settings.hpp"
 #include "common/protocol/Connection.hpp"
 
 #include <cstdint>
@@ -31,6 +32,8 @@ constexpr const char *Usage =
     "                     [--room N] [--bench SECONDS FILE.csv]\n";
 /** @brief The controls file read if --controls is not given. */
 constexpr const char *DefaultControlsPath = "controls.cfg";
+/** @brief The settings file, in the current directory. */
+constexpr const char *SettingsPath = "settings.cfg";
 
 /**
  * @struct Arguments
@@ -165,6 +168,24 @@ client::Controls loadControls(const std::optional<std::string> &path)
     return controls;
 }
 
+/**
+ * @brief Reads settings.cfg from the current directory if it exists, over the
+ * default settings, and reports its bad lines on stderr.
+ * @return The settings.
+ **/
+client::Settings loadSettings()
+{
+    client::Settings settings;
+    std::ifstream in(SettingsPath);
+    if (!in) {
+        return settings;
+    }
+    for (const std::string &error : client::readSettings(in, settings)) {
+        std::cerr << "r-type_client: " << SettingsPath << ": " << error << '\n';
+    }
+    return settings;
+}
+
 } // namespace
 
 /**
@@ -180,6 +201,7 @@ int main(int argc, char *argv[])
     try {
         parsed = parseArguments(args.subspan(1));
         parsed.options.controls = loadControls(parsed.controlsPath);
+        parsed.options.settings = loadSettings();
     } catch (const std::exception &error) {
         std::cerr << "r-type_client: " << error.what() << '\n' << Usage;
         return ExitError;
