@@ -8,9 +8,10 @@
 #ifndef SERVER_SPAWNREQUESTS_HPP
 #define SERVER_SPAWNREQUESTS_HPP
 
+#include "EnemyCatalog.hpp"
 #include "common/components/Enemy.hpp"
 #include "common/components/MovementPattern.hpp"
-#include "components/ShotStyles.hpp"
+#include "common/components/PowerUpKind.hpp"
 #include "engine/Entity.hpp"
 #include "engine/Vec2.hpp"
 
@@ -27,11 +28,14 @@ namespace server {
  * @param type The type of the enemy to spawn.
  * @param position The position to spawn the enemy at.
  * @param pattern The path it follows, or nothing for the one of its type.
+ * @param kind Its kind in the enemy catalog, which then replaces type; or
+ * nothing for the built-in kind of type.
  **/
 struct SpawnEnemy {
     rtype::EnemyType type = rtype::EnemyType::Basic;
     engine::Vec2f position{};
     std::optional<rtype::MovementPattern> pattern;
+    std::optional<EnemyKindId> kind;
 };
 
 /**
@@ -69,11 +73,11 @@ struct SpawnProjectile {
  * @struct SpawnPowerUp
  * @brief A request to spawn a power-up, dropped by a destroyed enemy.
  * @param position Where it appears.
- * @param kind The shot style it gives.
+ * @param kind The boost it gives.
  **/
 struct SpawnPowerUp {
     engine::Vec2f position{};
-    PowerUpKind kind = PowerUpKind::Spread;
+    rtype::PowerUpKind kind = rtype::PowerUpKind::Spread;
 };
 
 /**

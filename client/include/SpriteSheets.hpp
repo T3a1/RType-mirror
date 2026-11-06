@@ -35,6 +35,8 @@ namespace client {
  * @param Explosion The explosions.
  * @param Boss The end-level boss.
  * @param PowerUp The power-ups.
+ * @param Hive The second end-level boss.
+ * @param Obstacles The walls and destroyable tiles of the levels.
  * @param Count The number of sheets, not a sheet.
  **/
 enum class Sheet : std::uint8_t {

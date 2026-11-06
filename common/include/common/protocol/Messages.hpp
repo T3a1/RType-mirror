@@ -9,8 +9,10 @@
 #define COMMON_PROTOCOL_MESSAGES_HPP
 
 #include "common/components/EntityType.hpp"
+#include "common/components/PowerUpKind.hpp"
 #include "common/protocol/PacketType.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -35,7 +37,7 @@ inline constexpr std::size_t SnapshotHeaderSize = 8;
 /** @brief The size of the number of players on the wire, in bytes. */
 inline constexpr std::size_t PlayerCountSize = 1;
 /** @brief The size of one player on the wire, in bytes. */
-inline constexpr std::size_t PlayerRecordSize = 13;
+inline constexpr std::size_t PlayerRecordSize = 13 + PowerUpKindCount;
 /** @brief The size of one entity on the wire, in bytes. */
 inline constexpr std::size_t EntityRecordSize = 16;
 /** @brief How many parts one snapshot can be split into, at most. */
@@ -169,12 +171,15 @@ struct Welcome {
  * server at this tick, 0 if none, for client-side prediction.
  * @param shipId The NetworkId of the player's ship, 0 if it has none, so
  * that clients can tell which ship belongs to which player.
+ * @param boosts The seconds left of each boost of the player, by
+ * PowerUpKind, rounded up; 0 when it does not have it.
  **/
 struct PlayerInfo {
     std::uint8_t slot = 0;
     std::uint32_t score = 0;
     std::uint32_t lastInput = 0;
     std::uint32_t shipId = 0;
+    std::array<std::uint8_t, PowerUpKindCount> boosts{};
     bool operator==(const PlayerInfo &) const = default;
 };
 
@@ -188,9 +193,13 @@ inline constexpr std::uint8_t Charging = 1U << 1U;
 inline constexpr unsigned OwnerShift = 2U;
 /** @brief The bits holding the slot of the player who owns the entity. */
 inline constexpr std::uint8_t Owner = 0x7U << OwnerShift;
+/** @brief The position of the Boost bits. */
+inline constexpr unsigned BoostShift = 5U;
+/** @brief The bits holding the PowerUpKind of a power-up. */
+inline constexpr std::uint8_t Boost = 0x3U << BoostShift;
 /** @brief Every known bit. */
-inline constexpr std::uint8_t All =
-    unsigned{Invincible} | unsigned{Charging} | unsigned{Owner};
+inline constexpr std::uint8_t All = unsigned{Invincible} | unsigned{Charging} |
+                                    unsigned{Owner} | unsigned{Boost};
 
 /**
  * @brief Returns the flag bits naming the player who owns an entity.
@@ -213,6 +222,29 @@ constexpr std::uint8_t ownerOf(std::uint8_t flags)
     return static_cast<std::uint8_t>((unsigned{flags} & unsigned{Owner}) >>
                                      OwnerShift);
 }
+
+/**
+ * @brief Returns the flag bits naming the boost of a power-up.
+ * @param kind The power-up's kind.
+ * @return The Boost bits.
+ **/
+constexpr std::uint8_t boost(PowerUpKind kind)
+{
+    return static_cast<std::uint8_t>(
+        (unsigned{static_cast<std::uint8_t>(kind)} << BoostShift) &
+        unsigned{Boost});
+}
+
+/**
+ * @brief Returns the boost of a power-up.
+ * @param flags The power-up's flags.
+ * @return Its kind; may be Count or more in a packet that was not checked.
+ **/
+constexpr PowerUpKind boostOf(std::uint8_t flags)
+{
+    return static_cast<PowerUpKind>((unsigned{flags} & unsigned{Boost}) >>
+                                    BoostShift);
+}
 } // namespace EntityFlag
 
 /**
@@ -220,8 +252,8 @@ constexpr std::uint8_t ownerOf(std::uint8_t flags)
  * @brief One entity in a snapshot (EntityRecordSize bytes on the wire).
  * @param networkId The id shared by the server and the clients.
  * @param type What the entity is, to pick its sprite.
- * @param flags EntityFlag bits: Invincible, Charging, and the Owner slot
- * of a player's missile.
+ * @param flags EntityFlag bits: Invincible, Charging, the Owner slot of a
+ * player's missile and the Boost kind of a power-up.
  * @param health The entity's health points, 0 if it has none.
  * @param x The horizontal position of its center, in playfield units.
  * @param y The vertical position of its center, in playfield units.
@@ -363,6 +395,9 @@ struct LeaveRoom {
  * @enum Difficulty
  * @brief How hard a game is: enemy health, fire rate and, in endless mode,
  * how often they come.
+ * @param Easy Enemies with less health, which fire less often.
+ * @param Normal The stats of the enemy file.
+ * @param Hard Enemies with more health, which fire more often.
  **/
 enum class Difficulty : std::uint8_t { Easy, Normal, Hard };
 

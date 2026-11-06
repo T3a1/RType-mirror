@@ -1,4 +1,4 @@
-# R-Type network protocol (version 10)
+# R-Type network protocol (version 12)
 
 This document specifies the binary protocol spoken between the R-Type server
 and its clients. It is precise enough to write a compatible client or server
@@ -33,7 +33,7 @@ The key words **MUST**, **MUST NOT**, **SHOULD** and **MAY** are used as in
 - Every datagram holds exactly **one packet**: a 12-byte header followed by a
   payload whose layout depends on the packet type.
 - Most traffic is **unreliable and replaced by the next packet**: inputs
-  (client to server, about 60 per second) and snapshots (server to client, 20
+  (client to server, about 30 per second) and snapshots (server to client, 20
   per second). A lost one does not matter.
 - A few packets are **reliable**: acknowledged, resent until acknowledged, and
   delivered once and in order. They carry facts that are never repeated:
@@ -73,7 +73,7 @@ Every packet starts with this 12-byte header:
 | Offset | Size | Field | Value |
 |-------:|-----:|-------|-------|
 | 0 | 2 | magic | `52 54` (ASCII `"RT"`). Recognizes our packets: a random datagram almost never starts with these bytes |
-| 2 | 1 | version | `10`. See [Versioning](#12-versioning) |
+| 2 | 1 | version | `12`. See [Versioning](#12-versioning) |
 | 3 | 1 | type | Which payload follows. See [Packet types](#5-packet-types) |
 | 4 | 1 | flags | Bit 0: **Reliable**. Bits 1 to 7 are reserved and **MUST** be 0 |
 | 5 | 1 | reserved | **MUST** be 0 |
@@ -94,7 +94,7 @@ The names are the `DecodeError` values of the reference implementation.
 | 1 | At most 1200 bytes | `TooLarge` |
 | 2 | At least 12 bytes | `TooShort` |
 | 3 | Magic is `"RT"` | `BadMagic` |
-| 4 | Version is 10 | `BadVersion` |
+| 4 | Version is 12 | `BadVersion` |
 | 5 | Type is listed in section 5 | `UnknownType` |
 | 6 | No reserved flag bit, and Reliable set exactly on reliable types | `BadFlags` |
 | 7 | Reserved byte is 0 | `BadReserved` |
@@ -192,7 +192,7 @@ client that an administrator closed its room: it is back in the lobby.
 
 | Offset | Size | Field | Values |
 |-------:|-----:|-------|--------|
-| 0 | 1 | reason | `0` Left (the player quit), `1` Timeout, `2` Kicked (protocol broken, or removed by an administrator), `3` ServerClosing |
+| 0 | 1 | reason | `0` Left (the player quit), `1` Timeout, `2` Kicked (no acknowledgment, or removed by an administrator), `3` ServerClosing |
 
 ### `Input` (0x10)
 
@@ -240,15 +240,16 @@ not fit in one datagram is split into several **parts**
 | 5 | 1 | partCount | Number of parts for this tick, at least `1` |
 | 6 | 2 | entityCount | `u16`, number of entity records in this part |
 
-**Players block (part 0 only): 1 + 13 bytes per player**
+**Players block (part 0 only): 1 + 16 bytes per player**
 
 | Size | Field | Values |
 |-----:|-------|--------|
 | 1 | playerCount | `0` to `4` |
-| 1 | slot | `1` to `4`, repeated `playerCount` times with the next three fields |
+| 1 | slot | `1` to `4`, repeated `playerCount` times with the next four fields |
 | 4 | score | `u32` |
 | 4 | lastInput | `u32`. `sequence` of the last `Input` of this player that the server applied at this tick, `0` if none. The client replays its newer inputs on top of this state (client-side prediction) |
 | 4 | shipId | `u32`, network id of the player's ship, `0` if it has none (destroyed). Lets every client tell which ship belongs to which player (color and label) |
+| 3 | boosts | One `u8` per power-up kind, in order Spread, Aimed, Burst: the seconds left of that boost of the player, rounded up, `0` when it does not have it ([WEAPONS.md](WEAPONS.md)) |
 
 **Entity record (16 bytes), repeated `entityCount` times**
 
@@ -256,7 +257,7 @@ not fit in one datagram is split into several **parts**
 |-------:|-----:|-------|--------|
 | 0 | 4 | networkId | `u32`, identifies the entity. Never reused by the server |
 | 4 | 1 | type | Entity type, see below. The client chooses the sprite from it |
-| 5 | 1 | flags | Bit 0 (`0x01`) Invincible (blinking), bit 1 (`0x02`) Charging (a player ship whose fire key is held: its charged shot is coming). Bits 2 to 4 (`0x1C`) Owner: the slot (`1` to `4`) of the player who fired a `PlayerMissile`, `0` for every other entity. Bits 5 to 7 **MUST** be 0 |
+| 5 | 1 | flags | Bit 0 (`0x01`) Invincible (blinking), bit 1 (`0x02`) Charging (a player ship whose fire key is held: its charged shot is coming). Bits 2 to 4 (`0x1C`) Owner: the slot (`1` to `4`) of the player who fired a `PlayerMissile`, `0` for every other entity. Bits 5 and 6 (`0x60`) Boost: the kind of a `PowerUp` (`0` Spread, `1` Aimed, `2` Burst; `3` is invalid), `0` for every other entity. Bit 7 **MUST** be 0 |
 | 6 | 2 | health | `u16`, the health points |
 | 8 | 4 | x | `f32`, center, in playfield units |
 | 12 | 4 | y | `f32`, center, in playfield units |
@@ -278,7 +279,7 @@ right edge) but **MUST** be finite: NaN and infinities are invalid.
 | 8 | EnemyLarge |
 | 9 | Boss (end-level boss; its full health is `BossMaxHealth`, 2500, for the client's health bar) |
 | 10 | ChargedShot (a player's charged shot, which goes through enemies) |
-| 11 | PowerUp (a bonus: the player who touches it gets one more weapon level) |
+| 11 | PowerUp (a bonus: the player who touches it gets the boost of its Boost flag bits for a while) |
 | 12 | BossHive (the second end-level boss; its full health is the health of its first record) |
 | 13 | Obstacle (a wall of the level: it stops every shot and destroys the ships that touch it) |
 | 14 | DestroyableTile (a block of the level that stops shots and breaks after a few hits; its full health is `TileMaxHealth`, 150) |
@@ -447,7 +448,8 @@ the player that the versions do not match.
 |------|-----------|------|
 | The player quits | Immediate | The client sends `Disconnect{Left}` (best effort, not resent) |
 | A client crashes or its network drops | No valid packet from it for **5 seconds** | None |
-| A client breaks the protocol | Too many invalid packets, or too many unacknowledged reliable packets | The server sends `Disconnect{Kicked}` |
+| A client never acknowledges | More than 256 unacknowledged reliable packets | The server sends `Disconnect{Kicked}` |
+| An administrator removes it | The `kick` and `ban` commands | The server sends `Disconnect{Kicked}` |
 | The server shuts down | Immediate | The server sends `Disconnect{ServerClosing}` to every client |
 
 In every case the server removes the session and sends
@@ -462,7 +464,7 @@ the connection lost; snapshots, 20 per second, act as a heartbeat.
 | Connect retry interval | 500 ms |
 | Reliable resend interval | 100 ms |
 | Peer timeout | 5 s |
-| Client input rate | about 60 per second |
+| Client input rate | about 30 per second, and at once when the actions change |
 | Server tick rate | 60 per second |
 | Snapshot rate | 20 per second (every 3rd tick) |
 
@@ -477,7 +479,7 @@ entities. Only part 0 carries the players block.
 
 | Part | Room for entities |
 |------|-------------------|
-| Part 0, with 4 players | (1188 − 8 − 53) / 16 = **70** entities |
+| Part 0, with 4 players | (1188 − 8 − 65) / 16 = **69** entities |
 | Other parts | (1188 − 8) / 16 = **73** entities |
 
 `partCount` is at most 255.
@@ -511,8 +513,8 @@ or make it use unbounded memory:
 
 **Known limitation.** This version has no handshake token. A `Connect` sent with
 a forged source address makes the server send `Accept`, `Welcome` and
-snapshots to that address until the 5-second timeout, and takes one of the 4
-slots meanwhile. A challenge-response handshake (the server answers
+snapshots to that address until the 5-second timeout, and takes one of the 64
+sessions meanwhile. A challenge-response handshake (the server answers
 `Connect` with a random token that the client must send back) would fix it
 in a later version.
 
@@ -530,7 +532,7 @@ All bytes in hexadecimal.
 Unreliable sequence 298, acknowledging reliable packet 17, input number 1000:
 
 ```text
-52 54 0B 10 00 00 2A 01 11 00 05 00   header: "RT", v11, Input, no flags,
+52 54 0C 10 00 00 2A 01 11 00 05 00   header: "RT", v12, Input, no flags,
                                               sequence 298, ack 17, size 5
 E8 03 00 00                           sequence 1000
 11                                    actions 0x11 = Up | Fire
@@ -541,7 +543,7 @@ E8 03 00 00                           sequence 1000
 Reliable sequence 2, slot 2, ship 58, tick 1200:
 
 ```text
-52 54 0B 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
+52 54 0C 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
                                               sequence 2, ack 0, size 9
 02                                    slot 2
 3A 00 00 00                           shipId 58
@@ -551,13 +553,14 @@ B0 04 00 00                           tick 1200
 ### `Snapshot` with one player and one entity
 
 ```text
-52 54 0B 20 00 00 2B 01 11 00 26 00   header: Snapshot, size 38
+52 54 0C 20 00 00 2B 01 11 00 29 00   header: Snapshot, size 41
 2C 01 00 00                           tick 300
 00 01                                 part 0 of 1
 01 00                                 1 entity
 01                                    1 player
 01 DC 05 00 00 E8 03 00 00              slot 1, score 1500, last input 1000,
 07 00 00 00                               ship 7
+00 00 00                                  no boost
 07 00 00 00                           networkId 7
 00                                      type PlayerShip
 00                                      flags none
@@ -588,3 +591,4 @@ B0 04 00 00                           tick 1200
 | 9 | New entity types `ChargedShot` and `PowerUp`; the `Charging` flag is now sent ([WEAPONS.md](WEAPONS.md)). Version 8 is the administration console. |
 | 10 | `StartGame` carries the game settings (difficulty, starting level, boss), `RoomJoined` the number of levels; new entity type `BossHive`. |
 | 11 | New entity types `Obstacle` and `DestroyableTile` (obstacles read from the level files, [LEVELS.md](LEVELS.md)). |
+| 12 | Power-ups give timed boosts of a random kind: Boost flag bits (5 and 6) on a `PowerUp`, players block `boosts` added (16 bytes per player) ([WEAPONS.md](WEAPONS.md)). |

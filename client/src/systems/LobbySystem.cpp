@@ -88,10 +88,16 @@ std::optional<std::uint32_t> lobbyScreen(LobbyState &state,
 
 namespace {
 
-// The settings of the waiting room.
+/** @brief The settings of the waiting room: difficulty, level and boss. */
 constexpr std::size_t SettingCount = 3;
+/** @brief The color of the hints of the waiting room. */
 constexpr gfx::Color HintColor = gfx::rgb(170, 170, 185);
 
+/**
+ * @brief Returns the text of a difficulty.
+ * @param difficulty The difficulty.
+ * @return Its name, as shown in the waiting room.
+ **/
 std::string difficultyName(rtype::protocol::Difficulty difficulty)
 {
     switch (difficulty) {
@@ -105,6 +111,11 @@ std::string difficultyName(rtype::protocol::Difficulty difficulty)
     return "?";
 }
 
+/**
+ * @brief Returns the text of a starting level.
+ * @param level The level, from 1, or the endless mode.
+ * @return Its name, as shown in the waiting room.
+ **/
 std::string levelName(std::uint8_t level)
 {
     return level == rtype::protocol::EndlessLevel
@@ -112,6 +123,11 @@ std::string levelName(std::uint8_t level)
                : "Level " + std::to_string(level);
 }
 
+/**
+ * @brief Returns the text of a boss choice.
+ * @param boss The choice.
+ * @return Its name, as shown in the waiting room.
+ **/
 std::string bossName(rtype::protocol::BossChoice boss)
 {
     switch (boss) {

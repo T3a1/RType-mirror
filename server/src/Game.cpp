@@ -41,6 +41,9 @@ void Game::registerSystems()
     const engine::SystemOptions playing{.when = [this] {
         return m_status != rtype::protocol::RoomStatus::Waiting;
     }};
+    const engine::SystemOptions spawning{.when = [this] {
+        return m_status == rtype::protocol::RoomStatus::Playing;
+    }};
 
     m_scheduler.add(Stage::Input, "drainInbound", [this](Registry &, Duration) {
         m_messages = m_inbound.drain();
@@ -81,19 +84,19 @@ void Game::registerSystems()
                 });
             }
         },
-        playing);
+        spawning);
     m_scheduler.add(
         Stage::Simulation, "obstacles",
         [this](Registry &r, Duration) {
             server::obstacleSystem(r, m_commands);
         },
-        playing);
+        spawning);
     m_scheduler.add(
         Stage::Simulation, "spawn",
         [this](Registry &r, Duration dt) {
             server::spawnSystem(r, m_commands, dt);
         },
-        playing);
+        spawning);
     m_scheduler.add(
         Stage::Simulation, "shoot",
         [this](Registry &r, Duration dt) {
@@ -101,9 +104,21 @@ void Game::registerSystems()
         },
         playing);
     m_scheduler.add(
+        Stage::Simulation, "burstShot",
+        [this](Registry &r, Duration dt) {
+            server::burstShotSystem(r, dt, m_weapons);
+        },
+        playing);
+    m_scheduler.add(
         Stage::Simulation, "spreadShot",
         [this](Registry &r, Duration) {
             server::spreadShotSystem(r, m_commands, m_weapons);
+        },
+        playing);
+    m_scheduler.add(
+        Stage::Simulation, "aimedShot",
+        [this](Registry &r, Duration) {
+            server::aimedShotSystem(r, m_commands, m_weapons);
         },
         playing);
     m_scheduler.add(
@@ -135,14 +150,14 @@ void Game::registerSystems()
     m_scheduler.add(
         Stage::Simulation, "pickup",
         [this](Registry &r, Duration) {
-            server::pickupSystem(r, m_collisions, m_outbound,
-                                 m_weapons.maxLevel);
+            server::pickupSystem(r, m_collisions, m_outbound, m_weapons);
         },
         playing);
+    m_scheduler.add(Stage::Simulation, "boost", server::boostSystem, playing);
     m_scheduler.add(
         Stage::Simulation, "powerUpDrop",
         [this](Registry &r, Duration) {
-            server::powerUpDropSystem(r, m_commands);
+            server::powerUpDropSystem(r, m_commands, m_random);
         },
         playing);
     m_scheduler.add(

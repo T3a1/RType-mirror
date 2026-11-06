@@ -144,11 +144,11 @@ launcher `rtype.py`.
 
 ### 3.2 Entities
 
-An entity is a 32-bit index plus a 32-bit generation:
+An entity is a 32-bit index (`id`) plus a 32-bit generation:
 
 ```cpp
 struct Entity {
-    std::uint32_t index;
+    std::uint32_t id;
     std::uint32_t generation;
 };
 ```
@@ -278,9 +278,9 @@ and the systems of a stage in the order they were added:
 | Stage | Server | Client |
 |-------|--------|--------|
 | 1. Input | Drain the inbound network queue, sessions, players' `InputState`, room phase, fire and AI decisions | Receive from the server, lobby messages, apply the latest snapshot, read and send the inputs |
-| 2. Simulation | Levels, obstacles, spawning, shooting, player control, patterns, movement, collisions, damage, death, lifetime, boundaries, game over | Background scroll, smoothing, prediction, ship tilt, animation, tile cracks |
+| 2. Simulation | Levels, obstacles, spawning, shooting, player control, patterns, movement, collisions, damage, power-ups and their boost timers, death, lifetime, boundaries, game over | Background scroll, smoothing, prediction, ship tilt, animation, tile cracks |
 | 3. Cleanup | Create the requested entities (`spawnCommandSystem`); the scheduler then calls `registry.flush()` | The scheduler calls `registry.flush()` |
-| 4. Output | Build snapshots and push them to the outbound queue | Nothing yet |
+| 4. Output | Build snapshots and push them to the outbound queue | Choose the music (`audioSystem`) |
 
 Cleanup comes before Output so that a snapshot never contains an entity that
 was destroyed during the tick.
@@ -296,7 +296,9 @@ scheduler.add(Stage::Output, "snapshot", snapshot, {.every = 3}); // 20 Hz
 
 `every` keeps the snapshot rate out of the game code, and `when` stops a system
 during a phase: the server's world only moves once the room has left its waiting
-phase, and the client only reads the world while it is in a room.
+phase, the levels, obstacles and spawns stop at the game over while the world
+keeps moving behind the final scores, and the client only reads the world while
+it is in a room.
 
 A system has the signature `void(Registry &, Duration)`. A system that needs
 something else, such as the outbound queue, is wrapped in a lambda that captures
@@ -309,6 +311,11 @@ game's `render()` keeps the frame itself (`beginFrame`, the switch to world
 coordinates, `endFrame`) because it gives each layer its meaning. The lobby,
 waiting room and game over screens also act on the game, so they stay together in
 a single `screens` system of the `Overlay` layer.
+
+The background is two tileable images scrolling forever (`Background`
+components, drawn by `depth`): planets far behind, and stars in front that
+scroll three times faster, for a feeling of depth (parallax). The layers, their
+images and speeds are listed in `client/src/Game.cpp` (`BackgroundLayers`).
 
 ### 4.3 Overview
 
@@ -559,11 +566,11 @@ flowchart LR
 Both queues use the same generic type, `engine::MessageQueue<T>` (standard
 library only):
 
-- A `std::vector<T>` protected by a `std::mutex`.
+- A `std::deque<T>` protected by a `std::mutex`.
 - `push(T)` locks, appends and unlocks.
-- `drain()` locks, **swaps** the vector with an empty one and unlocks, then
-  returns all the messages at once. The lock is held for a swap only, so the
-  game thread never waits for the network thread in any meaningful way.
+- `drain()` locks, **moves** every message into a vector and unlocks, then returns
+  them all at once. The lock is held for a few moves only, so the game thread never
+  waits for the network thread in any meaningful way.
 - The queue has a **capacity**. When it is full, new messages are refused and
   the failure is logged. A flood of packets can therefore never make the server
   allocate unbounded memory.
@@ -572,18 +579,18 @@ The queues carry **decoded messages** (C++ structs), not raw bytes:
 
 - The game thread never parses packets.
 - The game thread never sees an IP address or a port. A client is identified by
-  a `ClientId` (a 32-bit number given by the network thread when the client
+  the client id (a 32-bit number given by the network thread when the client
   connects).
 
 #### Inbound messages (network thread to game thread)
 
 | Message | Content | Pushed when |
 |---------|---------|-------------|
-| `ClientConnected` | `ClientId` | A new client finished the handshake |
-| `ClientDisconnected` | `ClientId`, reason (left, timeout, kicked) | A client said goodbye, stopped answering or broke the protocol |
-| `PlayerInput` | `ClientId`, input sequence number, actions bitmask | A valid, newer input arrived |
+| `Connected` | the client id | A new client finished the handshake |
+| `Disconnected` | the client id | A client said goodbye, stopped answering or was removed |
+| `Input` | the client id, input sequence number, actions bitmask | A valid, newer input arrived |
 
-Pings, acknowledgments and handshake packets are handled entirely by the
+Acknowledgments and handshake packets are handled entirely by the
 network thread and never reach the game thread.
 
 #### Outbound messages (game thread to network thread)
@@ -593,15 +600,12 @@ Each outbound message has a **recipient** and a payload. The delivery mode
 [PROTOCOL.md](PROTOCOL.md#5-packet-types), so the game thread never chooses it:
 
 ```cpp
-struct Recipient {
-    enum class Kind : std::uint8_t { One, All, AllExcept };
-    Kind kind;
-    ClientId client; // used by One and AllExcept
-};
+enum class Recipient : std::uint8_t { All, AllExcept, One };
 
 struct OutboundMessage {
-    Recipient to;
-    std::variant<Welcome, Snapshot, GameEvent> payload;
+    Recipient to = Recipient::All;
+    std::uint32_t cliendId = 0; // used by One and AllExcept
+    rtype::protocol::Payload payload = rtype::protocol::Accept{};
 };
 ```
 
@@ -617,7 +621,7 @@ The network thread keeps one **session** per connected client:
 
 | Field | Use |
 |-------|-----|
-| `ClientId` | Identity shared with the game thread |
+| the client id | Identity shared with the game thread |
 | Address and port | Where to send datagrams |
 | Last time a packet was received | Timeout detection |
 | Last input sequence number | Drop old or duplicated inputs |
@@ -643,7 +647,7 @@ sequenceDiagram
     N->>N: check size, header, type, payload length
     N->>N: find the session from the address
     N->>N: drop if the input sequence is not newer
-    N->>Q: push PlayerInput{clientId, seq, actions}
+    N->>Q: push Input{clientId, sequence, actions}
     Note over G: start of the next tick
     G->>Q: drain()
     G->>G: NetworkInputSystem writes InputState<br/>on the player's ship
@@ -706,12 +710,11 @@ Encoding once and sending the same bytes to every client keeps the cost low: a
 snapshot is built once per snapshot tick, whatever the number of players. Only
 the reliable header (sequence number) differs per client.
 
-**When does the network thread run?** It loops on a receive with a short
-timeout (about 1 ms). After each wake-up, whether a datagram arrived or the
-timeout expired, it also sends the outbound messages, resends unacknowledged
-reliable messages that are due, and checks timeouts. In the code, the loop
-waits in `IUdpSocket::receive()` until the next update, which runs every
-10 ms; the network library never runs its own thread or event loop.
+**When does the network thread run?** It loops on a receive, waiting in
+`IUdpSocket::receive()` until the next update, which runs every 10 ms. At each
+update it also sends the outbound messages, resends unacknowledged reliable messages
+that are due, and checks timeouts. The network library never runs its own thread or
+event loop.
 
 ### 6.6 Delivery: unreliable and reliable
 
@@ -777,7 +780,7 @@ sequenceDiagram
         N->>N: create session, ClientId 7
         N-->>C: accepted
         C->>N: JoinRoom (from the lobby)
-        N->>G: ClientConnected{7}, to the game of that room
+        N->>G: Connected{7}, to the game of that room
         G->>G: create the ship entity,<br/>map ClientId 7 -> entity
         G->>N: Welcome{slot, ship NetworkId} to One(7)
         G->>N: PlayerJoined{slot} to AllExcept(7)
@@ -801,7 +804,7 @@ All three cases end the same way:
 Then:
 
 1. The network thread removes the session and pushes
-   `ClientDisconnected{id, reason}`.
+   `Disconnected{id}`.
 2. The game thread destroys the player's ship and pushes `PlayerLeft{slot}` to
    `All`, reliable.
 3. The remaining clients remove the ship and show a notice ("Player 2 left").
@@ -918,8 +921,8 @@ and `help`.
 
 | Side | Stage | System | Job |
 |------|-------|--------|-----|
-| Server | Input | `SessionSystem` | `ClientConnected` / `ClientDisconnected`: create or destroy ships, push `Welcome`, `PlayerJoined`, `PlayerLeft` |
-| Server | Input | `NetworkInputSystem` | `PlayerInput`: write `InputState` on the right ship |
+| Server | Input | `SessionSystem` | `Connected` / `Disconnected`: create or destroy ships, push `Welcome`, `PlayerJoined`, `PlayerLeft` |
+| Server | Input | `NetworkInputSystem` | `Input`: write `InputState` on the right ship |
 | Server | Output | `SnapshotSystem` | Every 3rd tick, push a `Snapshot` to `All` |
 | Client | Input | `networkSyncSystem` | Create and update entities from snapshots, remove them on `EntityDestroyed`, note who joined or left |
 | Client | Input | `inputSystem`, `sendInput` | Read the keyboard, send the input state |
@@ -943,7 +946,7 @@ and `help`.
 
 ## 8. Testing
 
-- The ECS (entity reuse, generations, storages, views, deferred destruction) is
+- The ECS (entity reuse, generations, storages, queries, deferred destruction) is
   covered by unit tests in `tests/`.
 - Gameplay systems are tested by creating a registry, adding a few entities,
   running the system for N ticks and checking the components. No window or

@@ -78,3 +78,5 @@ CLAUDE.md
 # Personal key bindings and settings of the client
 controls.cfg
 settings.cfg
+
+__pycache__/

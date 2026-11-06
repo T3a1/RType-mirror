@@ -10,7 +10,9 @@
 #include "common/components/Enemy.hpp"
 #include "common/components/EntityType.hpp"
 #include "common/components/Health.hpp"
+#include "common/components/PowerUpKind.hpp"
 #include "common/components/Projectile.hpp"
+#include "common/components/Velocity.hpp"
 #include "common/components/Weapon.hpp"
 #include "components/Piercing.hpp"
 #include "components/PowerUp.hpp"
@@ -27,6 +29,8 @@
 #include <gtest/gtest.h>
 
 #include <cstddef>
+#include <random>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -61,10 +65,41 @@ class WeaponTest : public testing::Test {
         for (int i = 0; i < ticks; ++i) {
             m_registry.get<rtype::Weapon>(m_ship).triggered = fire;
             server::shootSystem(m_registry, m_commands, Tick, m_stats);
+            server::burstShotSystem(m_registry, Tick, m_stats);
             server::spreadShotSystem(m_registry, m_commands, m_stats);
+            server::aimedShotSystem(m_registry, m_commands, m_stats);
             server::spawnCommandSystem(m_registry, m_commands, m_factory);
             m_registry.flush();
         }
+    }
+
+    /** @brief Waits long enough for the weapon to fire again. */
+    void cool()
+    {
+        hold(false, static_cast<int>(m_stats.fireInterval / Tick) + 2);
+    }
+
+    /** @brief Makes the ship touch a power-up of a kind. */
+    void pick(rtype::PowerUpKind kind)
+    {
+        const engine::Entity powerUp =
+            m_factory.create(m_registry, server::SpawnPowerUp{.kind = kind});
+        server::Outbound outbound;
+        server::pickupSystem(m_registry, {{.a = m_ship, .b = powerUp}},
+                             outbound, m_stats);
+        m_registry.flush();
+    }
+
+    /** @brief Lets the boosts run for some seconds. */
+    void wait(float seconds)
+    {
+        server::boostSystem(m_registry, engine::Duration{seconds});
+    }
+
+    /** @brief The time left of a boost of the ship. */
+    float left(rtype::PowerUpKind kind)
+    {
+        return m_registry.get<server::Boosts>(m_ship).of(kind).count();
     }
 
     engine::Registry &registry() { return m_registry; }
@@ -159,6 +194,21 @@ TEST_F(WeaponTest, ReleasingTooEarlyFiresNoChargedShot)
     EXPECT_EQ(countType(registry(), rtype::EntityType::ChargedShot), 0U);
 }
 
+TEST(Weapons, ReadsTheBoostDurations)
+{
+    std::string error;
+    const auto stats = server::parseWeapons(
+        R"({ "spreadDuration": 20, "burstShots": 3 })", error);
+
+    ASSERT_TRUE(stats.has_value()) << error;
+    const server::WeaponStats read = stats.value_or(server::WeaponStats{});
+    EXPECT_FLOAT_EQ(read.durationOf(rtype::PowerUpKind::Spread).count(), 20.0F);
+    EXPECT_FLOAT_EQ(read.durationOf(rtype::PowerUpKind::Aimed).count(), 45.0F);
+    EXPECT_EQ(read.burstShots, 3);
+    EXPECT_FALSE(
+        server::parseWeapons(R"({ "aimedDuration": 300 })", error).has_value());
+}
+
 TEST(PowerUps, DroppedByDestroyedMediumEnemies)
 {
     engine::Registry registry;
@@ -173,27 +223,120 @@ TEST(PowerUps, DroppedByDestroyedMediumEnemies)
     registry.get<rtype::Health>(basic).current = 0;
 
     server::SpawnCommands commands;
-    server::powerUpDropSystem(registry, commands);
+    // Fixed seed: a failure can be replayed.
+    // NOLINTNEXTLINE(cert-msc32-c,cert-msc51-cpp,bugprone-random-generator-seed)
+    std::mt19937 random{1};
+    server::powerUpDropSystem(registry, commands, random);
     server::spawnCommandSystem(registry, commands, factory);
 
     EXPECT_EQ(countType(registry, rtype::EntityType::PowerUp), 1U);
 }
 
-TEST_F(WeaponTest, APowerUpRaisesTheWeaponLevelUpToTheMaximum)
+TEST(PowerUps, DropsEveryKindAtRandom)
 {
+    engine::Registry registry;
     server::EntityFactory factory;
-    server::Outbound outbound;
-    for (int i = 0; i < 4; ++i) {
-        const engine::Entity powerUp =
-            factory.create(registry(), server::SpawnPowerUp{});
-        server::pickupSystem(registry(), {{.a = ship(), .b = powerUp}},
-                             outbound, stats().maxLevel);
-        registry().flush();
+    const engine::Entity medium = factory.create(
+        registry, server::SpawnEnemy{.type = rtype::EnemyType::Medium});
+    registry.get<rtype::Health>(medium).current = 0;
+    // Fixed seed: a failure can be replayed.
+    // NOLINTNEXTLINE(cert-msc32-c,cert-msc51-cpp,bugprone-random-generator-seed)
+    std::mt19937 random{7};
+    std::set<rtype::PowerUpKind> kinds;
+    for (int i = 0; i < 100; ++i) {
+        server::SpawnCommands commands;
+        server::powerUpDropSystem(registry, commands, random);
+        for (const server::SpawnCommand &command : commands) {
+            if (const auto *drop =
+                    std::get_if<server::SpawnPowerUp>(&command)) {
+                kinds.insert(drop->kind);
+            }
+        }
     }
+    EXPECT_EQ(kinds.size(), rtype::PowerUpKindCount);
+}
 
+TEST_F(WeaponTest, ASpreadBoostGivesThreeShotsThenFiveUpToTheMaximum)
+{
+    pick(rtype::PowerUpKind::Spread);
+    EXPECT_EQ(registry().get<server::SpreadShot>(ship()).level, 2);
+    for (int i = 0; i < 3; ++i) {
+        pick(rtype::PowerUpKind::Spread);
+    }
     EXPECT_EQ(registry().get<server::SpreadShot>(ship()).level,
               stats().maxLevel);
     EXPECT_EQ(countType(registry(), rtype::EntityType::PowerUp), 0U);
+}
+
+TEST_F(WeaponTest, ABoostEndsAfterItsDuration)
+{
+    const float duration =
+        stats().durationOf(rtype::PowerUpKind::Spread).count();
+    pick(rtype::PowerUpKind::Spread);
+    wait(duration - 1.0F);
+    EXPECT_EQ(registry().get<server::SpreadShot>(ship()).level, 2);
+    wait(2.0F);
+    EXPECT_EQ(registry().get<server::SpreadShot>(ship()).level, 1);
+    EXPECT_FLOAT_EQ(left(rtype::PowerUpKind::Spread), 0.0F);
+}
+
+TEST_F(WeaponTest, TakingABoostAgainRestartsItsTimer)
+{
+    pick(rtype::PowerUpKind::Aimed);
+    wait(20.0F);
+    pick(rtype::PowerUpKind::Aimed);
+    EXPECT_FLOAT_EQ(left(rtype::PowerUpKind::Aimed),
+                    stats().durationOf(rtype::PowerUpKind::Aimed).count());
+}
+
+TEST_F(WeaponTest, BoostsStackAndEndEachAtItsOwnTime)
+{
+    // Spread taken at 5:02, aimed at 5:22: both fire until the spread ends.
+    pick(rtype::PowerUpKind::Spread);
+    wait(20.0F);
+    pick(rtype::PowerUpKind::Aimed);
+    hold(true, 1);
+    EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 4U);
+
+    wait(stats().durationOf(rtype::PowerUpKind::Spread).count() - 20.0F);
+    EXPECT_EQ(registry().get<server::SpreadShot>(ship()).level, 1);
+    EXPECT_TRUE(registry().has<server::AimedShot>(ship()));
+    cool();
+    hold(true, 1);
+    EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 6U);
+
+    wait(stats().durationOf(rtype::PowerUpKind::Aimed).count());
+    EXPECT_FALSE(registry().has<server::AimedShot>(ship()));
+}
+
+TEST_F(WeaponTest, AnAimedShotGoesTowardsTheNearestEnemy)
+{
+    server::EntityFactory factory;
+    factory.create(registry(),
+                   server::SpawnEnemy{.type = rtype::EnemyType::Basic,
+                                      .position = {.x = 200.0F, .y = 900.0F}});
+    registry().remove<server::SpreadShot>(ship());
+    pick(rtype::PowerUpKind::Aimed);
+    hold(true, 1);
+
+    std::size_t aimedDown = 0;
+    registry().each<rtype::Projectile, rtype::Velocity>(
+        [&](engine::Entity, const rtype::Projectile &,
+            const rtype::Velocity &velocity) {
+            aimedDown += velocity.value.y > 0.0F ? 1U : 0U;
+        });
+    EXPECT_EQ(aimedDown, 1U);
+}
+
+TEST_F(WeaponTest, ABurstFiresEachShotAgainRightAfterIt)
+{
+    pick(rtype::PowerUpKind::Burst);
+    hold(true, 1);
+    EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 1U);
+    hold(true, static_cast<int>(stats().burstDelay / Tick) *
+                   (stats().burstShots + 1));
+    EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile),
+              1U + stats().burstShots);
 }
 
 TEST_F(WeaponTest, EveryShipStartsWithASingleShotSpread)

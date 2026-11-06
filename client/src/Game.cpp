@@ -18,6 +18,7 @@
 #include "systems/RenderSystem.hpp"
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <string>
 #include <utility>
@@ -26,10 +27,25 @@ namespace client {
 
 namespace {
 
-/** @brief The image of the background, relative to the executable. */
-constexpr const char *backgroundPath = "assets/bg.jpg";
-/** @brief How fast the background scrolls, in pixels per second. */
-constexpr float backgroundSpeed = 120.0F;
+/**
+ * @struct BackgroundLayer
+ * @brief One layer of the scrolling background.
+ * @param path Its image, relative to the executable.
+ * @param speed How fast it scrolls, in image pixels per second.
+ * @param depth Its drawing order: the planets under the stars.
+ **/
+struct BackgroundLayer {
+    const char *path;
+    float speed;
+    int depth;
+};
+
+/** @brief The background layers: the stars, nearer, scroll three times
+ * faster than the planets behind them, for a feeling of depth. */
+constexpr std::array<BackgroundLayer, BackgroundLayerCount> BackgroundLayers{{
+    {.path = "assets/backgrounds/planets.png", .speed = 30.0F, .depth = 0},
+    {.path = "assets/backgrounds/stars.png", .speed = 90.0F, .depth = 1},
+}};
 
 /** @brief How long the keyboard is ignored on the game over screen, in seconds.
  * Space also fires, so a player still firing does not leave it by accident. */
@@ -96,7 +112,12 @@ Game::Game(const std::string &host, std::uint16_t port,
     registerRenderSystems();
 }
 
-Game::~Game() { m_graphics->unloadTexture(m_backgroundTexture); }
+Game::~Game()
+{
+    for (const gfx::Texture &texture : m_backgroundTextures) {
+        m_graphics->unloadTexture(texture);
+    }
+}
 
 void Game::run()
 {
@@ -237,6 +258,9 @@ void Game::registerRenderSystems()
                   playerLabelSystem(r, m_sync, *m_graphics);
               },
               {.when = [this] { return m_settings.playerLabels; }});
+    addRender(Layer::World, "powerUpLabels", [this](Registry &r, Duration) {
+        powerUpLabelSystem(r, *m_graphics);
+    });
     addRender(Layer::Overlay, "screens",
               [this](Registry &, Duration) { drawScreens(); });
     addRender(Layer::Overlay, "status",
@@ -542,17 +566,22 @@ void Game::render(engine::Duration dt)
 
 void Game::spawnBackground()
 {
-    m_backgroundTexture =
-        m_graphics->loadTexture(backgroundPath, gfx::TextureFilter::Smooth);
+    for (std::size_t i = 0; i < BackgroundLayers.size(); ++i) {
+        m_backgroundTextures.at(i) = m_graphics->loadTexture(
+            BackgroundLayers.at(i).path, gfx::TextureFilter::Pixelated);
+    }
     createBackground();
 }
 
 void Game::createBackground()
 {
-    const engine::Entity background = m_registry.create();
-    m_registry.emplace<Background>(
-        background,
-        Background{.texture = m_backgroundTexture, .speed = backgroundSpeed});
+    for (std::size_t i = 0; i < BackgroundLayers.size(); ++i) {
+        const engine::Entity background = m_registry.create();
+        m_registry.emplace<Background>(
+            background, Background{.texture = m_backgroundTextures.at(i),
+                                   .speed = BackgroundLayers.at(i).speed,
+                                   .depth = BackgroundLayers.at(i).depth});
+    }
 }
 
 void Game::drawStatus() const

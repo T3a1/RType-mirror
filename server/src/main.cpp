@@ -5,6 +5,7 @@
 ** main
 */
 
+#include "EnemyCatalog.hpp"
 #include "Game.hpp"
 #include "Level.hpp"
 #include "Weapons.hpp"
@@ -273,6 +274,27 @@ server::WeaponStats loadWeapons(std::span<char *> args)
     return stats;
 }
 
+/**
+ * @brief Loads enemies.json from next to the executable into the enemy
+ * catalog, or keeps the built-in enemies and logs why. Runs before the
+ * levels are read, as they name the enemies of the catalog.
+ * @param args The command line, program name included.
+ **/
+void loadEnemies(std::span<char *> args)
+{
+    const std::filesystem::path program =
+        args.empty() ? std::filesystem::path{} : std::filesystem::path{args[0]};
+    std::string error;
+    server::EnemyCatalog catalog =
+        server::loadEnemies(program.parent_path() / "enemies.json", error);
+    if (error.empty()) {
+        BB_INFO(catalog.kinds().size() << " kind(s) of enemies loaded");
+    } else {
+        BB_WARN("Built-in enemies used: " << error);
+    }
+    server::setEnemyCatalog(std::move(catalog));
+}
+
 } // namespace
 
 /**
@@ -296,6 +318,7 @@ int main(int argc, char *argv[])
     }
     const bool invincible = options.invincible;
     engine::Logger::instance().start(engine::LogLevel::Info);
+    loadEnemies(args);
     const auto levels =
         loadLevels(levelsDirectory(options.levelsDirectory, args));
     const server::WeaponStats weapons = loadWeapons(args);

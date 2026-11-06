@@ -8,6 +8,7 @@
 #ifndef CLIENT_PLAYERCOLORS_HPP
 #define CLIENT_PLAYERCOLORS_HPP
 
+#include "common/components/PowerUpKind.hpp"
 #include "graphics/Types.hpp"
 
 #include <cstdint>
@@ -38,6 +39,30 @@ constexpr gfx::Color playerColor(std::uint8_t slot)
     default:
         return gfx::colors::OffWhite;
     }
+}
+
+/**
+ * @brief The color of a power-up's boost, for its sprite and its HUD line.
+ *
+ * Also from the Okabe-Ito palette: yellow (spread), blue (aimed), orange
+ * (burst). Never the only cue: the power-up shows the boost's letter and
+ * the HUD its name.
+ * @param kind The boost.
+ * @return Its color.
+ **/
+constexpr gfx::Color powerUpColor(rtype::PowerUpKind kind)
+{
+    switch (kind) {
+    case rtype::PowerUpKind::Spread:
+        return gfx::rgb(240, 228, 66);
+    case rtype::PowerUpKind::Aimed:
+        return gfx::rgb(86, 150, 255);
+    case rtype::PowerUpKind::Burst:
+        return gfx::rgb(230, 159, 0);
+    case rtype::PowerUpKind::Count:
+        break;
+    }
+    return gfx::colors::OffWhite;
 }
 
 } // namespace client

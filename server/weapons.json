@@ -7,5 +7,10 @@
     "beamSpeed": 1300,
     "beamDamage": 300,
     "spreadAngle": 0.12,
-    "maxLevel": 3
+    "maxLevel": 3,
+    "spreadDuration": 30,
+    "aimedDuration": 45,
+    "burstDuration": 30,
+    "burstShots": 2,
+    "burstDelay": 0.08
 }

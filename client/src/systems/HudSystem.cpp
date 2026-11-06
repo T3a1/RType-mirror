@@ -9,6 +9,7 @@
 #include "PlayerColors.hpp"
 #include "common/components/EntityType.hpp"
 #include "common/components/Health.hpp"
+#include "common/components/PowerUpKind.hpp"
 #include "common/components/Transform.hpp"
 #include "components/ShipOwner.hpp"
 #include "engine/Entity.hpp"
@@ -104,9 +105,25 @@ void playerLabelSystem(engine::Registry &registry, const SyncState &state,
         });
 }
 
+void powerUpLabelSystem(engine::Registry &registry, gfx::IGraphics &graphics)
+{
+    registry.each<rtype::PowerUpKind, rtype::Transform>(
+        [&graphics](engine::Entity, const rtype::PowerUpKind &kind,
+                    const rtype::Transform &transform) {
+            const std::string text{rtype::powerUpName(kind).front()};
+            const float width = static_cast<float>(LabelFontSize) * GlyphWidth;
+            graphics.drawText(text,
+                              {.x = transform.position.x - (width / 2.0F),
+                               .y = transform.position.y - LabelOffsetY -
+                                    static_cast<float>(LabelFontSize)},
+                              LabelFontSize, powerUpColor(kind));
+        });
+}
+
 void hudSystem(const SyncState &state, bool autoFire, gfx::IGraphics &graphics)
 {
     float y = HudY;
+    const rtype::protocol::PlayerInfo *you = nullptr;
     for (const auto &player : state.players) {
         const bool local = player.slot == state.localSlot;
         const std::string text = "P" + std::to_string(player.slot) + "  " +
@@ -115,6 +132,20 @@ void hudSystem(const SyncState &state, bool autoFire, gfx::IGraphics &graphics)
                                  (player.shipId == 0 ? "  out" : "");
         graphics.drawText(text, {.x = HudX, .y = y}, HudFontSize,
                           playerColor(player.slot));
+        y += HudLineHeight;
+        if (local) {
+            you = &player;
+        }
+    }
+    for (const rtype::PowerUpKind kind : rtype::PowerUpKinds) {
+        const std::uint8_t seconds =
+            you != nullptr ? you->boosts.at(static_cast<std::size_t>(kind)) : 0;
+        if (seconds == 0) {
+            continue;
+        }
+        graphics.drawText(std::string{rtype::powerUpName(kind)} + "  " +
+                              std::to_string(seconds) + "s",
+                          {.x = HudX, .y = y}, HudFontSize, powerUpColor(kind));
         y += HudLineHeight;
     }
     if (autoFire) {

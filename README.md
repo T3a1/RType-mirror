@@ -94,11 +94,22 @@ Docker); it installs the rest, such as CMake and Conan, by itself. The game uses
 Conan downloads. See the [installation guide](docs/INSTALLATION.md) for the
 requirements and all the options.
 
+To play on several machines, one of them runs only the server and the others
+only the clients:
+
+```bash
+./rtype.py --server-only --native     # on the host
+./rtype.py --clients-only -H <host>   # on each player's machine
+```
+
+The same options are also in a window: `./rtype.py --gui`.
+
 ## Documentation
 
 The full documentation is online, with an outline and a search bar:
 **<https://t3a1.github.io/RType-mirror/>** (or `./rtype.py --docs` to build it
-locally).
+locally). A button on each page switches to its French version
+([version française](https://t3a1.github.io/RType-mirror/fr/)).
 
 | Document | What you will find |
 |----------|--------------------|
@@ -109,6 +120,7 @@ locally).
 | [How-to guides](docs/HOWTO.md) | Adding a component, a system, an enemy, a packet, a sound, a menu page or a setting; building and debugging. |
 | [Levels](docs/LEVELS.md) | Writing a level: the JSON file of its enemy waves, and how the server plays the levels. |
 | [Weapons](docs/WEAPONS.md) | The charged shot, the power-ups and the weapon settings file. |
+| [Enemies](docs/ENEMIES.md) | The enemy file: the stats of every enemy, and new enemies and bosses without writing code. |
 | [Network testing](docs/NETWORK_TESTING.md) | Playing with added latency, packet loss, duplication and low bandwidth on one machine. |
 | [Network performance comparison](docs/NETWORK_COMPARISON.md) | Measured effect of interpolation and prediction on a degraded network, compared with the Part 1 prototype. |
 | [Contributing](docs/CONTRIBUTING.md) | How to work on the project: workflow, conventions, tools. |
@@ -120,6 +132,14 @@ locally).
 |-----------|------|---------|
 | Part 1 | October 18, 2026 | Game engine, networking and a playable prototype. |
 | Part 2 | November 8, 2026 | Advanced features, built on top of the prototype. |
+
+## License
+
+R-Type is free software, under the [GNU General Public License v3.0](LICENSE).
+
+The license covers our code and our documentation, not the third-party assets of
+`client/assets/`: the R-Type sprite sheets remain the property of their rights
+holders, and DejaVu Sans has its own license, next to the font.
 
 ## Authors
 

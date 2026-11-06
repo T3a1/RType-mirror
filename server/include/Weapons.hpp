@@ -8,8 +8,10 @@
 #ifndef SERVER_WEAPONS_HPP
 #define SERVER_WEAPONS_HPP
 
+#include "common/components/PowerUpKind.hpp"
 #include "engine/Clock.hpp"
 
+#include <array>
 #include <cstdint>
 #include <filesystem>
 #include <optional>
@@ -36,7 +38,11 @@ inline constexpr std::uint8_t MaxWeaponLevel = 5;
  * @param beamDamage The damage of a charged shot, dealt once to every
  * enemy it goes through.
  * @param spreadAngle The angle between two shots of a spread, in radians.
- * @param maxLevel The highest weapon level: level N fires 2N - 1 shots.
+ * @param maxLevel The highest spread level: level N fires 2N - 1 shots.
+ * @param boostDuration How long each boost of a power-up lasts, by
+ * PowerUpKind.
+ * @param burstShots How many times a Burst boost fires each shot again.
+ * @param burstDelay The time between two shots of a burst.
  **/
 struct WeaponStats {
     engine::Duration fireInterval{0.25F};
@@ -48,6 +54,21 @@ struct WeaponStats {
     int beamDamage = 300;
     float spreadAngle = 0.12F;
     std::uint8_t maxLevel = 3;
+    std::array<engine::Duration, rtype::PowerUpKindCount> boostDuration{
+        engine::Duration{30.0F}, engine::Duration{45.0F},
+        engine::Duration{30.0F}};
+    std::uint8_t burstShots = 2;
+    engine::Duration burstDelay{0.08F};
+
+    /**
+     * @brief Returns how long a boost lasts.
+     * @param kind The boost.
+     * @return Its duration.
+     **/
+    [[nodiscard]] engine::Duration durationOf(rtype::PowerUpKind kind) const
+    {
+        return boostDuration.at(static_cast<std::size_t>(kind));
+    }
 };
 
 /**

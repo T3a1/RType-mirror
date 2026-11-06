@@ -8,6 +8,7 @@
 #ifndef SERVER_FORMATIONS_HPP
 #define SERVER_FORMATIONS_HPP
 
+#include "EnemyCatalog.hpp"
 #include "common/components/Enemy.hpp"
 #include "common/components/MovementPattern.hpp"
 #include "common/components/Spawner.hpp"
@@ -32,6 +33,8 @@ namespace server {
  * @param fromCenter Whether the middle enemy spawns first and the others after
  * it, by distance to it (a V), instead of one end first.
  * @param pattern The path of the enemies, or nothing for the one of their type.
+ * @param kind Their kind in the enemy catalog, which replaces type for their
+ * stats; nothing for the built-in kind of type.
  **/
 struct Formation {
     rtype::EnemyType type = rtype::EnemyType::Basic;
@@ -40,6 +43,7 @@ struct Formation {
     float stepY = 0.0F;
     bool fromCenter = false;
     std::optional<rtype::MovementPattern> pattern;
+    std::optional<EnemyKindId> kind;
 };
 
 /**
