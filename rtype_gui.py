@@ -12,8 +12,13 @@ missing.
 
 from __future__ import annotations
 
+import os
+import queue
 import shlex
+import signal
+import subprocess
 import sys
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -123,7 +128,11 @@ class LauncherWindow:
         self.status = tk.StringVar(value="Ready.")
         self.client_fields: list = []
         self.server_fields: list = []
+        self.process: subprocess.Popen | None = None
+        self.lines: queue.Queue[str | None] = queue.Queue()
         self._build_form()
+        self._build_output()
+        self.root.protocol("WM_DELETE_WINDOW", self.close)
         for variable in (self.mode, self.native, self.clients, self.host,
                          self.port, self.room, self.graphics):
             variable.trace_add("write", lambda *_: self.refresh())
@@ -176,6 +185,114 @@ class LauncherWindow:
         ttk.Label(form, textvariable=self.status, foreground="#a33").grid(
             row=8, column=0, columnspan=2, sticky="w", pady=(6, 0))
         self.form = form
+
+    def _build_output(self) -> None:
+        """Lays out the Start and Stop buttons and the output of the game."""
+        ttk = self.ttk
+        buttons = ttk.Frame(self.root, padding=(12, 0))
+        buttons.grid(row=1, column=0, sticky="ew")
+        self.start_button = ttk.Button(buttons, text="Start", command=self.start)
+        self.start_button.pack(side="left")
+        self.stop_button = ttk.Button(buttons, text="Stop", command=self.stop)
+        self.stop_button.pack(side="left", padx=8)
+        self.stop_button.state(["disabled"])
+
+        output = ttk.Frame(self.root, padding=12)
+        output.grid(row=2, column=0, sticky="nsew")
+        self.root.rowconfigure(2, weight=1)
+        output.columnconfigure(0, weight=1)
+        output.rowconfigure(0, weight=1)
+        self.output = self.tk.Text(output, height=12, wrap="word",
+                                   state="disabled")
+        self.output.grid(row=0, column=0, sticky="nsew")
+        scroll = ttk.Scrollbar(output, command=self.output.yview)
+        scroll.grid(row=0, column=1, sticky="ns")
+        self.output.configure(yscrollcommand=scroll.set)
+
+    def write(self, text: str) -> None:
+        """Appends text to the output and scrolls to it."""
+        self.output.configure(state="normal")
+        self.output.insert("end", text)
+        self.output.see("end")
+        self.output.configure(state="disabled")
+
+    def start(self) -> None:
+        """Runs the command of the settings, unless one is already running or
+        the settings are wrong."""
+        settings = self.settings()
+        problem = "Clients, port and room are whole numbers." if settings is None \
+            else check(settings)
+        if problem or self.process is not None or settings is None:
+            self.status.set(problem or "Already running: stop it first.")
+            return
+        self.write(f"$ {shown_command(settings)}\n")
+        # A process group of its own: Stop reaches rtype.py, which then stops
+        # the server and the clients it started.
+        extra = ({"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+                 if sys.platform == "win32" else {"start_new_session": True})
+        # Unbuffered, so that its lines show up as soon as they are written.
+        env = {**os.environ, "PYTHONUNBUFFERED": "1"}
+        self.process = subprocess.Popen(
+            command(settings), cwd=ROOT, env=env, stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+            errors="replace", bufsize=1, **extra)
+        threading.Thread(target=self._read, args=(self.process,),
+                         daemon=True).start()
+        self.start_button.state(["disabled"])
+        self.stop_button.state(["!disabled"])
+        self.status.set("Running.")
+        self.root.after(100, self._poll)
+
+    def _read(self, process: subprocess.Popen) -> None:
+        """Thread: passes every line of the process to the window, then None
+        once it is done. Tk is only touched from its own thread (_poll)."""
+        assert process.stdout is not None
+        for line in process.stdout:
+            self.lines.put(line)
+        self.lines.put(None)
+
+    def _poll(self) -> None:
+        """Shows the new lines of the process, until it is done."""
+        while True:
+            try:
+                line = self.lines.get_nowait()
+            except queue.Empty:
+                self.root.after(100, self._poll)
+                return
+            if line is None:
+                self._finished()
+                return
+            self.write(line)
+
+    def _finished(self) -> None:
+        """Shows how the process ended and lets a new one start."""
+        code = self.process.wait() if self.process is not None else 0
+        self.process = None
+        self.write(f"[finished with status {code}]\n")
+        self.start_button.state(["!disabled"])
+        self.stop_button.state(["disabled"])
+        self.status.set("Ready." if code == 0 else f"Stopped (status {code}).")
+
+    def stop(self) -> None:
+        """Asks rtype.py to stop, like Ctrl+C does: it stops the server and
+        the clients it started, then exits."""
+        if self.process is None or self.process.poll() is not None:
+            return
+        if sys.platform == "win32":
+            self.process.send_signal(signal.CTRL_BREAK_EVENT)
+        else:
+            self.process.send_signal(signal.SIGINT)
+        self.status.set("Stopping...")
+
+    def close(self) -> None:
+        """Closes the window, stopping the game first."""
+        self.stop()
+        if self.process is not None:
+            try:
+                self.process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+        self.root.destroy()
 
     def settings(self) -> GameSettings | None:
         """Reads the form, or returns None if a number is not one."""
