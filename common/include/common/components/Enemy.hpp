@@ -49,14 +49,17 @@ inline constexpr int BossMaxHealth = 2500;
 /**
  * @struct Enemy
  * @brief The behavior of an enemy, read by the AI system.
- * @param type The kind of enemy.
+ * @param type The built-in type whose behavior it has.
  * @param fireInterval The time between two shots, in seconds.
  * @param fireCooldown The time left before the next shot, in seconds.
+ * @param kind Its id in the server's enemy catalog, which holds its stats; a
+ * built-in kind has the id of its type.
  **/
 struct Enemy {
     EnemyType type = EnemyType::Basic;
     engine::Duration fireInterval{2.0F};
     engine::Duration fireCooldown{0.0F};
+    std::uint16_t kind = 0;
 };
 
 } // namespace rtype
