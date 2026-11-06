@@ -40,12 +40,11 @@ server::EnemyCatalog parsed(const std::string &text)
 /** @brief Installs a catalog for one test, then puts the built-in one back. */
 class CatalogTest : public testing::Test {
   protected:
-    CatalogTest() { server::setEnemyCatalog(parsed(KamikazeFile)); }
-    ~CatalogTest() override { server::setEnemyCatalog(server::EnemyCatalog{}); }
-    CatalogTest(const CatalogTest &) = delete;
-    CatalogTest &operator=(const CatalogTest &) = delete;
-    CatalogTest(CatalogTest &&) = delete;
-    CatalogTest &operator=(CatalogTest &&) = delete;
+    void SetUp() override { server::setEnemyCatalog(parsed(KamikazeFile)); }
+    void TearDown() override
+    {
+        server::setEnemyCatalog(server::EnemyCatalog{});
+    }
 
     [[nodiscard]] static server::EnemyKindId id(const char *name)
     {
