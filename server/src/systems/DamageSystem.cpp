@@ -12,8 +12,8 @@ namespace server {
 namespace {
 
 /**
- * @brief Gives the points of a destroyed enemy to the player who fired the
- * projectile that destroyed it.
+ * @brief Gives the points of a destroyed enemy or tile to the player who
+ * fired the projectile that destroyed it.
  * @param registry The registry holding both entities.
  * @param projectile The projectile that dealt the last hit.
  * @param target The destroyed entity.
@@ -22,12 +22,17 @@ void awardKill(engine::Registry &registry, engine::Entity projectile,
                engine::Entity target)
 {
     const auto *shot = registry.tryGet<rtype::Projectile>(projectile);
-    const auto *enemy = registry.tryGet<rtype::Enemy>(target);
-    if (shot == nullptr || enemy == nullptr) {
+    if (shot == nullptr) {
         return;
     }
-    if (auto *shooter = registry.tryGet<rtype::Player>(shot->owner)) {
+    auto *shooter = registry.tryGet<rtype::Player>(shot->owner);
+    if (shooter == nullptr) {
+        return;
+    }
+    if (const auto *enemy = registry.tryGet<rtype::Enemy>(target)) {
         shooter->score += enemyDef(enemy->type).score;
+    } else if (registry.has<Obstacle>(target)) {
+        shooter->score += rtype::TileScore;
     }
 }
 
@@ -47,13 +52,23 @@ void hit(engine::Registry &registry, engine::Entity attacker,
     const auto *damage = registry.tryGet<rtype::Damage>(attacker);
     auto *health = registry.tryGet<rtype::Health>(target);
     auto *piercing = registry.tryGet<Piercing>(attacker);
+    const bool isShot = registry.has<rtype::Projectile>(attacker);
+    // The level stops every shot, piercing or not.
+    const bool blocked = isShot && registry.has<Obstacle>(target);
 
-    if (damage == nullptr || health == nullptr || health->current <= 0 ||
+    if (damage == nullptr ||
         std::ranges::find(alreadyHit, attacker) != alreadyHit.end()) {
         return;
     }
+    if (health == nullptr || health->current <= 0) {
+        if (blocked) {
+            alreadyHit.push_back(attacker);
+            despawn(registry, attacker, outbound);
+        }
+        return;
+    }
     // A piercing shot damages each entity once and goes on.
-    if (piercing != nullptr) {
+    if (piercing != nullptr && !blocked) {
         if (std::ranges::find(piercing->hit, target) != piercing->hit.end()) {
             return;
         }
@@ -67,7 +82,7 @@ void hit(engine::Registry &registry, engine::Entity attacker,
         awardKill(registry, attacker, target);
     }
 
-    if (piercing == nullptr && registry.has<rtype::Projectile>(attacker)) {
+    if (isShot && (piercing == nullptr || blocked)) {
         alreadyHit.push_back(attacker);
         despawn(registry, attacker, outbound);
     }

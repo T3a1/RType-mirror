@@ -6,6 +6,7 @@
 */
 
 #include "Level.hpp"
+#include "common/Obstacles.hpp"
 #include "common/Playfield.hpp"
 
 #include <nlohmann/json.hpp>
@@ -60,6 +61,12 @@ constexpr std::array<std::pair<std::string_view, rtype::EnemyType>, 2>
         {"warship", rtype::EnemyType::Boss},
         {"hive", rtype::EnemyType::Hive},
     }};
+
+/** @brief The obstacle kinds a level may use: is it destroyable. */
+constexpr std::array<std::pair<std::string_view, bool>, 2> ObstacleKinds{{
+    {"wall", false},
+    {"tile", true},
+}};
 
 /** @brief The movement pattern names a wave may use. */
 constexpr std::array<std::pair<std::string_view, rtype::MovementKind>, 4>
@@ -124,6 +131,31 @@ float number(const Json &object, const char *key, float min, float max,
         throw LevelError(message.str());
     }
     return static_cast<float>(value);
+}
+
+/**
+ * @brief Reads an optional whole number from 1 to max.
+ * @param object The JSON object holding it.
+ * @param key Its key.
+ * @param max The largest value allowed.
+ * @param where Where the object is in the file, for the error message.
+ * @return The number, 1 if the key is missing.
+ * @throws LevelError If it is not a whole number from 1 to max.
+ **/
+std::size_t wholeNumber(const Json &object, const char *key, std::size_t max,
+                        const std::string &where)
+{
+    const auto it = object.find(key);
+    if (it == object.end()) {
+        return 1;
+    }
+    if (!it->is_number_integer() || it->get<std::int64_t>() < 1 ||
+        it->get<std::int64_t>() > static_cast<std::int64_t>(max)) {
+        throw LevelError(where + "." + key +
+                         ": must be a whole number from 1 to " +
+                         std::to_string(max));
+    }
+    return it->get<std::size_t>();
 }
 
 /**
@@ -236,6 +268,36 @@ Wave readWave(const Json &wave, const std::string &where)
 }
 
 /**
+ * @brief Reads one group of obstacles and appends its columns, left first.
+ * @param group The JSON object of the group.
+ * @param where Where it is in the file, for the error message.
+ * @param columns Where its columns go.
+ * @throws LevelError If it is not a valid group.
+ **/
+void readObstacles(const Json &group, const std::string &where,
+                   std::vector<ObstacleColumn> &columns)
+{
+    checkKeys(group, {"time", "kind", "y", "rows", "columns"}, where);
+    const ObstacleColumn first{
+        .time = engine::Duration{number(group, "time", 0.0F, MaxWaveTime,
+                                        std::nullopt, where)},
+        .destroyable = named(group, "kind", ObstacleKinds, where),
+        .top = number(group, "y", 0.0F, rtype::PlayfieldHeight, std::nullopt,
+                      where),
+        .rows = wholeNumber(group, "rows", MaxObstacleRows, where),
+    };
+    const std::size_t count =
+        wholeNumber(group, "columns", MaxObstacleColumns, where);
+    // The time a column takes to scroll by its own width.
+    const engine::Duration step{rtype::TileSize.x / rtype::ObstacleSpeed};
+    for (std::size_t i = 0; i < count; ++i) {
+        ObstacleColumn column = first;
+        column.time += step * static_cast<float>(i);
+        columns.push_back(column);
+    }
+}
+
+/**
  * @brief Reads a level from its parsed JSON.
  * @param root The JSON document.
  * @return The level.
@@ -243,7 +305,7 @@ Wave readWave(const Json &wave, const std::string &where)
  **/
 Level readLevel(const Json &root)
 {
-    checkKeys(root, {"name", "waves", "boss"}, "level");
+    checkKeys(root, {"name", "waves", "boss", "obstacles"}, "level");
     const auto name = root.find("name");
     if (name == root.end() || !name->is_string() ||
         name->get_ref<const std::string &>().empty() ||
@@ -266,6 +328,19 @@ Level readLevel(const Json &root)
     std::ranges::stable_sort(level.waves, {}, &Wave::time);
     if (root.contains("boss")) {
         level.boss = named(root, "boss", BossNames, "level");
+    }
+    if (const auto obstacles = root.find("obstacles");
+        obstacles != root.end()) {
+        if (!obstacles->is_array() || obstacles->size() > MaxObstacleGroups) {
+            throw LevelError("level.obstacles: must be a list of at most " +
+                             std::to_string(MaxObstacleGroups) + " groups");
+        }
+        for (std::size_t i = 0; i < obstacles->size(); ++i) {
+            readObstacles(obstacles->at(i),
+                          "obstacles[" + std::to_string(i) + "]",
+                          level.obstacles);
+        }
+        std::ranges::stable_sort(level.obstacles, {}, &ObstacleColumn::time);
     }
     return level;
 }

@@ -134,6 +134,7 @@ std::optional<std::uint8_t> levelSystem(engine::Registry &registry,
             ++progress.level;
             progress.bossSpawned = false;
             progress.nextWave = 0;
+            progress.nextObstacle = 0;
             progress.elapsed = engine::Duration{0.0F};
             progress.pause = LevelPause;
             if (progress.level >= progress.levels->size()) {

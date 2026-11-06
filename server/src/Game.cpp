@@ -83,6 +83,12 @@ void Game::registerSystems()
         },
         playing);
     m_scheduler.add(
+        Stage::Simulation, "obstacles",
+        [this](Registry &r, Duration) {
+            server::obstacleSystem(r, m_commands);
+        },
+        playing);
+    m_scheduler.add(
         Stage::Simulation, "spawn",
         [this](Registry &r, Duration dt) {
             server::spawnSystem(r, m_commands, dt);

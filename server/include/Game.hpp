@@ -31,6 +31,7 @@
 #include "systems/LevelSystem.hpp"
 #include "systems/LifetimeSystem.hpp"
 #include "systems/NetworkInputSystem.hpp"
+#include "systems/ObstacleSystem.hpp"
 #include "systems/PowerUpSystem.hpp"
 #include "systems/RoomPhaseSystem.hpp"
 #include "systems/SessionSystem.hpp"

@@ -28,6 +28,11 @@ namespace rtype {
  * @param Boss An EnemyType::Boss.
  * @param ChargedShot The piercing shot of a player who held the fire key.
  * @param PowerUp A pickup that raises the weapon level of a player.
+ * @param BossHive An EnemyType::Hive, the second end-level boss.
+ * @param Obstacle A wall of the level: it stops every shot and destroys the
+ * ships that touch it.
+ * @param DestroyableTile A block of the level that stops shots like a wall
+ * but breaks after a few hits.
  **/
 enum class EntityType : std::uint8_t {
     PlayerShip,
@@ -43,12 +48,20 @@ enum class EntityType : std::uint8_t {
     ChargedShot,
     PowerUp,
     BossHive,
+    Obstacle,
+    DestroyableTile,
 };
 
 // Whether an entity type is an end-level boss.
 constexpr bool isBossEntity(EntityType type)
 {
     return type == EntityType::Boss || type == EntityType::BossHive;
+}
+
+// Whether an entity type is a part of the level (a wall or a tile).
+constexpr bool isObstacleEntity(EntityType type)
+{
+    return type == EntityType::Obstacle || type == EntityType::DestroyableTile;
 }
 
 } // namespace rtype

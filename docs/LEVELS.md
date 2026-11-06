@@ -16,6 +16,11 @@ rebuild of the code, only a restart of the server.
 4. After the last level comes the **endless mode**: random waves, until the
    game is over.
 
+A level can also bring in **obstacles**, at the times of its file: walls and
+destroyable tiles that scroll from the right edge (see
+[Obstacles](#obstacles)). They do not keep a level from ending, and the endless
+mode has none.
+
 Each level is announced to the players (`GameEvent{LevelStarted}`, see the
 [protocol](PROTOCOL.md)): a large "LEVEL 2" banner, after "Level cleared",
 during the 3-second pause, and the current level at the top of the screen.
@@ -50,6 +55,10 @@ crashes the server.
             "time": 40, "enemy": "basic", "count": 3, "spacing": 0.5, "stepY": 140,
             "pattern": { "kind": "dive", "diveDelay": 2, "diveSpeed": 650 }
         }
+    ],
+    "obstacles": [
+        { "time": 8, "kind": "tile", "y": 96, "rows": 3, "columns": 2 },
+        { "time": 30, "kind": "wall", "y": 32, "rows": 4, "columns": 3 }
     ]
 }
 ```
@@ -61,6 +70,7 @@ crashes the server.
 | `name` | yes | The name of the level, 1 to 64 characters. |
 | `waves` | yes | The list of its waves, 1 to 1000. Their order in the file does not matter: they are sorted by `time`. |
 | `boss` | no | The boss that comes after the waves: `warship` or `hive`. Without it, the level ends with its last wave. The game settings can replace it with another boss. |
+| `obstacles` | no | The list of its groups of walls and tiles, at most 1000, see [Obstacles](#obstacles). Their order does not matter: they are sorted by `time`. |
 
 ### Bosses
 
@@ -106,14 +116,37 @@ screen. The playfield is 1920 units wide and 1080 high, `y` going down.
 | `diveDelay` | no | `0` | Seconds before a `dive` rushes (0 to 60). |
 | `diveSpeed` | no | `0` | Speed of the rush of a `dive` (0 to 5000). |
 
+### Obstacles
+
+An obstacle group is a rectangle of blocks of 64 × 64 units that scrolls in
+from the right edge at 120 units per second, a little slower than the
+enemies.
+
+| Kind | What it does |
+|------|--------------|
+| `wall` | A metal block. It stops every shot, the charged shot included, and destroys a ship that touches it. Nothing breaks it. |
+| `tile` | A brick block. It also stops every shot and destroys a ship that touches it, but breaks after 3 normal shots (150 health points). It looks cracked once half of its health is gone, and gives 20 points to the player whose shot breaks it. |
+
+| Key | Required | Default | Value |
+|-----|:--------:|---------|-------|
+| `time` | yes | | When the first column comes in, in seconds from the start of the level (0 to 3600). The next columns follow with no gap, one every 0.53 s. |
+| `kind` | yes | | `wall` or `tile`. |
+| `y` | yes | | Height of the center of the top row (0 to 1080). A block centered on 32 touches the top edge, one on 1048 the bottom edge. |
+| `rows` | no | `1` | How many blocks from top to bottom, 1 to 16. |
+| `columns` | no | `1` | How many blocks from left to right, 1 to 30. |
+
+Leave the ships a way through: a passage narrower than a ship (64 units) is
+only crossed by breaking tiles. Walls on the top and the bottom at the same
+`time` make a corridor.
+
 Any other key, a value of the wrong type or out of its range makes the file
 invalid: a typo is reported instead of being silently ignored.
 
 ## Limits
 
 To protect the server, a level file larger than 1 MiB is not read, and the
-limits above (waves per level, enemies per wave, times and distances) are
-checked when the file is loaded.
+limits above (waves per level, enemies per wave, obstacle groups, rows and
+columns, times and distances) are checked when the file is loaded.
 
 ## Code
 
@@ -124,3 +157,10 @@ checked when the file is loaded.
   `levelSystem()`, which plays the levels, and the `LevelProgress` component
   on the spawner entity. While it is there, `spawnSystem()` sends no random
   waves.
+- [`server/include/systems/ObstacleSystem.hpp`](https://github.com/T3a1/RType-mirror/blob/dev/server/include/systems/ObstacleSystem.hpp):
+  `obstacleSystem()`, which brings in the columns of `Level::obstacles` (the
+  parser splits each group of the file into columns). The blocks are built by
+  `EntityFactory` from a `SpawnObstacle` command; `damageSystem()` makes them
+  stop the shots.
+- [`tools/generate_tiles.py`](https://github.com/T3a1/RType-mirror/blob/dev/tools/generate_tiles.py): draws the obstacle
+  sprites (`client/assets/sprites/obstacles.png`).

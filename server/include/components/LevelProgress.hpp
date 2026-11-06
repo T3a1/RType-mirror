@@ -26,6 +26,8 @@ namespace server {
  * room and never changed.
  * @param level The index of the current level.
  * @param nextWave The index of the next wave of the current level.
+ * @param nextObstacle The index of the next obstacle column of the current
+ * level.
  * @param elapsed The time since the current level started.
  * @param pause The time left before the current level starts.
  * @param bossSpawned Whether the boss of the current level came.
@@ -36,6 +38,7 @@ struct LevelProgress {
     std::shared_ptr<const std::vector<Level>> levels;
     std::size_t level = 0;
     std::size_t nextWave = 0;
+    std::size_t nextObstacle = 0;
     engine::Duration elapsed{0.0F};
     engine::Duration pause{0.0F};
     bool bossSpawned = false;

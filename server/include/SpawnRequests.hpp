@@ -76,8 +76,20 @@ struct SpawnPowerUp {
     PowerUpKind kind = PowerUpKind::Spread;
 };
 
+/**
+ * @struct SpawnObstacle
+ * @brief A request to spawn one block of the level.
+ * @param position The center of the block.
+ * @param destroyable Whether it is a destroyable tile instead of a wall.
+ **/
+struct SpawnObstacle {
+    engine::Vec2f position{};
+    bool destroyable = false;
+};
+
 /** @brief A deferred entity creation. */
-using SpawnCommand = std::variant<SpawnEnemy, SpawnProjectile, SpawnPowerUp>;
+using SpawnCommand =
+    std::variant<SpawnEnemy, SpawnProjectile, SpawnPowerUp, SpawnObstacle>;
 
 /** @brief The creations requested during a tick, applied in the Cleanup stage.
  */
