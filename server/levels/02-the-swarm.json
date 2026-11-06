@@ -20,5 +20,13 @@
         { "time": 44, "enemy": "large", "y": 540 },
         { "time": 46, "enemy": "small", "count": 6, "spacing": 0.2, "y": 200 },
         { "time": 48, "enemy": "small", "count": 6, "spacing": 0.2, "y": 880 }
+    ],
+    "obstacles": [
+        { "time": 5, "kind": "wall", "y": 32, "rows": 5, "columns": 4 },
+        { "time": 12, "kind": "tile", "y": 412, "rows": 4, "columns": 2 },
+        { "time": 20, "kind": "wall", "y": 728, "rows": 6, "columns": 3 },
+        { "time": 28, "kind": "tile", "y": 32, "rows": 16 },
+        { "time": 40, "kind": "wall", "y": 32, "rows": 3, "columns": 6 },
+        { "time": 40, "kind": "wall", "y": 856, "rows": 4, "columns": 6 }
     ]
 }

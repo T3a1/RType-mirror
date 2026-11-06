@@ -16,5 +16,13 @@
             "pattern": { "kind": "dive", "diveDelay": 2, "diveSpeed": 650 }
         },
         { "time": 46, "enemy": "medium", "count": 2, "stepY": 330, "y": 540 }
+    ],
+    "obstacles": [
+        { "time": 8, "kind": "tile", "y": 96, "rows": 3, "columns": 2 },
+        { "time": 12, "kind": "wall", "y": 952, "rows": 2, "columns": 4 },
+        { "time": 24, "kind": "tile", "y": 476, "rows": 3 },
+        { "time": 30, "kind": "wall", "y": 32, "rows": 4, "columns": 3 },
+        { "time": 30, "kind": "wall", "y": 856, "rows": 4, "columns": 3 },
+        { "time": 42, "kind": "tile", "y": 412, "rows": 5, "columns": 2 }
     ]
 }
