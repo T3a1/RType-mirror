@@ -33,28 +33,52 @@ hand only.
 
 In the menus, the arrow keys move the selection, and Space or Enter chooses.
 
-**Choose your own keys**: open Settings in the main menu, then the Controls tab.
+**Play with a gamepad**: plug in an Xbox or a PlayStation gamepad, before or
+during the game. It works at the same time as the keyboard:
+
+| Xbox | PlayStation | Action |
+|------|-------------|--------|
+| D-pad or left stick | D-pad or left stick | Move the ship. In the menus: move the selection |
+| A or RT | Cross or R2 | Shoot, and charged shot. In the menus: A (Cross) chooses |
+| RB | R1 | Auto-fire on or off |
+| B | Circle | In the menus: go back. Closes the chat. It never leaves a game |
+| Back | Create | Leave the room |
+
+The chat needs a keyboard to write. The stick moves the ship at full speed once it
+is pushed past half of its range, in eight directions like the keyboard.
+
+**Choose your own keys**: open Settings in the main menu, then the Keyboard tab.
 Each action has two keys: choose one, then press the new key, or Escape to
 cancel. The game tells you if another action uses the same key, and Reset keys
-brings back the default ones. The arrow keys, Space, Enter and Escape always
-work in the menus.
+brings back the default ones. The Gamepad tab does the same for the buttons of
+the gamepad, and Escape or B (Circle) cancels there. The arrow keys, Space,
+Enter and Escape, and the D-pad, A (Cross) and B (Circle), always work in the
+menus.
 
 Your choice is saved in a `controls.cfg` file in the folder you start the game
 from (or in the file given with `--controls FILE`), which you can also edit by
-hand. Each line gives the keys of one action and replaces its default keys:
+hand. Each line gives the keys of one action and replaces its default keys. A
+line starting with `pad_` gives its gamepad buttons instead:
 
 ```text
 # action = key key...
 fire = Enter Space
 autofire = Tab
+pad_fire = PadA PadRT
 ```
 
-- Actions: `up`, `down`, `left`, `right`, `fire`, `autofire`, `chat`.
+- Actions: `up`, `down`, `left`, `right`, `fire`, `autofire`, `chat`, and the
+  same names after `pad_` for the gamepad.
 - Keys: `Up`, `Down`, `Left`, `Right`, `Space`, `Enter`, `Tab`, `LeftShift`,
   `RightShift`, `LeftCtrl`, `RightCtrl`, `LeftAlt`, `RightAlt`, the letters
   `A` to `Z` and the digits `0` to `9`. With the default (Raylib) client a
   letter is the key at that place on a US keyboard: W A S D are the keys
   Z Q S D of a French AZERTY keyboard.
+- Gamepad buttons, only on `pad_` lines: `PadUp`, `PadDown`, `PadLeft`,
+  `PadRight` (D-pad), `PadStickUp`, `PadStickDown`, `PadStickLeft`,
+  `PadStickRight` (left stick), `PadA`, `PadB` (Cross, Circle), `PadLB`,
+  `PadRB`, `PadLT`, `PadRT` (L1, R1, L2, R2), `PadStart`, `PadSelect`
+  (Options, Create).
 - A line the game cannot read is reported when it starts, and that action
   keeps its default keys.
 

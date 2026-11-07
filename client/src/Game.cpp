@@ -365,24 +365,28 @@ void Game::leaveRoom()
 }
 
 /**
- * @brief Handles the back key: it leaves the room, stops waiting for a new key
- * or goes back to the main menu. It does nothing in the main menu or while a
- * room is being joined, and quits during a benchmark.
+ * @brief Handles the back and leave keys: in a room, the leave key leaves it;
+ * out of a room, the back key stops waiting for a new key or goes back to the
+ * main menu. They do nothing in the main menu or while a room is being joined,
+ * and quit during a benchmark.
  **/
 void Game::handleBackKey()
 {
-    if (!m_menuKeys.back) {
+    const bool back = m_menuKeys.back;
+    if (!back && !m_menuKeys.leave) {
         return;
     }
     if (m_bench) {
         m_quitRequested = true;
     } else if (inRoom()) {
-        m_sounds.play(audio::SoundEvent::MenuBack);
-        leaveRoom();
-    } else if (m_menu.settings.capture.slot()) {
+        if (m_menuKeys.leave) {
+            m_sounds.play(audio::SoundEvent::MenuBack);
+            leaveRoom();
+        }
+    } else if (back && m_menu.settings.capture.slot()) {
         m_sounds.play(audio::SoundEvent::MenuBack);
         m_menu.settings.capture.cancel();
-    } else if (m_menu.page != MenuPage::Main &&
+    } else if (back && m_menu.page != MenuPage::Main &&
                m_lobby.screen != LobbyState::Screen::Joining) {
         m_sounds.play(audio::SoundEvent::MenuBack);
         m_menu.page = MenuPage::Main;
@@ -461,8 +465,8 @@ void Game::finishSettingsPage(const SettingsResult &result)
  **/
 void Game::drawSettings()
 {
-    const SettingsResult result = settingsPage(menuContext(), m_menu.settings,
-                                               m_settings, m_controls.keyboard);
+    const SettingsResult result =
+        settingsPage(menuContext(), m_menu.settings, m_settings, m_controls);
     if (result.changed) {
         applyVolumes();
     }

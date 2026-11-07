@@ -52,8 +52,10 @@ constexpr std::array<const char *, ControlCount> ControlLabels{
 constexpr std::size_t KeysPerRow = 2;
 /** @brief The index of the Audio tab. */
 constexpr std::size_t AudioTab = 0;
-/** @brief The index of the Controls tab. */
-constexpr std::size_t ControlsTab = 1;
+/** @brief The index of the Keyboard tab. */
+constexpr std::size_t KeyboardTab = 1;
+/** @brief The index of the Gamepad tab. */
+constexpr std::size_t GamepadTab = 2;
 /** @brief The height a row takes in a column, in pixels. */
 constexpr float RowStep = MenuRowHeight + MenuRowGap;
 
@@ -62,17 +64,20 @@ constexpr float RowStep = MenuRowHeight + MenuRowGap;
  * control uses it too.
  * @param context What the menu needs for this frame.
  * @param state The state of the Settings page, updated.
- * @param controls The keys bound to each control, updated.
+ * @param players The keys bound to each control on each device, updated.
  * @return Whether the keys changed.
  **/
 bool applyCapture(const MenuContext &context, SettingsPageState &state,
-                  Controls &controls)
+                  PlayerControls &players)
 {
     const std::optional<gfx::Key> key = state.capture.update(*context.graphics);
     const std::optional<KeySlot> slot = state.capture.slot();
     if (!key || !slot) {
         return false;
     }
+    Controls &controls = state.capture.device() == Device::Gamepad
+                             ? players.gamepad
+                             : players.keyboard;
     bindKey(controls, slot->control, slot->index, *key);
     state.capture.cancel();
     context.sounds->play(audio::SoundEvent::MenuConfirm);
@@ -89,19 +94,21 @@ bool applyCapture(const MenuContext &context, SettingsPageState &state,
 /**
  * @brief Returns the text of the button of one key of a control.
  * @param state The state of the Settings page.
- * @param controls The keys bound to each control.
+ * @param controls The keys bound to each control on the device of the tab.
+ * @param device The device of the tab.
  * @param slot The key.
  * @return The control and its key, or a request while the key is changing.
  **/
 std::string keyLabel(const SettingsPageState &state, const Controls &controls,
-                     KeySlot slot)
+                     Device device, KeySlot slot)
 {
     const auto control = static_cast<std::size_t>(slot.control);
     const std::string name = std::string{ControlLabels.at(control)} + ": ";
     const std::optional<KeySlot> waiting = state.capture.slot();
-    if (waiting && waiting->control == slot.control &&
-        waiting->index == slot.index) {
-        return name + "press a key...";
+    if (waiting && state.capture.device() == device &&
+        waiting->control == slot.control && waiting->index == slot.index) {
+        return name + (device == Device::Gamepad ? "press a button..."
+                                                 : "press a key...");
     }
     const std::vector<gfx::Key> &keys = controls.at(control);
     return name +
@@ -132,17 +139,19 @@ float audioTab(MenuPanel &panel, engine::Vec2f screen, float top,
 }
 
 /**
- * @brief Draws the Controls tab.
+ * @brief Draws the Keyboard or the Gamepad tab: two keys per control, then a
+ * button that brings back the default keys of the device.
  * @param panel The panel of the page.
  * @param context What the menu needs for this frame.
  * @param top The top of the tab.
  * @param state The state of the Settings page, updated.
- * @param controls The keys bound to each control, updated.
+ * @param controls The keys bound to each control on the device, updated.
+ * @param device The device of the tab.
  * @param result What the player did, updated.
  * @return The height below the tab.
  **/
 float controlsTab(MenuPanel &panel, const MenuContext &context, float top,
-                  SettingsPageState &state, Controls &controls,
+                  SettingsPageState &state, Controls &controls, Device device,
                   SettingsResult &result)
 {
     gfx::IGraphics &graphics = *context.graphics;
@@ -151,8 +160,8 @@ float controlsTab(MenuPanel &panel, const MenuContext &context, float top,
         const KeySlot slot{.control = static_cast<Control>(i / KeysPerRow),
                            .index = i % KeysPerRow};
         if (panel.button(menuGridCell(screen, top, i),
-                         keyLabel(state, controls, slot))) {
-            state.capture.start(slot);
+                         keyLabel(state, controls, device, slot))) {
+            state.capture.start(slot, device);
             state.notice.clear();
         }
     }
@@ -161,7 +170,8 @@ float controlsTab(MenuPanel &panel, const MenuContext &context, float top,
                  gfx::colors::OffWhite);
     y += MenuLineHeight;
     if (panel.button(menuRow(screen, y), "Reset keys")) {
-        controls = defaultControls();
+        controls = device == Device::Gamepad ? defaultPadControls()
+                                             : defaultControls();
         state.capture.cancel();
         state.notice.clear();
         result.controlsChanged = true;
@@ -308,7 +318,7 @@ MainChoice mainMenuPage(const MenuContext &context, MenuCursor &cursor,
 
 SettingsResult settingsPage(const MenuContext &context,
                             SettingsPageState &state, Settings &settings,
-                            Controls &controls)
+                            PlayerControls &controls)
 {
     SettingsResult result;
     // The widgets must not take the keys pressed for the capture.
@@ -322,16 +332,26 @@ SettingsResult settingsPage(const MenuContext &context,
     const engine::Vec2f screen = graphics.screenSize();
 
     float y = drawMenuTitle(graphics, "SETTINGS");
-    const std::array<std::string, 3> tabs{"Audio", "Controls", "Video"};
+    const std::array<std::string, 4> tabs{"Audio", "Keyboard", "Gamepad",
+                                          "Video"};
     panel.tabs(menuRow(screen, y), tabs, state.tab);
     y += RowStep;
-    if (state.tab != ControlsTab) {
+    // A capture only goes on in the tab of its device.
+    const bool keyboardCapture =
+        state.tab == KeyboardTab && state.capture.device() == Device::Keyboard;
+    const bool gamepadCapture =
+        state.tab == GamepadTab && state.capture.device() == Device::Gamepad;
+    if (!keyboardCapture && !gamepadCapture) {
         state.capture.cancel();
     }
     if (state.tab == AudioTab) {
         y = audioTab(panel, screen, y, settings, result);
-    } else if (state.tab == ControlsTab) {
-        y = controlsTab(panel, frame, y, state, controls, result);
+    } else if (state.tab == KeyboardTab) {
+        y = controlsTab(panel, frame, y, state, controls.keyboard,
+                        Device::Keyboard, result);
+    } else if (state.tab == GamepadTab) {
+        y = controlsTab(panel, frame, y, state, controls.gamepad,
+                        Device::Gamepad, result);
     } else {
         y = videoTab(panel, screen, y, settings, result);
     }

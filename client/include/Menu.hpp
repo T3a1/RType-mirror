@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <initializer_list>
 #include <span>
 #include <string>
 
@@ -27,7 +28,9 @@ namespace client {
  * @param left Move left.
  * @param right Move right.
  * @param confirm Choose the selected item.
- * @param back Go back.
+ * @param back Go back in the menus, or close the chat.
+ * @param leave Leave the room. On a gamepad it is its own button, so that
+ * going back in a menu never leaves a game by mistake.
  **/
 struct MenuKeys {
     bool up = false;
@@ -36,13 +39,16 @@ struct MenuKeys {
     bool right = false;
     bool confirm = false;
     bool back = false;
+    bool leave = false;
 };
 
 /**
  * @class MenuInput
- * @brief Turns the held keys of IGraphics into key presses for the menus.
- * Update it every frame, also out of the menus, so that a key held since the
- * game does not count as a press.
+ * @brief Turns the held keys of IGraphics into key presses for the menus. The
+ * keys are fixed: the arrows, the D-pad or the left stick move, Space, Enter
+ * or A (Cross) confirm, Escape or B (Circle) go back, Escape or Back (Create)
+ * leave the room. Update it every frame, also out of
+ *the menus, so that a key held since the game does not count as a press.
  **/
 class MenuInput {
   public:
@@ -60,6 +66,7 @@ class MenuInput {
     bool m_right = false;
     bool m_confirm = false;
     bool m_back = false;
+    bool m_leave = false;
 };
 
 /**

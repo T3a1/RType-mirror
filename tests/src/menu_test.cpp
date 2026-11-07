@@ -21,6 +21,7 @@
 namespace {
 
 using client::Control;
+using client::Device;
 using client::MainChoice;
 using client::MenuCursor;
 using client::MenuInput;
@@ -130,16 +131,23 @@ struct MenuRig {
 struct SettingsRig : MenuRig {
     client::SettingsPageState page;
     client::Settings settings;
-    client::Controls controls = client::defaultControls();
+    client::PlayerControls controls;
 
     client::SettingsResult frame(const MenuKeys &keys = {})
     {
         return client::settingsPage(context(keys), page, settings, controls);
     }
 
+    // The keyboard keys of a control.
     [[nodiscard]] const std::vector<gfx::Key> &keysOf(Control control) const
     {
-        return controls.at(static_cast<std::size_t>(control));
+        return controls.keyboard.at(static_cast<std::size_t>(control));
+    }
+
+    // The gamepad buttons of a control.
+    [[nodiscard]] const std::vector<gfx::Key> &buttonsOf(Control control) const
+    {
+        return controls.gamepad.at(static_cast<std::size_t>(control));
     }
 };
 
@@ -666,7 +674,7 @@ TEST(MenuPages, SettingsSwitchToControlsWithTheTabs)
 
     rig.graphics.texts.clear();
     static_cast<void>(rig.frame());
-    EXPECT_TRUE(rig.drew("[Controls]"));
+    EXPECT_TRUE(rig.drew("[Keyboard]"));
     EXPECT_TRUE(rig.drew("Fire: Space"));
     EXPECT_TRUE(rig.drew("Fire: RightCtrl"));
 }
@@ -726,7 +734,8 @@ TEST(MenuPages, CaptureNeverTakesEscape)
 {
     SettingsRig rig;
     rig.page.tab = 1;
-    rig.page.capture.start({.control = Control::Fire, .index = 0});
+    rig.page.capture.start({.control = Control::Fire, .index = 0},
+                           Device::Keyboard);
     static_cast<void>(rig.frame());
 
     rig.graphics.held = {gfx::Key::Escape};
@@ -739,7 +748,8 @@ TEST(MenuPages, CaptureNeverTakesAGamepadButton)
 {
     SettingsRig rig;
     rig.page.tab = 1;
-    rig.page.capture.start({.control = Control::Fire, .index = 0});
+    rig.page.capture.start({.control = Control::Fire, .index = 0},
+                           Device::Keyboard);
     static_cast<void>(rig.frame());
 
     rig.graphics.held = {gfx::Key::PadA};
@@ -756,7 +766,8 @@ TEST(MenuPages, TheCapturedKeyDoesNotReachTheWidgets)
     SettingsRig rig;
     rig.page.tab = 1;
     rig.page.cursor.selected = FireSecondKey;
-    rig.page.capture.start({.control = Control::Fire, .index = 1});
+    rig.page.capture.start({.control = Control::Fire, .index = 1},
+                           Device::Keyboard);
     static_cast<void>(rig.frame());
 
     rig.graphics.held = {gfx::Key::Enter};
@@ -771,7 +782,8 @@ TEST(MenuPages, AKeyUsedElsewhereIsReported)
 {
     SettingsRig rig;
     rig.page.tab = 1;
-    rig.page.capture.start({.control = Control::Fire, .index = 1});
+    rig.page.capture.start({.control = Control::Fire, .index = 1},
+                           Device::Keyboard);
     static_cast<void>(rig.frame());
 
     rig.graphics.held = {gfx::Key::F};
@@ -786,13 +798,14 @@ TEST(MenuPages, ResetKeysBringsBackTheDefaults)
 {
     SettingsRig rig;
     rig.page.tab = 1;
-    rig.controls.at(static_cast<std::size_t>(Control::Fire)) = {gfx::Key::G};
+    rig.controls.keyboard.at(static_cast<std::size_t>(Control::Fire)) = {
+        gfx::Key::G};
     rig.page.notice = "old";
     rig.page.cursor.selected = 1 + (client::ControlCount * 2);
 
     EXPECT_TRUE(rig.frame({.confirm = true}).controlsChanged);
 
-    EXPECT_EQ(rig.controls, client::defaultControls());
+    EXPECT_EQ(rig.controls.keyboard, client::defaultControls());
     EXPECT_TRUE(rig.page.notice.empty());
 }
 
@@ -800,7 +813,8 @@ TEST(MenuPages, LeavingTheControlsTabCancelsTheCapture)
 {
     SettingsRig rig;
     rig.page.tab = 1;
-    rig.page.capture.start({.control = Control::Fire, .index = 0});
+    rig.page.capture.start({.control = Control::Fire, .index = 0},
+                           Device::Keyboard);
     rig.page.tab = 0;
 
     static_cast<void>(rig.frame());
@@ -922,12 +936,12 @@ TEST(MenuPanel, SelectorWithoutOptionsDoesNothing)
     EXPECT_EQ(current, 3U);
 }
 
-TEST(MenuPages, VideoTabIsTheThirdTab)
+TEST(MenuPages, VideoTabIsTheLastTab)
 {
     SettingsRig rig;
 
     static_cast<void>(rig.frame({.left = true}));
-    EXPECT_EQ(rig.page.tab, 2U);
+    EXPECT_EQ(rig.page.tab, 3U);
 
     rig.graphics.texts.clear();
     static_cast<void>(rig.frame());
@@ -940,7 +954,7 @@ TEST(MenuPages, VideoTabIsTheThirdTab)
 TEST(MenuPages, VideoTabReportsAChange)
 {
     SettingsRig rig;
-    rig.page.tab = 2;
+    rig.page.tab = 3;
     rig.page.cursor.selected = 1;
 
     const client::SettingsResult result = rig.frame({.confirm = true});
@@ -953,7 +967,7 @@ TEST(MenuPages, VideoTabReportsAChange)
 TEST(MenuPages, VideoTabChangesTheWindowSize)
 {
     SettingsRig rig;
-    rig.page.tab = 2;
+    rig.page.tab = 3;
     rig.page.cursor.selected = 2;
 
     const client::SettingsResult result = rig.frame({.right = true});
@@ -965,7 +979,7 @@ TEST(MenuPages, VideoTabChangesTheWindowSize)
 TEST(MenuPages, VideoTabDisablesTheWindowSizeInFullscreen)
 {
     SettingsRig rig;
-    rig.page.tab = 2;
+    rig.page.tab = 3;
     rig.page.cursor.selected = 2;
     rig.settings.fullscreen = true;
 
@@ -978,7 +992,7 @@ TEST(MenuPages, VideoTabDisablesTheWindowSizeInFullscreen)
 TEST(MenuPages, VSyncReplacesTheFrameLimit)
 {
     SettingsRig rig;
-    rig.page.tab = 2;
+    rig.page.tab = 3;
     rig.page.cursor.selected = 4;
     const std::size_t limit = rig.settings.frameLimit;
 
@@ -998,7 +1012,131 @@ TEST(MenuPages, VSyncReplacesTheFrameLimit)
 TEST(MenuPages, VideoTabCancelsAKeyCapture)
 {
     SettingsRig rig;
-    rig.page.capture.start({.control = Control::Fire, .index = 0});
+    rig.page.capture.start({.control = Control::Fire, .index = 0},
+                           Device::Keyboard);
+    rig.page.tab = 3;
+
+    static_cast<void>(rig.frame());
+
+    EXPECT_FALSE(rig.page.capture.slot().has_value());
+}
+
+TEST(MenuInput, ReadsTheGamepad)
+{
+    FakeGraphics graphics;
+    client::MenuInput input;
+
+    graphics.held = {gfx::Key::PadDown, gfx::Key::PadA};
+    const MenuKeys pressed = input.update(graphics);
+
+    EXPECT_TRUE(pressed.down);
+    EXPECT_TRUE(pressed.confirm);
+    EXPECT_FALSE(pressed.back);
+}
+
+TEST(MenuInput, CountsAStickPushedOnce)
+{
+    FakeGraphics graphics;
+    client::MenuInput input;
+
+    graphics.held = {gfx::Key::PadStickRight};
+    EXPECT_TRUE(input.update(graphics).right);
+    EXPECT_FALSE(input.update(graphics).right);
+
+    graphics.held.clear();
+    static_cast<void>(input.update(graphics));
+    graphics.held = {gfx::Key::PadStickRight};
+    EXPECT_TRUE(input.update(graphics).right);
+}
+
+TEST(MenuInput, EscapeGoesBackAndLeaves)
+{
+    FakeGraphics graphics;
+    client::MenuInput input;
+
+    graphics.held = {gfx::Key::Escape};
+    const MenuKeys pressed = input.update(graphics);
+
+    EXPECT_TRUE(pressed.back);
+    EXPECT_TRUE(pressed.leave);
+}
+
+TEST(MenuInput, GamepadBackNeverLeaves)
+{
+    FakeGraphics graphics;
+    client::MenuInput input;
+
+    graphics.held = {gfx::Key::PadB};
+    const MenuKeys back = input.update(graphics);
+    graphics.held = {gfx::Key::PadSelect};
+    const MenuKeys leave = input.update(graphics);
+
+    EXPECT_TRUE(back.back);
+    EXPECT_FALSE(back.leave);
+    EXPECT_FALSE(leave.back);
+    EXPECT_TRUE(leave.leave);
+}
+
+TEST(MenuPages, GamepadTabShowsTheButtons)
+{
+    SettingsRig rig;
+
+    static_cast<void>(rig.frame({.right = true}));
+    static_cast<void>(rig.frame({.right = true}));
+    EXPECT_EQ(rig.page.tab, 2U);
+
+    rig.graphics.texts.clear();
+    static_cast<void>(rig.frame());
+    EXPECT_TRUE(rig.drew("[Gamepad]"));
+    EXPECT_TRUE(rig.drew("Fire: PadA"));
+    EXPECT_TRUE(rig.drew("Fire: PadRT"));
+    EXPECT_TRUE(rig.drew("Chat: -"));
+}
+
+TEST(MenuPages, GamepadCaptureTakesOnlyAButton)
+{
+    SettingsRig rig;
+    rig.page.tab = 2;
+    rig.page.cursor.selected = FireSecondKey;
+    static_cast<void>(rig.frame({.confirm = true}));
+    static_cast<void>(rig.frame());
+    EXPECT_TRUE(rig.drew("Fire: press a button..."));
+
+    rig.graphics.held = {gfx::Key::G};
+    EXPECT_FALSE(rig.frame().controlsChanged);
+
+    rig.graphics.held = {gfx::Key::PadRB};
+    EXPECT_TRUE(rig.frame().controlsChanged);
+    EXPECT_EQ(rig.buttonsOf(Control::Fire),
+              (std::vector<gfx::Key>{gfx::Key::PadA, gfx::Key::PadRB}));
+    EXPECT_EQ(
+        rig.keysOf(Control::Fire),
+        client::defaultControls().at(static_cast<std::size_t>(Control::Fire)));
+}
+
+TEST(MenuPages, GamepadResetOnlyResetsTheGamepad)
+{
+    SettingsRig rig;
+    rig.page.tab = 2;
+    rig.controls.keyboard.at(static_cast<std::size_t>(Control::Fire)) = {
+        gfx::Key::G};
+    rig.controls.gamepad.at(static_cast<std::size_t>(Control::Fire)) = {
+        gfx::Key::PadB};
+    rig.page.cursor.selected =
+        1 + (client::ControlCount * 2); // the Reset keys button
+
+    EXPECT_TRUE(rig.frame({.confirm = true}).controlsChanged);
+
+    EXPECT_EQ(rig.controls.gamepad, client::defaultPadControls());
+    EXPECT_EQ(rig.keysOf(Control::Fire), std::vector<gfx::Key>{gfx::Key::G});
+}
+
+TEST(MenuPages, ChangingDeviceTabCancelsTheCapture)
+{
+    SettingsRig rig;
+    rig.page.tab = 1;
+    rig.page.capture.start({.control = Control::Fire, .index = 0},
+                           Device::Keyboard);
     rig.page.tab = 2;
 
     static_cast<void>(rig.frame());

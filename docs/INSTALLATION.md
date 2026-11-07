@@ -286,6 +286,15 @@ that machine's firewall.
 The Raylib and SFML clients play sound effects and music. The ncurses client has no
 sound.
 
+The Raylib and SFML clients also read an Xbox or a PlayStation gamepad, plugged in
+before or during the game. To see what the SFML client reads from a gamepad, set
+`RTYPE_PAD_DEBUG`: it then logs the gamepad found, its vendor, and every button and
+axis that changes.
+
+```bash
+RTYPE_PAD_DEBUG=1 ./rtype.py --native --graphics sfml
+```
+
 ### Terminal client (ncurses)
 
 Built with `--graphics ncurses`, the client draws the game in the terminal it
@@ -385,6 +394,13 @@ runs without sound` and plays normally. If a file cannot be read, it prints `Can
 load the sound` or `Cannot load the music` with its name: build the client again to
 copy `client/assets/` next to it. The ncurses client never plays sound, and
 `--bench` mutes the game.
+
+**A gamepad button does nothing with the SFML client.** SFML numbers the buttons as
+the system does, and only the layout of a DualSense on Linux has been checked. Run
+the client with `RTYPE_PAD_DEBUG=1`, press the button, and fix its number in the
+`PadLayout` of `client/src/graphics/sfml/SfmlGraphics.cpp`. With an Xbox gamepad on
+Windows, SFML may give both triggers on one axis, so that pressed together they
+cancel out: this has not been checked.
 
 **Windows: MSVC still not found.** Open the Visual Studio Installer and add the
 "Desktop development with C++" workload to Build Tools 2022.

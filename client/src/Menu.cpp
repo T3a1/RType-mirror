@@ -162,19 +162,41 @@ gfx::Rect tabAt(const gfx::Rect &rect, std::size_t index, std::size_t count)
             .height = rect.height};
 }
 
+/**
+ * @brief Tells whether one of some keys is held.
+ * @param graphics The graphics backend.
+ * @param keys The keys.
+ * @return `true` if one of them is held.
+ **/
+bool anyDown(const gfx::IGraphics &graphics,
+             std::initializer_list<gfx::Key> keys)
+{
+    return std::ranges::any_of(
+        keys, [&graphics](gfx::Key key) { return graphics.isKeyDown(key); });
+}
+
 } // namespace
 
 MenuKeys MenuInput::update(const gfx::IGraphics &graphics)
 {
+    using gfx::Key;
     return {
-        .up = pressed(graphics.isKeyDown(gfx::Key::Up), m_up),
-        .down = pressed(graphics.isKeyDown(gfx::Key::Down), m_down),
-        .left = pressed(graphics.isKeyDown(gfx::Key::Left), m_left),
-        .right = pressed(graphics.isKeyDown(gfx::Key::Right), m_right),
-        .confirm = pressed(graphics.isKeyDown(gfx::Key::Space) ||
-                               graphics.isKeyDown(gfx::Key::Enter),
-                           m_confirm),
-        .back = pressed(graphics.isKeyDown(gfx::Key::Escape), m_back),
+        .up = pressed(anyDown(graphics, {Key::Up, Key::PadUp, Key::PadStickUp}),
+                      m_up),
+        .down = pressed(
+            anyDown(graphics, {Key::Down, Key::PadDown, Key::PadStickDown}),
+            m_down),
+        .left = pressed(
+            anyDown(graphics, {Key::Left, Key::PadLeft, Key::PadStickLeft}),
+            m_left),
+        .right = pressed(
+            anyDown(graphics, {Key::Right, Key::PadRight, Key::PadStickRight}),
+            m_right),
+        .confirm = pressed(
+            anyDown(graphics, {Key::Space, Key::Enter, Key::PadA}), m_confirm),
+        .back = pressed(anyDown(graphics, {Key::Escape, Key::PadB}), m_back),
+        .leave =
+            pressed(anyDown(graphics, {Key::Escape, Key::PadSelect}), m_leave),
     };
 }
 

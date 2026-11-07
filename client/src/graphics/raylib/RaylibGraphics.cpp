@@ -85,8 +85,8 @@ KeyboardKey toRaylib(Key key)
     }
 }
 
-/** @brief The gamepad read: the first one plugged in. */
-constexpr int Gamepad = 0;
+/** @brief How many gamepads Raylib follows (MAX_GAMEPADS). */
+constexpr int MaxGamepads = 4;
 /** @brief How far a stick must be pushed to count as a direction, from 0 to 1.
  */
 constexpr float StickThreshold = 0.5F;
@@ -129,18 +129,16 @@ GamepadButton toRaylibButton(Key key)
 }
 
 /**
- * @brief Tells whether a button of the gamepad, or a direction of its left
+ * @brief Tells whether a button of a gamepad, or a direction of its left
  * stick, is held.
  * @param key A key for which isPadKey() is true.
- * @return `false` if no gamepad is plugged in.
+ * @param gamepad The place of the gamepad in Raylib.
+ * @return `true` if it is held.
  **/
-bool isPadDown(Key key)
+bool isPadDown(Key key, int gamepad)
 {
-    if (!IsGamepadAvailable(Gamepad)) {
-        return false;
-    }
-    const float x = GetGamepadAxisMovement(Gamepad, GAMEPAD_AXIS_LEFT_X);
-    const float y = GetGamepadAxisMovement(Gamepad, GAMEPAD_AXIS_LEFT_Y);
+    const float x = GetGamepadAxisMovement(gamepad, GAMEPAD_AXIS_LEFT_X);
+    const float y = GetGamepadAxisMovement(gamepad, GAMEPAD_AXIS_LEFT_Y);
     switch (key) {
     case Key::PadStickUp:
         return y < -StickThreshold;
@@ -151,8 +149,26 @@ bool isPadDown(Key key)
     case Key::PadStickRight:
         return x > StickThreshold;
     default:
-        return IsGamepadButtonDown(Gamepad, toRaylibButton(key));
+        return IsGamepadButtonDown(gamepad, toRaylibButton(key));
     }
+}
+
+/**
+ * @brief Tells whether a button, or a direction of a left stick, is held on
+ * any gamepad. Linux shows the touchpad of a DualSense as a device of its own,
+ * which may take the first place: Raylib gives it no button and no axis, so
+ * reading every place finds the gamepad wherever it is, even plugged in late.
+ * @param key A key for which isPadKey() is true.
+ * @return `false` if no gamepad is plugged in.
+ **/
+bool isAnyPadDown(Key key)
+{
+    for (int gamepad = 0; gamepad < MaxGamepads; ++gamepad) {
+        if (IsGamepadAvailable(gamepad) && isPadDown(key, gamepad)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 } // namespace
@@ -311,7 +327,7 @@ std::u32string RaylibGraphics::takeTextInput()
 bool RaylibGraphics::isKeyDown(Key key) const
 {
     if (isPadKey(key)) {
-        return isPadDown(key);
+        return isAnyPadDown(key);
     }
     return IsKeyDown(toRaylib(key));
 }

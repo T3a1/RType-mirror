@@ -34,7 +34,7 @@ class RType(ConanFile):
         # nlohmann-json used by the Dockerfile.
         self.requires("nlohmann_json/3.11.3")
         if self.options.graphics == "raylib":
-            self.requires("raylib/5.5")
+            self.requires("raylib/6.0")
         elif self.options.graphics == "sfml":
             self.requires("sfml/3.0.2")
         else:

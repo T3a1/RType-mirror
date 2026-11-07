@@ -12,9 +12,18 @@
 #include "graphics/IGraphics.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 
 namespace client {
+
+/**
+ * @enum Device
+ * @brief What a key belongs to.
+ * @param Keyboard The keyboard.
+ * @param Gamepad The gamepad.
+ **/
+enum class Device : std::uint8_t { Keyboard, Gamepad };
 
 /**
  * @struct KeySlot
@@ -33,15 +42,16 @@ struct KeySlot {
  *
  * The key that started the capture is still held at that moment, so it first
  * waits for every key to be released. Escape is never captured: it cancels.
- * Only keyboard keys are captured: a gamepad button is ignored.
+ * Only the keys of the chosen device are captured: the others are ignored.
  **/
 class KeyCapture {
   public:
     /**
      * @brief Starts waiting for a key.
      * @param slot Where the key goes.
+     * @param device The device whose keys are captured.
      **/
-    void start(KeySlot slot);
+    void start(KeySlot slot, Device device);
     /**
      * @brief Stops waiting.
      **/
@@ -52,6 +62,11 @@ class KeyCapture {
      **/
     [[nodiscard]] std::optional<KeySlot> slot() const;
     /**
+     * @brief Returns the device whose keys are captured.
+     * @return The device given to start().
+     **/
+    [[nodiscard]] Device device() const;
+    /**
      * @brief Reads the keyboard: call it once per frame while it is waiting.
      * @param graphics The graphics backend.
      * @return The key pressed, if any.
@@ -61,6 +76,7 @@ class KeyCapture {
 
   private:
     std::optional<KeySlot> m_slot;
+    Device m_device = Device::Keyboard;
     bool m_released = false;
 };
 
