@@ -162,6 +162,22 @@ inline constexpr char32_t TextBackspace = U'\b';
  * @param Num9 The digit 9.
  * @param Escape The Escape key: it goes back in the menus and cannot be bound
  * to a control.
+ * @param PadUp Up on the D-pad of the gamepad.
+ * @param PadDown Down on the D-pad.
+ * @param PadLeft Left on the D-pad.
+ * @param PadRight Right on the D-pad.
+ * @param PadStickUp The left stick pushed up, past half of its range.
+ * @param PadStickDown The left stick pushed down.
+ * @param PadStickLeft The left stick pushed left.
+ * @param PadStickRight The left stick pushed right.
+ * @param PadA The bottom face button: A on Xbox, Cross on PlayStation.
+ * @param PadB The right face button: B on Xbox, Circle on PlayStation.
+ * @param PadLB The left shoulder button: LB, or L1.
+ * @param PadRB The right shoulder button: RB, or R1.
+ * @param PadLT The left trigger: LT, or L2.
+ * @param PadRT The right trigger: RT, or R2.
+ * @param PadStart The right middle button: Start, or Options.
+ * @param PadSelect The left middle button: Back, or Create.
  * @param Count The number of keys, not a key.
  */
 enum class Key : std::uint8_t {
@@ -215,12 +231,38 @@ enum class Key : std::uint8_t {
     Num8,
     Num9,
     Escape,
+    PadUp,
+    PadDown,
+    PadLeft,
+    PadRight,
+    PadStickUp,
+    PadStickDown,
+    PadStickLeft,
+    PadStickRight,
+    PadA,
+    PadB,
+    PadLB,
+    PadRB,
+    PadLT,
+    PadRT,
+    PadStart,
+    PadSelect,
     /** @brief The number of keys, not a key. */
     Count,
 };
 
 /** @brief The number of keys in Key. */
 inline constexpr std::size_t KeyCount = static_cast<std::size_t>(Key::Count);
+
+/**
+ * @brief Tells whether a key is a button of the gamepad.
+ * @param key The key.
+ * @return `true` for the keys from PadUp to PadSelect.
+ **/
+[[nodiscard]] constexpr bool isPadKey(Key key)
+{
+    return key >= Key::PadUp && key <= Key::PadSelect;
+}
 
 } // namespace client::gfx
 

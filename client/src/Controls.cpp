@@ -19,7 +19,7 @@ namespace {
 using gfx::Key;
 
 /** @brief The names of the keys that are not letters or digits. */
-constexpr std::array<std::pair<std::string_view, Key>, 13> NamedKeys{{
+constexpr std::array<std::pair<std::string_view, Key>, 29> NamedKeys{{
     {"Up", Key::Up},
     {"Down", Key::Down},
     {"Left", Key::Left},
@@ -33,6 +33,22 @@ constexpr std::array<std::pair<std::string_view, Key>, 13> NamedKeys{{
     {"RightCtrl", Key::RightControl},
     {"LeftAlt", Key::LeftAlt},
     {"RightAlt", Key::RightAlt},
+    {"PadUp", Key::PadUp},
+    {"PadDown", Key::PadDown},
+    {"PadLeft", Key::PadLeft},
+    {"PadRight", Key::PadRight},
+    {"PadStickUp", Key::PadStickUp},
+    {"PadStickDown", Key::PadStickDown},
+    {"PadStickLeft", Key::PadStickLeft},
+    {"PadStickRight", Key::PadStickRight},
+    {"PadA", Key::PadA},
+    {"PadB", Key::PadB},
+    {"PadLB", Key::PadLB},
+    {"PadRB", Key::PadRB},
+    {"PadLT", Key::PadLT},
+    {"PadRT", Key::PadRT},
+    {"PadStart", Key::PadStart},
+    {"PadSelect", Key::PadSelect},
 }};
 
 /** @brief The name of each control in the file, in the order of Control. */

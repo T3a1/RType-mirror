@@ -85,6 +85,76 @@ KeyboardKey toRaylib(Key key)
     }
 }
 
+/** @brief The gamepad read: the first one plugged in. */
+constexpr int Gamepad = 0;
+/** @brief How far a stick must be pushed to count as a direction, from 0 to 1.
+ */
+constexpr float StickThreshold = 0.5F;
+
+/**
+ * @brief Converts a button of the gamepad to Raylib's type.
+ * @param key The button, not a direction of the stick.
+ * @return The same button, or GAMEPAD_BUTTON_UNKNOWN.
+ **/
+GamepadButton toRaylibButton(Key key)
+{
+    switch (key) {
+    case Key::PadUp:
+        return GAMEPAD_BUTTON_LEFT_FACE_UP;
+    case Key::PadDown:
+        return GAMEPAD_BUTTON_LEFT_FACE_DOWN;
+    case Key::PadLeft:
+        return GAMEPAD_BUTTON_LEFT_FACE_LEFT;
+    case Key::PadRight:
+        return GAMEPAD_BUTTON_LEFT_FACE_RIGHT;
+    case Key::PadA:
+        return GAMEPAD_BUTTON_RIGHT_FACE_DOWN;
+    case Key::PadB:
+        return GAMEPAD_BUTTON_RIGHT_FACE_RIGHT;
+    case Key::PadLB:
+        return GAMEPAD_BUTTON_LEFT_TRIGGER_1;
+    case Key::PadRB:
+        return GAMEPAD_BUTTON_RIGHT_TRIGGER_1;
+    case Key::PadLT:
+        return GAMEPAD_BUTTON_LEFT_TRIGGER_2;
+    case Key::PadRT:
+        return GAMEPAD_BUTTON_RIGHT_TRIGGER_2;
+    case Key::PadStart:
+        return GAMEPAD_BUTTON_MIDDLE_RIGHT;
+    case Key::PadSelect:
+        return GAMEPAD_BUTTON_MIDDLE_LEFT;
+    default:
+        return GAMEPAD_BUTTON_UNKNOWN;
+    }
+}
+
+/**
+ * @brief Tells whether a button of the gamepad, or a direction of its left
+ * stick, is held.
+ * @param key A key for which isPadKey() is true.
+ * @return `false` if no gamepad is plugged in.
+ **/
+bool isPadDown(Key key)
+{
+    if (!IsGamepadAvailable(Gamepad)) {
+        return false;
+    }
+    const float x = GetGamepadAxisMovement(Gamepad, GAMEPAD_AXIS_LEFT_X);
+    const float y = GetGamepadAxisMovement(Gamepad, GAMEPAD_AXIS_LEFT_Y);
+    switch (key) {
+    case Key::PadStickUp:
+        return y < -StickThreshold;
+    case Key::PadStickDown:
+        return y > StickThreshold;
+    case Key::PadStickLeft:
+        return x < -StickThreshold;
+    case Key::PadStickRight:
+        return x > StickThreshold;
+    default:
+        return IsGamepadButtonDown(Gamepad, toRaylibButton(key));
+    }
+}
+
 } // namespace
 
 std::unique_ptr<IGraphics> createGraphics(const WindowConfig &config)
@@ -240,6 +310,9 @@ std::u32string RaylibGraphics::takeTextInput()
 
 bool RaylibGraphics::isKeyDown(Key key) const
 {
+    if (isPadKey(key)) {
+        return isPadDown(key);
+    }
     return IsKeyDown(toRaylib(key));
 }
 

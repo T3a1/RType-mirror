@@ -14,6 +14,7 @@
 #include <SFML/Graphics/View.hpp>
 #include <SFML/System/Err.hpp>
 #include <SFML/Window/Event.hpp>
+#include <SFML/Window/Joystick.hpp>
 #include <SFML/Window/Keyboard.hpp>
 #include <SFML/Window/Mouse.hpp>
 #include <SFML/Window/VideoMode.hpp>
@@ -89,6 +90,118 @@ sf::Keyboard::Key toSfml(Key key)
         return sf::Keyboard::Key::RAlt;
     default:
         return sf::Keyboard::Key::Unknown;
+    }
+}
+
+/** @brief The gamepad read: the first one plugged in. */
+constexpr unsigned int Gamepad = 0;
+/** @brief How far a stick, a trigger or the D-pad must be pushed to count, out
+ * of SFML's 100. */
+constexpr float AxisThreshold = 50.0F;
+/** @brief The USB vendor of Sony, whose gamepads number their middle buttons
+ * differently. */
+constexpr unsigned int SonyVendor = 0x054C;
+
+/**
+ * @struct PadButtons
+ * @brief The numbers SFML gives to some buttons of a gamepad. They follow the
+ * driver: these are the ones of Linux, the same for Xbox and PlayStation
+ * gamepads except for the middle buttons.
+ * @param a The bottom face button.
+ * @param b The right face button.
+ * @param lb The left shoulder button.
+ * @param rb The right shoulder button.
+ * @param start The right middle button.
+ * @param select The left middle button.
+ **/
+struct PadButtons {
+    unsigned int a = 0;
+    unsigned int b = 1;
+    unsigned int lb = 4;
+    unsigned int rb = 5;
+    unsigned int start = 7;
+    unsigned int select = 6;
+};
+
+/**
+ * @brief Returns the numbers of the buttons of the plugged gamepad.
+ * @return Those of a PlayStation gamepad, or of an Xbox one otherwise.
+ **/
+PadButtons padButtons()
+{
+    PadButtons buttons;
+    if (sf::Joystick::getIdentification(Gamepad).vendorId == SonyVendor) {
+        buttons.start = 9;
+        buttons.select = 8;
+    }
+    return buttons;
+}
+
+/**
+ * @brief Returns the position of an axis of the gamepad.
+ * @param axis The axis.
+ * @return Its position from -100 to 100, or 0 if the gamepad has no such axis.
+ **/
+float axis(sf::Joystick::Axis axis)
+{
+    return sf::Joystick::hasAxis(Gamepad, axis)
+               ? sf::Joystick::getAxisPosition(Gamepad, axis)
+               : 0.0F;
+}
+
+/**
+ * @brief Tells whether a button of the gamepad, or a direction of its left
+ * stick or D-pad, is held.
+ * @param key A key for which isPadKey() is true.
+ * @return `false` if no gamepad is plugged in.
+ **/
+bool isPadDown(Key key)
+{
+    using Axis = sf::Joystick::Axis;
+    if (!sf::Joystick::isConnected(Gamepad)) {
+        return false;
+    }
+    const PadButtons buttons = padButtons();
+    const auto pressed = [](unsigned int button) {
+        return sf::Joystick::isButtonPressed(Gamepad, button);
+    };
+    // A stick is negative up and left. A trigger goes from -100, released, to
+    // 100. SFML gives the D-pad as the PovX and PovY axes, positive up.
+    switch (key) {
+    case Key::PadUp:
+        return axis(Axis::PovY) > AxisThreshold;
+    case Key::PadDown:
+        return axis(Axis::PovY) < -AxisThreshold;
+    case Key::PadLeft:
+        return axis(Axis::PovX) < -AxisThreshold;
+    case Key::PadRight:
+        return axis(Axis::PovX) > AxisThreshold;
+    case Key::PadStickUp:
+        return axis(Axis::Y) < -AxisThreshold;
+    case Key::PadStickDown:
+        return axis(Axis::Y) > AxisThreshold;
+    case Key::PadStickLeft:
+        return axis(Axis::X) < -AxisThreshold;
+    case Key::PadStickRight:
+        return axis(Axis::X) > AxisThreshold;
+    case Key::PadA:
+        return pressed(buttons.a);
+    case Key::PadB:
+        return pressed(buttons.b);
+    case Key::PadLB:
+        return pressed(buttons.lb);
+    case Key::PadRB:
+        return pressed(buttons.rb);
+    case Key::PadLT:
+        return axis(Axis::Z) > 0.0F;
+    case Key::PadRT:
+        return axis(Axis::R) > 0.0F;
+    case Key::PadStart:
+        return pressed(buttons.start);
+    case Key::PadSelect:
+        return pressed(buttons.select);
+    default:
+        return false;
     }
 }
 
@@ -265,8 +378,15 @@ std::u32string SfmlGraphics::takeTextInput()
 
 bool SfmlGraphics::isKeyDown(Key key) const
 {
-    // SFML reads the global keyboard state: ignore it when unfocused.
-    return m_window.hasFocus() && sf::Keyboard::isKeyPressed(toSfml(key));
+    // SFML reads the global keyboard and gamepad state: ignore it when
+    // unfocused.
+    if (!m_window.hasFocus()) {
+        return false;
+    }
+    if (isPadKey(key)) {
+        return isPadDown(key);
+    }
+    return sf::Keyboard::isKeyPressed(toSfml(key));
 }
 
 engine::Vec2f SfmlGraphics::mousePosition() const
