@@ -20,7 +20,9 @@
 #include <array>
 #include <chrono>
 #include <string>
+#include <tuple>
 #include <utility>
+#include <vector>
 
 namespace client {
 
@@ -198,7 +200,7 @@ void Game::registerSystems()
         playing);
     m_scheduler.add(Stage::Input, "sendInput", [this](Registry &, Duration dt) {
         m_actions = 0;
-        if (inRoom() && m_sync.started) {
+        if (inRoom() && m_sync.started && !m_sync.chat.open) {
             m_actions =
                 m_bench ? m_bench->input(m_now)
                         : inputSystem(*m_graphics, m_controls, m_autoFire, dt);
@@ -238,6 +240,10 @@ void Game::registerSystems()
     m_scheduler.add(Stage::Simulation, "playerNotices",
                     [this](Registry &, Duration dt) {
                         updatePlayerNotices(m_sync.notices, dt.count());
+                    });
+    m_scheduler.add(Stage::Simulation, "chatLines",
+                    [this](Registry &, Duration dt) {
+                        updateChatLines(m_sync.chat, dt.count());
                     });
     m_scheduler.add(Stage::Simulation, "shipTilt", shipTiltSystem);
     m_scheduler.add(Stage::Simulation, "animation", animationSystem);
@@ -571,6 +577,60 @@ void Game::drawScreens()
         drawGame();
     }
     playerNoticeSystem(m_sync, *m_graphics);
+    drawChat();
+}
+
+/**
+ * @brief Gives the keyboard to the chat while it is open: the characters go to
+ * the draft, Enter sends it, Escape cancels it, and the menus and the ship
+ * receive nothing. Otherwise, the chat key of a room opens it, unless the
+ * backend cannot read text or a benchmark is running.
+ **/
+void Game::updateChat()
+{
+    ChatState &chat = m_sync.chat;
+    const std::u32string typed = m_graphics->takeTextInput();
+    const bool chatKey = isHeld(*m_graphics, m_controls, Control::Chat);
+    const bool chatPressed = chatKey && !m_chatKeyHeld;
+    m_chatKeyHeld = chatKey;
+    const bool enter = m_graphics->isKeyDown(gfx::Key::Enter);
+    const bool enterPressed = enter && !m_enterHeld;
+    m_enterHeld = enter;
+
+    if (!chat.open) {
+        if (!chatPressed || !inRoom() || m_bench ||
+            !m_graphics->hasTextInput()) {
+            return;
+        }
+        chat.open = true;
+    } else if (m_menuKeys.back) {
+        std::ignore = closeChat(chat);
+    } else if (enterPressed) {
+        if (const auto line = closeChat(chat)) {
+            m_network.sendChat(*line, std::chrono::steady_clock::now());
+        }
+    } else {
+        typeInDraft(chat.draft, typed);
+    }
+    m_menuKeys = MenuKeys{};
+}
+
+/**
+ * @brief Draws the chat of the room, and in the waiting room the key that opens
+ * it.
+ **/
+void Game::drawChat()
+{
+    if (!inRoom()) {
+        return;
+    }
+    const std::vector<gfx::Key> &keys =
+        m_controls.at(static_cast<std::size_t>(Control::Chat));
+    if (!m_sync.started && !m_sync.chat.open && m_sync.chat.lines.empty() &&
+        !keys.empty() && m_graphics->hasTextInput()) {
+        chatHint(keyName(keys.front()), *m_graphics);
+    }
+    chatOverlay(m_sync.chat, *m_graphics);
 }
 
 void Game::render(engine::Duration dt)
@@ -580,6 +640,7 @@ void Game::render(engine::Duration dt)
     };
 
     m_menuKeys = m_menuInput.update(*m_graphics);
+    updateChat();
 
     m_graphics->beginFrame(gfx::colors::Black);
     draw(Layer::Background);

@@ -48,6 +48,23 @@ void powerUpLabelSystem(engine::Registry &registry, gfx::IGraphics &graphics);
 void hudSystem(const SyncState &state, bool autoFire, gfx::IGraphics &graphics);
 
 /**
+ * @brief Draws the chat at the bottom left of the window, in screen pixels:
+ * the lines received, each with its author and in the author's color, and the
+ * field the player types in while the chat is open.
+ * @param chat The chat.
+ * @param graphics The graphics backend to draw with.
+ **/
+void chatOverlay(const ChatState &chat, gfx::IGraphics &graphics);
+
+/**
+ * @brief Draws the key that opens the chat at the bottom left of the window,
+ * in screen pixels, for the waiting room.
+ * @param keyName The name of the key.
+ * @param graphics The graphics backend to draw with.
+ **/
+void chatHint(const std::string &keyName, gfx::IGraphics &graphics);
+
+/**
  * @brief Draws the health bar of the boss at the bottom of the window,
  * with its name, while a boss is on screen. It is drawn in screen pixels:
  * call it after endWorld().

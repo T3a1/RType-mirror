@@ -37,6 +37,16 @@ struct AutoFire {
 inline constexpr float AutoFirePeriod = 0.25F;
 
 /**
+ * @brief Tells whether one of the keys of a control is held.
+ * @param graphics The backend reading the keyboard.
+ * @param controls The keys of each control.
+ * @param control The control.
+ * @return `true` if one of its keys is held.
+ **/
+[[nodiscard]] bool isHeld(const gfx::IGraphics &graphics,
+                          const Controls &controls, Control control);
+
+/**
  * @brief Reads the keyboard through the player's controls.
  * @param graphics The graphics backend, for the keyboard.
  * @param controls The keys bound to each control.

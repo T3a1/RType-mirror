@@ -56,6 +56,8 @@ class RaylibGraphics final : public IGraphics {
     [[nodiscard]] bool isKeyDown(Key key) const override;
     [[nodiscard]] engine::Vec2f mousePosition() const override;
     [[nodiscard]] bool isMousePressed() const override;
+    [[nodiscard]] bool hasTextInput() const override { return true; }
+    [[nodiscard]] std::u32string takeTextInput() override;
 
   private:
     int m_chosenWidth;

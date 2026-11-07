@@ -37,7 +37,7 @@ constexpr std::array<std::pair<std::string_view, Key>, 13> NamedKeys{{
 
 /** @brief The name of each control in the file, in the order of Control. */
 constexpr std::array<std::string_view, ControlCount> ControlNames{
-    "up", "down", "left", "right", "fire", "autofire",
+    "up", "down", "left", "right", "fire", "autofire", "chat",
 };
 
 /** @brief The number of letter keys, from Key::A. */
@@ -130,6 +130,7 @@ Controls defaultControls()
     set(Control::Right, {Key::Right, Key::D});
     set(Control::Fire, {Key::Space, Key::RightControl});
     set(Control::AutoFire, {Key::F, Key::RightShift});
+    set(Control::Chat, {Key::T});
     return controls;
 }
 

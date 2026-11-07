@@ -37,6 +37,7 @@ inline constexpr const char *DefaultControlsPath = "controls.cfg";
  * @param Right Moves the ship to the right.
  * @param Fire Fires, or charges a shot while held.
  * @param AutoFire Turns auto-fire on or off: the ship fires without a key held.
+ * @param Chat Opens the chat of the room.
  * @param Count The number of controls, not a control.
  **/
 enum class Control : std::uint8_t {
@@ -46,6 +47,7 @@ enum class Control : std::uint8_t {
     Right,
     Fire,
     AutoFire,
+    Chat,
     Count,
 };
 
@@ -62,7 +64,7 @@ using Controls = std::array<std::vector<gfx::Key>, ControlCount>;
 /**
  * @brief The default bindings, playable with either hand alone: arrows,
  * Right Ctrl (fire) and Right Shift (auto-fire) on the right; W A S D,
- * Space (fire) and F (auto-fire) on the left.
+ * Space (fire), F (auto-fire) and T (chat) on the left.
  * @return The default controls.
  **/
 [[nodiscard]] Controls defaultControls();
@@ -84,7 +86,7 @@ using Controls = std::array<std::vector<gfx::Key>, ControlCount>;
 
 /**
  * @brief Finds a control by its name, ignoring case: "up", "down",
- * "left", "right", "fire", "autofire".
+ * "left", "right", "fire", "autofire", "chat".
  * @param name The name of the control.
  * @return The control, or nothing if no control has this name.
  **/

@@ -102,6 +102,10 @@ enum class TextureFilter : std::uint8_t {
     Pixelated,
 };
 
+/** @brief The character IGraphics::takeTextInput() gives for the Backspace key.
+ */
+inline constexpr char32_t TextBackspace = U'\b';
+
 /**
  * @enum Key
  * @brief The keyboard keys the client can read. A to Z and Num0 to Num9
