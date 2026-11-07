@@ -121,7 +121,7 @@ directly:
 | Subsystem | Where platform or library code goes | Interface the rest of the code uses |
 |-----------|-------------------------------------|-------------------------------------|
 | Networking (sockets, addresses, OS error codes) | `common/src/network/<backend>/` | `engine::net::IUdpSocket`, `rtype::network::openUdpSocket()` |
-| Graphics, windows, keyboard | `client/src/graphics/<backend>/` | `client::gfx::IGraphics` |
+| Graphics, windows, keyboard, gamepad | `client/src/graphics/<backend>/` | `client::gfx::IGraphics` |
 | Sound effects and music | `client/src/audio/<backend>/` | `client::audio::IAudio`, `client::audio::createAudio()` |
 
 New platform-specific code (for example Windows sockets) goes into a new
@@ -419,15 +419,15 @@ backend.
 
 | Part | File | Role |
 |------|------|------|
-| `MenuInput`, `MenuKeys` | `Menu.hpp` | The menu keys pressed this frame, rather than held. They are fixed: arrows, Space or Enter, Escape |
+| `MenuInput`, `MenuKeys` | `Menu.hpp` | The menu keys pressed this frame, rather than held. They are fixed: arrows, Space or Enter, Escape, and on a gamepad the D-pad or the left stick, A, B and Back |
 | `MenuPanel`, `MenuCursor` | `Menu.hpp` | The widgets: `button`, `backButton`, `checkbox`, `slider`, `selector`, `tabs` |
 | `drawMenuTitle`, `menuRow`, `menuGridCell` | `Menu.hpp` | The layout shared by the pages |
 | Pages, `MenuState` | `MenuPages.hpp` | Main menu, Settings, Accessibility, How to play, Credits |
 | `lobbyScreen`, `waitingRoomScreen` | `RoomPages.hpp` | The list of rooms and the waiting room, which need the protocol types |
 | `gameOverScreen` | `systems/HudSystem.hpp` | The final scores |
 | `Settings`, `Toggles`, `WindowSizes`, `FrameLimits` | `Settings.hpp` | The player's options and `settings.cfg` |
-| `Controls` | `Controls.hpp` | The keys of each action and `controls.cfg` |
-| `KeyCapture` | `KeyCapture.hpp` | Waits for the key to bind to an action |
+| `Controls`, `PlayerControls` | `Controls.hpp` | The keys of each action, on the keyboard and on the gamepad, and `controls.cfg` |
+| `KeyCapture` | `KeyCapture.hpp` | Waits for the key of one device to bind to an action |
 
 **The keyboard selection.** `MenuPanel` numbers its widgets in the order the page
 creates them, and the widget whose number equals `MenuCursor::selected` is the
@@ -436,9 +436,13 @@ is destroyed, it records the number of widgets, so the cursor wraps around and s
 valid if a page gets shorter. Each page has its own cursor in `MenuState`, and the
 screens of a room have theirs in `LobbyState`.
 
-**Going back.** `Game::handleBackKey()` handles Escape before any page draws. In
-order, it leaves the room, cancels a key capture, or returns to the main menu. It does
-nothing in the main menu or while a room is being joined, and it ends a benchmark.
+**Going back.** `MenuKeys` has two keys to go back: `back` (Escape, or B on a
+gamepad) and `leave` (Escape, or Back). `Game::handleBackKey()` reads them before any
+page draws. In a room, only `leave` leaves it, so that B, pressed to go back in a menu,
+never ends a game. Out of a room, `back` cancels a key capture or returns to the main
+menu. Nothing happens in the main menu or while a room is being joined, and a
+benchmark ends. The chat, while it is open, closes with `back` and takes every other
+key.
 
 **Settings.** `Settings` holds plain data, and the `Toggles` table describes the options
 that are on or off. Both the file and the Accessibility page read this table. A page
@@ -460,8 +464,9 @@ two buttons on its Gamepad tab:
 
 1. Choosing a key calls `KeyCapture::start()`.
 2. `KeyCapture::update()` waits until every key is released, or the key that started
-   the capture would be taken as the new one. It then returns the next key pressed.
-   Escape is never captured, because it cancels.
+   the capture would be taken as the new one. It then returns the next key pressed,
+   among those of the device of the tab only. Escape is never captured, because it
+   cancels, and neither is B on the Gamepad tab, for the same reason.
 3. `bindKey()` changes the controls that the game already reads, so the key works at
    once. If the action already has this key in its other place, the two places swap,
    so an action never has the same key twice.
@@ -472,6 +477,24 @@ two buttons on its Gamepad tab:
 During a capture, the widgets receive empty `MenuKeys`, so the captured key cannot also
 press a button or move the selection. `KeyCapture` reads the keys with `isKeyDown()`,
 so the graphics backends need no code of their own for it.
+
+**Gamepad.** The buttons of a gamepad, the directions of its D-pad and of its left
+stick are values of `gfx::Key`, from `PadUp` to `PadSelect` (`gfx::isPadKey()`), so
+everything that reads keys through `isKeyDown()` reads the gamepad too. A stick counts
+as a direction past half of its range, so the server still receives action bits, and
+a diagonal is two of them, which the server brings back to the speed of a straight
+line. `PlayerControls` holds two `Controls`: `keyboard`, and `gamepad`, whose default
+buttons come from `defaultPadControls()` and are saved as `pad_` lines of
+`controls.cfg`. `isHeld()` reads both, and the file refuses a gamepad button on a
+keyboard line or the reverse, so each device keeps its own keys.
+
+Each backend reads the gamepad its own way:
+
+| Backend | How | Limits |
+|---------|-----|--------|
+| Raylib | The gamepad database of GLFW names the buttons by their place, for Xbox, PlayStation and most gamepads, on every system. The client reads the four places Raylib follows: Linux also shows the touchpad of a DualSense as a device, which may take the first place but never gives a button | Raylib 6.0 or newer: 5.5 could stop when a DualSense was plugged in on Linux, as it copied the long name of its touchpad into 64 characters |
+| SFML | SFML only gives button numbers, which depend on the system and the driver. `findGamepad()` takes the first device with enough buttons and a stick, and `padLayout()` picks a `PadLayout` for the system (Linux, or Windows and macOS) and the vendor (Sony, or other) | Checked on Linux with a DualSense, except L1, Create and Options. With `RTYPE_PAD_DEBUG` set, the client logs the gamepad found and every button and axis that changes, to check or fix a layout |
+| ncurses | Not read: a terminal never sees a gamepad | |
 
 ## 5. Time and the game loop
 
