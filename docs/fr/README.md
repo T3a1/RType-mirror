@@ -31,7 +31,7 @@ Chaque action a une touche pour chaque main, donc le jeu se joue d'une seule mai
 |-------------|-------------|--------|
 | W A S D | Flèches | Déplacer le vaisseau |
 | Espace | Ctrl droit | Tirer : un tir par appui. Maintenu 1 seconde puis relâché : un tir chargé qui traverse les ennemis |
-| F | Maj droite | Activer ou couper le tir automatique : le vaisseau tire seul, 4 fois par seconde |
+| F | Maj droite | Tir automatique, actif par défaut : le vaisseau tire seul, 10 fois par seconde |
 | Échap | Échap | Quitter |
 | T | T | Écrire à votre salle, en salle d'attente ou en jeu : Entrée envoie, Échap annule. Le vaisseau s'arrête pendant la saisie |
 

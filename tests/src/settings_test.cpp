@@ -52,12 +52,12 @@ TEST(Settings, ReadsNothingFromAnEmptyFile)
     EXPECT_EQ(settings.playerLabels, defaults.playerLabels);
 }
 
-TEST(Settings, ShowsThePlayerLabelsByDefault)
+TEST(Settings, ShowsThePlayerLabelsAndAutoFiresByDefault)
 {
     const Settings settings;
 
     EXPECT_TRUE(settings.playerLabels);
-    EXPECT_FALSE(settings.autoFire);
+    EXPECT_TRUE(settings.autoFire);
 }
 
 TEST(Settings, ReadsEverySetting)
