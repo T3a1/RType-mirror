@@ -1005,3 +1005,31 @@ TEST(MenuPages, VideoTabCancelsAKeyCapture)
 
     EXPECT_FALSE(rig.page.capture.slot().has_value());
 }
+
+TEST(MenuInput, ReadsTheGamepad)
+{
+    FakeGraphics graphics;
+    client::MenuInput input;
+
+    graphics.held = {gfx::Key::PadDown, gfx::Key::PadA};
+    const MenuKeys pressed = input.update(graphics);
+
+    EXPECT_TRUE(pressed.down);
+    EXPECT_TRUE(pressed.confirm);
+    EXPECT_FALSE(pressed.back);
+}
+
+TEST(MenuInput, CountsAStickPushedOnce)
+{
+    FakeGraphics graphics;
+    client::MenuInput input;
+
+    graphics.held = {gfx::Key::PadStickRight};
+    EXPECT_TRUE(input.update(graphics).right);
+    EXPECT_FALSE(input.update(graphics).right);
+
+    graphics.held.clear();
+    static_cast<void>(input.update(graphics));
+    graphics.held = {gfx::Key::PadStickRight};
+    EXPECT_TRUE(input.update(graphics).right);
+}

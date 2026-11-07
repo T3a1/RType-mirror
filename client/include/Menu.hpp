@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <initializer_list>
 #include <span>
 #include <string>
 
@@ -40,9 +41,10 @@ struct MenuKeys {
 
 /**
  * @class MenuInput
- * @brief Turns the held keys of IGraphics into key presses for the menus.
- * Update it every frame, also out of the menus, so that a key held since the
- * game does not count as a press.
+ * @brief Turns the held keys of IGraphics into key presses for the menus. The
+ * keys are fixed: the arrows, the D-pad or the left stick move, Space, Enter
+ * or A (Cross) confirm, Escape goes back. Update it every frame, also out of
+ *the menus, so that a key held since the game does not count as a press.
  **/
 class MenuInput {
   public:
