@@ -50,6 +50,8 @@ inline constexpr float LevelBannerTime = 3.0F;
  * baseline).
  * @param predict Whether the local ship is predicted; when false it jumps
  * to each snapshot.
+ * @param explosions Whether destroyed entities explode; when false they
+ * vanish, still with their sound (the Reduce flashing setting).
  * @param prediction The prediction of the local ship.
  * @param ackTick The tick of the last players block giving the local
  * player's last applied input.
@@ -81,6 +83,7 @@ struct SyncState {
     std::vector<std::pair<engine::Entity, double>> dying;
     bool interpolate = true;
     bool predict = true;
+    bool explosions = true;
     rtype::Prediction prediction;
     std::uint32_t ackTick = 0;
     std::uint32_t ackInput = 0;

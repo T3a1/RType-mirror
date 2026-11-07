@@ -99,6 +99,7 @@ frame_limit = 0
 auto_fire = on
 player_labels = on
 background = on
+reduce_flashing = off
 ```
 
 Window sizes: `1280x720`, `1600x900`, `1920x1080`, `2560x1440`. Frame limits: `15`,
@@ -114,6 +115,9 @@ starts, and that setting keeps its value. Saving replaces the whole file, so you
 - **Background**: draws the scrolling stars and planets, by default. Off, the
   game is drawn on a still black screen, for players bothered by the motion or
   who need more contrast.
+- **Reduce flashing**: off by default. On, destroyed ships and enemies vanish
+  without an explosion (their sound still plays) and the glow of a charging
+  shot stops flickering. The game has no screen shake.
 
 ## Getting started
 

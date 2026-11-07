@@ -70,6 +70,15 @@ TEST(Settings, ShowsTheBackgroundByDefaultAndCanHideIt)
     EXPECT_FALSE(settings.background);
 }
 
+TEST(Settings, KeepsTheFlashingEffectsByDefaultAndCanReduceThem)
+{
+    Settings settings;
+    EXPECT_FALSE(settings.reduceFlashing);
+
+    EXPECT_TRUE(read("reduce_flashing = on\n", settings).empty());
+    EXPECT_TRUE(settings.reduceFlashing);
+}
+
 TEST(Settings, ReadsEverySetting)
 {
     Settings settings;

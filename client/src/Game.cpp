@@ -125,6 +125,7 @@ Game::Game(const std::string &host, std::uint16_t port,
 {
     m_sync.interpolate = options.interpolate;
     m_sync.predict = options.predict;
+    m_sync.explosions = !m_settings.reduceFlashing;
     m_graphics->applyVideo(startVideo(options));
     if (m_autoJoin) {
         m_menu.page = MenuPage::Lobby;
@@ -287,7 +288,7 @@ void Game::registerRenderSystems()
     addRender(Layer::World, "sprites",
               [this](Registry &r, Duration) { renderSystem(r, *m_graphics); });
     addRender(Layer::World, "chargeGlow", [this](Registry &r, Duration) {
-        chargeGlowSystem(r, m_sheets, *m_graphics);
+        chargeGlowSystem(r, m_sheets, *m_graphics, !m_settings.reduceFlashing);
     });
     addRender(Layer::World, "playerLabels",
               [this](Registry &r, Duration) {
@@ -358,6 +359,7 @@ void Game::leaveRoom()
     m_sync = SyncState{};
     m_sync.interpolate = interpolate;
     m_sync.predict = predict;
+    m_sync.explosions = !m_settings.reduceFlashing;
     m_registry = engine::Registry{};
     createBackground();
     m_lobby.screen = LobbyState::Screen::Lobby;
@@ -491,6 +493,7 @@ void Game::drawAccessibility()
     if (m_settings.autoFire != autoFire) {
         m_autoFire.enabled = m_settings.autoFire;
     }
+    m_sync.explosions = !m_settings.reduceFlashing;
     finishSettingsPage(result);
 }
 

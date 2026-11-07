@@ -57,6 +57,8 @@ inline constexpr std::array FrameLimits{15, 30, 60, 120, 0};
  * @param playerLabels Whether the name of each player is shown above the ship.
  * @param background Whether the scrolling background is drawn. Off, the game
  * is drawn on a still black screen, for players bothered by the motion.
+ * @param reduceFlashing Whether flashing effects are calmed: destroyed ships
+ * and enemies vanish without an explosion, and the charge glow is still.
  * @param fullscreen Whether the window covers the screen.
  * @param vsync Whether frames wait for the screen's refresh. It replaces the
  * frame limit.
@@ -69,6 +71,7 @@ struct Settings {
     bool autoFire = true;
     bool playerLabels = true;
     bool background = true;
+    bool reduceFlashing = false;
     bool fullscreen = false;
     bool vsync = true;
     std::size_t windowSize = 0;
@@ -106,6 +109,9 @@ inline constexpr std::array Toggles{
     ToggleDef{.key = "background",
               .label = "Background",
               .field = &Settings::background},
+    ToggleDef{.key = "reduce_flashing",
+              .label = "Reduce flashing",
+              .field = &Settings::reduceFlashing},
 };
 
 /**

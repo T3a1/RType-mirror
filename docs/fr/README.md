@@ -72,6 +72,7 @@ frame_limit = 0
 auto_fire = on
 player_labels = on
 background = on
+reduce_flashing = off
 ```
 
 Tailles de fenêtre : `1280x720`, `1600x900`, `1920x1080`, `2560x1440`. Limites
@@ -89,6 +90,9 @@ remplace tout le fichier, donc vos commentaires ne sont pas gardés.
 - **Background** : dessine le fond d'étoiles et de planètes qui défile, par défaut.
   Désactivé, le jeu est dessiné sur un écran noir immobile, pour les joueurs gênés par
   le mouvement ou qui ont besoin de plus de contraste.
+- **Reduce flashing** : désactivé par défaut. Activé, les vaisseaux et les ennemis
+  détruits disparaissent sans explosion (leur son est toujours joué) et la lueur d'un
+  tir en charge ne scintille plus. Le jeu n'a pas de tremblement d'écran.
 
 ## Pour commencer
 

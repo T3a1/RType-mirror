@@ -410,15 +410,17 @@ void attachSprite(engine::Registry &registry, engine::Entity entity,
 }
 
 void chargeGlowSystem(engine::Registry &registry, const SpriteSheets &sheets,
-                      gfx::IGraphics &graphics)
+                      gfx::IGraphics &graphics, bool animated)
 {
     const gfx::Texture texture = sheets.texture(Sheet::Shots);
     const auto seconds =
         std::chrono::duration<float>(
             std::chrono::steady_clock::now().time_since_epoch())
             .count();
-    const auto index = static_cast<std::size_t>(seconds / ChargeGlowFrameTime) %
-                       ChargeGlowFrames.size();
+    const auto index =
+        animated ? static_cast<std::size_t>(seconds / ChargeGlowFrameTime) %
+                       ChargeGlowFrames.size()
+                 : ChargeGlowFrames.size() / 2;
     const Rect &frame = ChargeGlowFrames.at(index);
     const engine::Vec2f size{.x = frame.width * ChargeGlowScale,
                              .y = frame.height * ChargeGlowScale};
@@ -455,7 +457,7 @@ void tileCrackSystem(engine::Registry &registry, engine::Duration /*dt*/)
 }
 
 bool spawnExplosion(engine::Registry &registry, engine::Entity entity,
-                    const SpriteSheets &sheets)
+                    const SpriteSheets &sheets, bool drawn)
 {
     const auto *type = registry.tryGet<rtype::EntityType>(entity);
     const auto *transform = registry.tryGet<rtype::Transform>(entity);
@@ -470,6 +472,9 @@ bool spawnExplosion(engine::Registry &registry, engine::Entity entity,
     if (position.x < 0.0F || position.x > rtype::PlayfieldWidth ||
         position.y < 0.0F || position.y > rtype::PlayfieldHeight) {
         return false;
+    }
+    if (!drawn) {
+        return true;
     }
     const Look look{.sheet = Sheet::Explosion,
                     .frames = ExplosionFrames,

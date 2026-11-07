@@ -127,7 +127,7 @@ void explode(engine::Registry &registry, engine::Entity entity,
              const SyncState &state, const SpriteSheets &sheets,
              audio::SoundBoard &sounds)
 {
-    if (!spawnExplosion(registry, entity, sheets)) {
+    if (!spawnExplosion(registry, entity, sheets, state.explosions)) {
         return;
     }
     const auto *networkId = registry.tryGet<rtype::NetworkId>(entity);
