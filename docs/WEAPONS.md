@@ -2,15 +2,16 @@
 
 ## In the game
 
-- **Normal shot**: each press of the fire key fires once (at most 4 times
-  per second). Tap it to shoot fast.
+- **Normal shot**: each press of the fire key fires once (at most about 12
+  times per second). Tap it to shoot fast.
 - **Charged shot**: hold the fire key. While it is held, the ship stops
   shooting and charges: a glow appears in front of it. Released after 1
   second, a large beam flies across the screen, goes **through** every enemy
   on its way and deals each one heavy damage (300, against 50 for a normal
   shot). Released earlier, nothing more is fired.
-- **Auto-fire** (F or Right Shift) presses the fire key for you 4 times per
-  second: rapid fire without tapping, and no charged shot.
+- **Auto-fire** is on by default: it presses the fire key for you 10 times
+  per second. F or Right Shift turns it off or on. Holding the fire key still
+  charges a shot, and auto-fire starts again when you release it.
 - **Power-ups**: medium and large enemies, and the bosses, leave an orb
   when they are destroyed. It slowly floats to the left; the ship that
   touches it gets its **boost** for a limited time. Each orb has a random
@@ -40,12 +41,12 @@ the server.
 
 ```json
 {
-    "fireInterval": 0.25,
-    "shotSpeed": 900,
+    "fireInterval": 0.08,
+    "shotSpeed": 1400,
     "shotDamage": 50,
     "enemyShotSpeed": 450,
     "chargeTime": 1.0,
-    "beamSpeed": 1300,
+    "beamSpeed": 1800,
     "beamDamage": 300,
     "spreadAngle": 0.12,
     "maxLevel": 3,
@@ -59,12 +60,12 @@ the server.
 
 | Key | Default | Range | Meaning |
 |-----|--------:|-------|---------|
-| `fireInterval` | 0.25 | 0.05 to 5 | Shortest time between two shots of a player: faster presses are ignored |
-| `shotSpeed` | 900 | 100 to 5000 | Speed of a player's shot, in playfield units per second (the playfield is 1920 wide) |
+| `fireInterval` | 0.08 | 0.05 to 5 | Shortest time between two shots of a player: faster presses are ignored |
+| `shotSpeed` | 1400 | 100 to 5000 | Speed of a player's shot, in playfield units per second (the playfield is 1920 wide) |
 | `shotDamage` | 50 | 1 to 10000 | Damage of a player's shot (a basic enemy has 100 health points) |
 | `enemyShotSpeed` | 450 | 100 to 5000 | Speed of an enemy's shot |
 | `chargeTime` | 1.0 | 0.1 to 10 | Seconds the fire key must be held for a charged shot |
-| `beamSpeed` | 1300 | 100 to 5000 | Speed of a charged shot |
+| `beamSpeed` | 1800 | 100 to 5000 | Speed of a charged shot |
 | `beamDamage` | 300 | 1 to 10000 | Damage of a charged shot to each enemy it goes through |
 | `spreadAngle` | 0.12 | 0 to 1 | Angle between two shots of a spread, in radians |
 | `maxLevel` | 3 | 1 to 5 | Highest spread level; a level N spread fires 2N - 1 shots (the first Spread boost gives level 2) |

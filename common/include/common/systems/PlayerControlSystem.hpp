@@ -18,7 +18,7 @@
 namespace rtype {
 
 /** @brief The speed of a player ship, in playfield units per second. */
-inline constexpr float playerSpeed = 500.0F;
+inline constexpr float playerSpeed = 800.0F;
 
 /**
  * @brief Returns the velocity of a player ship holding these actions: the

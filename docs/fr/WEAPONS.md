@@ -2,15 +2,16 @@
 
 ## Dans le jeu
 
-- **Tir normal** : chaque appui sur la touche de tir tire une fois (4 fois par seconde
-  au maximum). Tapotez pour tirer vite.
+- **Tir normal** : chaque appui sur la touche de tir tire une fois (environ 12 fois par
+  seconde au maximum). Tapotez pour tirer vite.
 - **Tir chargé** : maintenez la touche de tir. Tant qu'elle est maintenue, le vaisseau
   cesse de tirer et se charge : une lueur apparaît devant lui. Relâché après 1 seconde,
   un large rayon traverse l'écran, passe **à travers** tous les ennemis sur son chemin
   et inflige à chacun de lourds dégâts (300, contre 50 pour un tir normal). Relâché plus
   tôt, rien de plus n'est tiré.
-- **Tir automatique** (F ou Maj droite) appuie sur la touche de tir pour vous 4 fois par
-  seconde : un tir rapide sans tapoter, mais pas de tir chargé.
+- **Tir automatique** : actif par défaut, il appuie sur la touche de tir pour vous 10 fois
+  par seconde. F ou Maj droite le coupe ou le réactive. Maintenir la touche de tir charge
+  toujours un tir, et le tir automatique reprend quand vous la relâchez.
 - **Bonus** : les ennemis moyens et grands, ainsi que les boss, laissent un orbe quand
   ils sont détruits. Il flotte lentement vers la gauche ; le vaisseau qui le touche
   obtient son **boost** pour un temps limité. Chaque orbe a un type tiré au hasard,
@@ -38,12 +39,12 @@ sortie du serveur et les valeurs par défaut s'appliquent ; il n'arrête jamais 
 
 ```json
 {
-    "fireInterval": 0.25,
-    "shotSpeed": 900,
+    "fireInterval": 0.08,
+    "shotSpeed": 1400,
     "shotDamage": 50,
     "enemyShotSpeed": 450,
     "chargeTime": 1.0,
-    "beamSpeed": 1300,
+    "beamSpeed": 1800,
     "beamDamage": 300,
     "spreadAngle": 0.12,
     "maxLevel": 3,
@@ -57,12 +58,12 @@ sortie du serveur et les valeurs par défaut s'appliquent ; il n'arrête jamais 
 
 | Clé | Défaut | Plage | Signification |
 |-----|-------:|-------|---------------|
-| `fireInterval` | 0.25 | 0.05 à 5 | Le temps minimal entre deux tirs d'un joueur : les appuis plus rapides sont ignorés |
-| `shotSpeed` | 900 | 100 à 5000 | La vitesse d'un tir de joueur, en unités de l'aire de jeu par seconde (l'aire fait 1920 de large) |
+| `fireInterval` | 0.08 | 0.05 à 5 | Le temps minimal entre deux tirs d'un joueur : les appuis plus rapides sont ignorés |
+| `shotSpeed` | 1400 | 100 à 5000 | La vitesse d'un tir de joueur, en unités de l'aire de jeu par seconde (l'aire fait 1920 de large) |
 | `shotDamage` | 50 | 1 à 10000 | Les dégâts d'un tir de joueur (un ennemi basique a 100 points de vie) |
 | `enemyShotSpeed` | 450 | 100 à 5000 | La vitesse d'un tir ennemi |
 | `chargeTime` | 1.0 | 0.1 à 10 | Les secondes de maintien de la touche de tir pour un tir chargé |
-| `beamSpeed` | 1300 | 100 à 5000 | La vitesse d'un tir chargé |
+| `beamSpeed` | 1800 | 100 à 5000 | La vitesse d'un tir chargé |
 | `beamDamage` | 300 | 1 à 10000 | Les dégâts d'un tir chargé à chaque ennemi traversé |
 | `spreadAngle` | 0.12 | 0 à 1 | L'angle entre deux tirs d'un éventail, en radians |
 | `maxLevel` | 3 | 1 à 5 | Le niveau maximal de l'éventail ; un éventail de niveau N tire 2N - 1 tirs (le premier boost Éventail donne le niveau 2) |
