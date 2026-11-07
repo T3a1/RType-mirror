@@ -1033,3 +1033,31 @@ TEST(MenuInput, CountsAStickPushedOnce)
     graphics.held = {gfx::Key::PadStickRight};
     EXPECT_TRUE(input.update(graphics).right);
 }
+
+TEST(MenuInput, EscapeGoesBackAndLeaves)
+{
+    FakeGraphics graphics;
+    client::MenuInput input;
+
+    graphics.held = {gfx::Key::Escape};
+    const MenuKeys pressed = input.update(graphics);
+
+    EXPECT_TRUE(pressed.back);
+    EXPECT_TRUE(pressed.leave);
+}
+
+TEST(MenuInput, GamepadBackNeverLeaves)
+{
+    FakeGraphics graphics;
+    client::MenuInput input;
+
+    graphics.held = {gfx::Key::PadB};
+    const MenuKeys back = input.update(graphics);
+    graphics.held = {gfx::Key::PadSelect};
+    const MenuKeys leave = input.update(graphics);
+
+    EXPECT_TRUE(back.back);
+    EXPECT_FALSE(back.leave);
+    EXPECT_FALSE(leave.back);
+    EXPECT_TRUE(leave.leave);
+}

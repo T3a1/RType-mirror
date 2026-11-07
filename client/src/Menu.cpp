@@ -194,7 +194,9 @@ MenuKeys MenuInput::update(const gfx::IGraphics &graphics)
             m_right),
         .confirm = pressed(
             anyDown(graphics, {Key::Space, Key::Enter, Key::PadA}), m_confirm),
-        .back = pressed(graphics.isKeyDown(Key::Escape), m_back),
+        .back = pressed(anyDown(graphics, {Key::Escape, Key::PadB}), m_back),
+        .leave =
+            pressed(anyDown(graphics, {Key::Escape, Key::PadSelect}), m_leave),
     };
 }
 
