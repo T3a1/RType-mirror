@@ -16,6 +16,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <string>
 #include <vector>
 
 namespace rtype::protocol {
@@ -42,6 +43,20 @@ inline constexpr std::size_t PlayerRecordSize = 13 + PowerUpKindCount;
 inline constexpr std::size_t EntityRecordSize = 16;
 /** @brief How many parts one snapshot can be split into, at most. */
 inline constexpr std::size_t MaxSnapshotParts = 255;
+/** @brief The longest line of chat, in characters. */
+inline constexpr std::size_t MaxChatLength = 80;
+
+/**
+ * @brief Tells whether a character may be part of a line of chat: printable
+ * ASCII, the characters every graphics backend can draw. It also keeps control
+ * characters out of the server's logs.
+ * @param character The character.
+ * @return `true` if it is between ' ' and '~'.
+ **/
+constexpr bool isChatCharacter(char character)
+{
+    return character >= ' ' && character <= '~';
+}
 
 /**
  * @struct Connect
@@ -469,6 +484,34 @@ struct RoomClosed {
 };
 
 /**
+ * @struct ChatSend
+ * @brief A player writes to the players of its room (reliable). The server
+ * adds the author: a client cannot speak for another one.
+ * @param Type The packet type that carries this payload.
+ * @param text From 1 to MaxChatLength chat characters.
+ **/
+struct ChatSend {
+    static constexpr PacketType Type = PacketType::ChatSend;
+    std::string text;
+    bool operator==(const ChatSend &) const = default;
+};
+
+/**
+ * @struct ChatMessage
+ * @brief A line of the chat of the room, sent to all its players, the author
+ * included (reliable).
+ * @param Type The packet type that carries this payload.
+ * @param slot The author's slot, from 1 to MaxPlayers.
+ * @param text From 1 to MaxChatLength chat characters.
+ **/
+struct ChatMessage {
+    static constexpr PacketType Type = PacketType::ChatMessage;
+    std::uint8_t slot = 1;
+    std::string text;
+    bool operator==(const ChatMessage &) const = default;
+};
+
+/**
  * @brief Writes the payload of a Connect.
  * @param message The payload to write; writes nothing (empty payload).
  * @param out The writer to append to.
@@ -566,6 +609,19 @@ void encode(const SnapshotPart &message, ByteWriter &out);
 void encode(const GameEvent &message, ByteWriter &out);
 
 /**
+ * @brief Writes the payload of a ChatSend.
+ * @param message The message.
+ * @param out Where to write.
+ **/
+void encode(const ChatSend &message, ByteWriter &out);
+/**
+ * @brief Writes the payload of a ChatMessage.
+ * @param message The message.
+ * @param out Where to write.
+ **/
+void encode(const ChatMessage &message, ByteWriter &out);
+
+/**
  * @brief Reads and validates the payload of a Connect.
  * @param in The reader positioned at the start of the payload.
  * @param message Filled with the decoded fields.
@@ -573,6 +629,24 @@ void encode(const GameEvent &message, ByteWriter &out);
  * in.ok() and that no byte is left.
  **/
 [[nodiscard]] bool decode(ByteReader &in, Connect &message);
+/**
+ * @brief Reads and validates the payload of a ChatSend. Fails on an empty or
+ * too long text, or on a character that is not a chat character.
+ * @param in The reader positioned at the start of the payload.
+ * @param message Filled with the decoded fields.
+ * @return `true` if the fields are valid; the caller still checks
+ * in.ok() and that no byte is left.
+ **/
+[[nodiscard]] bool decode(ByteReader &in, ChatSend &message);
+/**
+ * @brief Reads and validates the payload of a ChatMessage. Fails on an invalid
+ * slot, like ChatSend on its text.
+ * @param in The reader positioned at the start of the payload.
+ * @param message Filled with the decoded fields.
+ * @return `true` if the fields are valid; the caller still checks
+ * in.ok() and that no byte is left.
+ **/
+[[nodiscard]] bool decode(ByteReader &in, ChatMessage &message);
 /**
  * @brief Reads and validates the payload of a Accept.
  * @param in The reader positioned at the start of the payload.

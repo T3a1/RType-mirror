@@ -75,6 +75,58 @@ void encode(const RoomJoined &message, ByteWriter &out)
     out.u8(message.levels);
 }
 
+namespace {
+
+/**
+ * @brief Writes the text of a line of chat: its size, then its characters.
+ * @param text The text, from 1 to MaxChatLength chat characters.
+ * @param out Where to write.
+ **/
+void encodeChatText(const std::string &text, ByteWriter &out)
+{
+    out.u8(static_cast<std::uint8_t>(text.size()));
+    for (const char character : text) {
+        out.u8(static_cast<std::uint8_t>(character));
+    }
+}
+
+/**
+ * @brief Reads and validates the text of a line of chat. The size is checked
+ * first, so that a hostile packet allocates nothing.
+ * @param in The reader.
+ * @param text Filled with the text.
+ * @return `true` if it is valid.
+ **/
+bool decodeChatText(ByteReader &in, std::string &text)
+{
+    const std::size_t size = in.u8();
+    if (size == 0 || size > MaxChatLength || size > in.remaining()) {
+        return false;
+    }
+    text.reserve(size);
+    for (std::size_t i = 0; i < size; ++i) {
+        const char character = static_cast<char>(in.u8());
+        if (!isChatCharacter(character)) {
+            return false;
+        }
+        text.push_back(character);
+    }
+    return true;
+}
+
+} // namespace
+
+void encode(const ChatSend &message, ByteWriter &out)
+{
+    encodeChatText(message.text, out);
+}
+
+void encode(const ChatMessage &message, ByteWriter &out)
+{
+    out.u8(message.slot);
+    encodeChatText(message.text, out);
+}
+
 void encode(const RoomRefused & /*message*/, ByteWriter & /*out*/) {}
 
 void encode(const RoomClosed & /*message*/, ByteWriter & /*out*/) {}
@@ -198,6 +250,17 @@ bool decode(ByteReader &in, RoomJoined &message)
     message.room = in.u32();
     message.levels = in.u8();
     return message.room != 0;
+}
+
+bool decode(ByteReader &in, ChatSend &message)
+{
+    return decodeChatText(in, message.text);
+}
+
+bool decode(ByteReader &in, ChatMessage &message)
+{
+    message.slot = in.u8();
+    return isValidSlot(message.slot) && decodeChatText(in, message.text);
 }
 
 bool decode(ByteReader & /*in*/, RoomRefused & /*message*/) { return true; }

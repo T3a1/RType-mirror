@@ -257,7 +257,7 @@ void NetworkServer::pushInbound(const Session &session, InboundMessage message)
     if (session.link == nullptr) {
         return;
     }
-    if (!session.link->inbound.push(message)) {
+    if (!session.link->inbound.push(std::move(message))) {
         BB_ERROR("Could not push event to inbound queue");
     }
 }
@@ -319,6 +319,13 @@ void NetworkServer::handleSessionPacket(SessionIterator it,
         pushInbound(it->second, {.clientId = it->second.id,
                                  .kind = InboundKind::Start,
                                  .settings = *start});
+    } else if (const auto *chat =
+                   std::get_if<rtype::protocol::ChatSend>(&packet.payload)) {
+        if (it->second.chatLimit.allow(now)) {
+            pushInbound(it->second, {.clientId = it->second.id,
+                                     .kind = InboundKind::Chat,
+                                     .text = chat->text});
+        }
     } else if (std::holds_alternative<rtype::protocol::Disconnect>(
                    packet.payload)) {
         removeSession(it, rtype::protocol::DisconnectReason::Left);

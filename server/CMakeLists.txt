@@ -29,6 +29,7 @@ target_link_libraries(r-type_server_game_over
 
 # The network thread is a library so the tests can run it on a fake socket.
 add_library(r-type_server_network STATIC
+    src/systems/ChatSystem.cpp
     src/network/NetworkServer.cpp
     src/network/AdminCommands.cpp
     src/AccessList.cpp

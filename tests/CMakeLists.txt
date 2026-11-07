@@ -34,6 +34,8 @@ set(SOURCE_FILES
     src/access_list_test.cpp
     src/admin_commands_test.cpp
     src/room_phase_system_test.cpp
+    src/chat_system_test.cpp
+    src/rate_limiter_test.cpp
     src/instance_manager_test.cpp
     src/game_over_system_test.cpp
 )
