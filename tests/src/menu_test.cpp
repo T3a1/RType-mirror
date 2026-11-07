@@ -547,6 +547,7 @@ TEST(MenuPages, HowToPlayShowsTheDefaultKeys)
     EXPECT_EQ(lines.at(1), "Move: Up, W / Down, S / Left, A / Right, D");
     EXPECT_EQ(lines.at(2), "Shoot: Space, RightCtrl");
     EXPECT_EQ(lines.at(4), "Auto-fire on or off: F, RightShift");
+    EXPECT_EQ(lines.at(5), "Write to your room: T, then Enter to send");
 }
 
 TEST(MenuPages, HowToPlayFollowsTheControls)

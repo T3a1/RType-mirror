@@ -147,7 +147,7 @@ TEST(Packet, MatchesTheDocumentedLayout)
     }));
     const std::vector<std::uint8_t> expected{
         0x52, 0x54,             // magic "RT"
-        0x0C,                   // version
+        0x0D,                   // version
         0x10,                   // type Input
         0x00,                   // flags
         0x00,                   // reserved
@@ -197,6 +197,9 @@ TEST(Packet, RoundTripsEveryPayload)
         RoomJoined{.room = 7, .levels = 3},
         RoomRefused{},
         RoomClosed{},
+        ChatSend{.text = "Hello, room 1!"},
+        ChatSend{.text = std::string(MaxChatLength, '~')},
+        ChatMessage{.slot = MaxPlayers, .text = "a"},
         Reject{.reason = RejectReason::Banned},
         Reject{.reason = RejectReason::NotWhitelisted},
     };
@@ -270,7 +273,7 @@ TEST(Packet, MarksReliableTypesReliable)
     const auto bytes =
         encodeBytes(packetOf(Welcome{.slot = 2, .shipId = 58, .tick = 1200}));
     const std::vector<std::uint8_t> expected{
-        0x52, 0x54, 0x0C, 0x21, // magic, version, type Welcome
+        0x52, 0x54, 0x0D, 0x21, // magic, version, type Welcome
         0x01, 0x00,             // flags Reliable, reserved
         0x2A, 0x01, 0x11, 0x00, // sequence 298, ack 17
         0x09, 0x00,             // payload size 9
@@ -411,6 +414,30 @@ TEST(Packet, RejectsInvalidRoomMessages)
     expectBadPayload(RoomJoined{.room = 0});
     // Count (1) + room (4) + players (1): the status comes next.
     expectBadByte(RoomList{.rooms = {{.room = 1}}}, HeaderSize + 6, 9);
+}
+
+TEST(Packet, RejectsInvalidChatLines)
+{
+    expectBadPayload(ChatSend{});
+    expectBadPayload(ChatSend{.text = std::string(MaxChatLength + 1, 'a')});
+    expectBadPayload(ChatSend{.text = "two\nlines"});
+    expectBadPayload(ChatSend{.text = "caf\xC3\xA9"});
+    expectBadPayload(ChatMessage{.slot = 0, .text = "a"});
+    expectBadPayload(ChatMessage{.slot = MaxPlayers + 1, .text = "a"});
+    expectBadPayload(ChatMessage{.slot = 1});
+    // The size must match the characters of the packet, in both directions.
+    expectBadByte(ChatSend{.text = "abc"}, HeaderSize, 2);
+    expectBadByte(ChatSend{.text = "abc"}, HeaderSize, 4);
+}
+
+TEST(Packet, ChatOnlyGoesInOneDirection)
+{
+    EXPECT_EQ(
+        decodeError(encodeBytes(packetOf(ChatSend{.text = "a"})), Side::Server),
+        DecodeError::WrongSender);
+    EXPECT_EQ(decodeError(encodeBytes(packetOf(ChatMessage{.text = "a"})),
+                          Side::Client),
+              DecodeError::WrongSender);
 }
 
 TEST(Packet, RefusesToEncodeMoreThanMaxPacketSize)

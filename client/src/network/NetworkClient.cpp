@@ -113,6 +113,13 @@ void NetworkClient::startGame(const StartGame &settings, TimePoint now)
     }
 }
 
+void NetworkClient::sendChat(const std::string &text, TimePoint now)
+{
+    if (m_state == State::Connected) {
+        send(rtype::protocol::ChatSend{.text = text}, now);
+    }
+}
+
 void NetworkClient::receivePending(TimePoint now,
                                    std::vector<Payload> &received)
 {

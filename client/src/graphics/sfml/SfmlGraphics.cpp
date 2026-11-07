@@ -23,6 +23,7 @@
 #include <stdexcept>
 #include <string>
 #include <system_error>
+#include <utility>
 
 namespace client::gfx {
 
@@ -122,6 +123,9 @@ bool SfmlGraphics::shouldClose()
     while (const std::optional event = m_window.pollEvent()) {
         if (event->is<sf::Event::Closed>()) {
             m_closeRequested = true;
+        }
+        if (const auto *text = event->getIf<sf::Event::TextEntered>()) {
+            m_typed.push_back(text->unicode);
         }
         const auto *mouse = event->getIf<sf::Event::MouseButtonPressed>();
         if (mouse != nullptr && mouse->button == sf::Mouse::Button::Left) {
@@ -252,6 +256,11 @@ void SfmlGraphics::drawText(const std::string &text, engine::Vec2f position,
     label.setPosition({position.x, position.y});
     label.setFillColor(toSfml(color));
     m_window.draw(label);
+}
+
+std::u32string SfmlGraphics::takeTextInput()
+{
+    return std::exchange(m_typed, {});
 }
 
 bool SfmlGraphics::isKeyDown(Key key) const

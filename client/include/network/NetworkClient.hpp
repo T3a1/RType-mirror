@@ -154,6 +154,14 @@ class NetworkClient {
     void startGame(const rtype::protocol::StartGame &settings, TimePoint now);
 
     /**
+     * @brief Sends a line of chat to the players of the room, if connected.
+     * The server sends it back with its author, to this client too.
+     * @param text From 1 to MaxChatLength chat characters.
+     * @param now The current time.
+     **/
+    void sendChat(const std::string &text, TimePoint now);
+
+    /**
      * @brief Returns the bytes of every datagram received from the server
      * since the start, for the network benchmark.
      * @return The number of bytes received.

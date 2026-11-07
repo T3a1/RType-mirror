@@ -43,6 +43,12 @@ class EchoGame final : public engine::IInstance {
             if (message.kind == server::InboundKind::Start) {
                 send(StartedSlot);
             }
+            if (message.kind == server::InboundKind::Chat) {
+                m_link.outbound.push(server::OutboundMessage{
+                    .to = server::Recipient::All,
+                    .payload = ChatMessage{.slot = 1, .text = message.text},
+                });
+            }
             if (message.kind != server::InboundKind::Input) {
                 continue;
             }
@@ -242,6 +248,54 @@ TEST_F(RoomRoutingTest, StartReachesTheGameOfTheRoom)
     client.send(StartGame{});
 
     EXPECT_EQ(nextEventSlot(client), StartedSlot);
+}
+
+TEST_F(RoomRoutingTest, ChatStaysInTheRoom)
+{
+    FakePeer author = peer(1000);
+    FakePeer sameRoom = peer(1001);
+    FakePeer otherRoom = peer(1002);
+    join(author, 1);
+    join(sameRoom, 1);
+    join(otherRoom, 2);
+
+    author.send(ChatSend{.text = "hello"});
+
+    const ChatMessage expected{.slot = 1, .text = "hello"};
+    EXPECT_EQ(author.waitFor<ChatMessage>(), expected);
+    EXPECT_EQ(sameRoom.waitFor<ChatMessage>(), expected);
+    EXPECT_FALSE(otherRoom.waitFor<ChatMessage>(std::chrono::milliseconds(100))
+                     .has_value());
+}
+
+TEST_F(RoomRoutingTest, ChatIsIgnoredInTheLobby)
+{
+    FakePeer client = peer(1000);
+    client.send(Connect{});
+    EXPECT_TRUE(client.waitFor<Accept>().has_value());
+
+    client.send(ChatSend{.text = "hello"});
+
+    EXPECT_FALSE(client.waitFor<ChatMessage>(std::chrono::milliseconds(100))
+                     .has_value());
+}
+
+TEST_F(RoomRoutingTest, AFloodOfChatIsLimited)
+{
+    FakePeer client = peer(1000);
+    join(client, 1);
+    const int burst = static_cast<int>(server::ChatBurst);
+
+    for (int i = 0; i < burst * 4; ++i) {
+        client.send(ChatSend{.text = "spam"});
+    }
+
+    int received = 0;
+    while (client.waitFor<ChatMessage>(std::chrono::milliseconds(100))) {
+        ++received;
+    }
+    EXPECT_GE(received, burst);
+    EXPECT_LE(received, burst + 2);
 }
 
 TEST_F(RoomRoutingTest, AFailingRoomOnlyDisconnectsItsPlayers)

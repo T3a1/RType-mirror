@@ -45,7 +45,7 @@ constexpr std::array CreditsLines{
 
 /** @brief The text of each control in the menus, in the order of Control. */
 constexpr std::array<const char *, ControlCount> ControlLabels{
-    "Up", "Down", "Left", "Right", "Fire", "Auto-fire",
+    "Up", "Down", "Left", "Right", "Fire", "Auto-fire", "Chat",
 };
 /** @brief How many keys of each control the Controls tab shows: one per hand.
  */
@@ -361,7 +361,7 @@ SettingsResult accessibilityPage(const MenuContext &context, MenuCursor &cursor,
     return result;
 }
 
-std::array<std::string, 5> howToPlayLines(const Controls &controls)
+std::array<std::string, 6> howToPlayLines(const Controls &controls)
 {
     return {
         "Shoot the enemies and survive, alone or as a team.",
@@ -372,6 +372,8 @@ std::array<std::string, 5> howToPlayLines(const Controls &controls)
         "Shoot: " + keysOf(controls, Control::Fire),
         "Charged shot: hold Shoot for 1 second, then release",
         "Auto-fire on or off: " + keysOf(controls, Control::AutoFire),
+        "Write to your room: " + keysOf(controls, Control::Chat) +
+            ", then Enter to send",
     };
 }
 

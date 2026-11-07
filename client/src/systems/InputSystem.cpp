@@ -37,13 +37,8 @@ constexpr std::array ActionBindings{
     ActionBinding{.control = Control::Fire, .action = rtype::Action::Fire},
 };
 
-/**
- * @brief Tells whether one of the keys of a control is held.
- * @param graphics The backend reading the keyboard.
- * @param controls The keys of each control.
- * @param control The control.
- * @return `true` if one of its keys is held.
- **/
+} // namespace
+
 bool isHeld(const gfx::IGraphics &graphics, const Controls &controls,
             Control control)
 {
@@ -51,8 +46,6 @@ bool isHeld(const gfx::IGraphics &graphics, const Controls &controls,
         controls.at(static_cast<std::size_t>(control)),
         [&graphics](gfx::Key key) { return graphics.isKeyDown(key); });
 }
-
-} // namespace
 
 std::uint8_t inputSystem(const gfx::IGraphics &graphics,
                          const Controls &controls, AutoFire &autoFire,

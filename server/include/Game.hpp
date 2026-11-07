@@ -23,6 +23,7 @@
 #include "network/NetworkMessages.hpp"
 #include "systems/BossSystem.hpp"
 #include "systems/BoundarySystem.hpp"
+#include "systems/ChatSystem.hpp"
 #include "systems/CollisionSystem.hpp"
 #include "systems/DamageSystem.hpp"
 #include "systems/DeathSystem.hpp"

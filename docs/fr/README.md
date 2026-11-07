@@ -33,6 +33,7 @@ Chaque action a une touche pour chaque main, donc le jeu se joue d'une seule mai
 | Espace | Ctrl droit | Tirer : un tir par appui. Maintenu 1 seconde puis relâché : un tir chargé qui traverse les ennemis |
 | F | Maj droite | Activer ou couper le tir automatique : le vaisseau tire seul, 4 fois par seconde |
 | Échap | Échap | Quitter |
+| T | T | Écrire à votre salle, en salle d'attente ou en jeu : Entrée envoie, Échap annule. Le vaisseau s'arrête pendant la saisie |
 
 **Choisissez vos touches** : écrivez un fichier `controls.cfg` dans le dossier depuis
 lequel vous lancez le jeu (ou donnez son chemin avec `--controls FILE`). Chaque ligne
@@ -44,7 +45,7 @@ fire = Enter Space
 autofire = Tab
 ```
 
-- Actions : `up`, `down`, `left`, `right`, `fire`, `autofire`.
+- Actions : `up`, `down`, `left`, `right`, `fire`, `autofire`, `chat`.
 - Touches : `Up`, `Down`, `Left`, `Right`, `Space`, `Enter`, `Tab`, `LeftShift`,
   `RightShift`, `LeftCtrl`, `RightCtrl`, `LeftAlt`, `RightAlt`, les lettres `A` à `Z`
   et les chiffres `0` à `9`. Avec le client par défaut (Raylib), une lettre désigne

@@ -56,6 +56,9 @@ void Game::registerSystems()
                     [this](Registry &r, Duration) {
                         server::networkInputSystem(r, m_messages, m_players);
                     });
+    m_scheduler.add(Stage::Input, "chat", [this](Registry &, Duration) {
+        server::chatSystem(m_messages, m_players, m_outbound);
+    });
     m_scheduler.add(Stage::Input, "roomPhase", [this](Registry &, Duration) {
         if (const auto settings =
                 server::roomPhaseSystem(m_messages, m_status, m_outbound)) {

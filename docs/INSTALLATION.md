@@ -301,6 +301,8 @@ library, but the game is degraded:
   key counts as held for about half a second after it is pressed, then as long
   as it repeats. Only one key works at a time: you cannot move and fire
   together.
+- The chat of the room is shown, but you cannot write in it: `q` quits the game
+  in this client, so the keys cannot be used for typing.
 - Quit with `q` or Ctrl+C. Escape leaves the room, then goes back to the main
   menu from the room list.
 - The logs go to `r-type_client.log` in the current directory instead of the
