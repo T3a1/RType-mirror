@@ -27,14 +27,15 @@ namespace client {
  * presses and releases Fire in turn, since the server fires on each press.
  **/
 struct AutoFire {
-    bool enabled = false;
+    bool enabled = true;
     bool keyHeld = false;
     float elapsed = 0.0F;
 };
 
-/** @brief How often auto-fire presses Fire, in seconds: the default time
- * between two shots. */
-inline constexpr float AutoFirePeriod = 0.25F;
+/** @brief How often auto-fire presses Fire, in seconds: a little more than
+ * the default time between two shots, so that the server never ignores a
+ * press because the last shot is still cooling down. */
+inline constexpr float AutoFirePeriod = 0.2F;
 
 /**
  * @brief Tells whether one of the keys of a control is held.

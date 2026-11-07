@@ -45,12 +45,12 @@ inline constexpr std::uint8_t MaxWeaponLevel = 5;
  * @param burstDelay The time between two shots of a burst.
  **/
 struct WeaponStats {
-    engine::Duration fireInterval{0.25F};
-    float shotSpeed = 900.0F;
+    engine::Duration fireInterval{0.08F};
+    float shotSpeed = 1400.0F;
     int shotDamage = 50;
     float enemyShotSpeed = 450.0F;
     engine::Duration chargeTime{1.0F};
-    float beamSpeed = 1300.0F;
+    float beamSpeed = 1800.0F;
     int beamDamage = 300;
     float spreadAngle = 0.12F;
     std::uint8_t maxLevel = 3;

@@ -260,7 +260,7 @@ suivi dans les issues du projet.
 
 | Catégorie | Ce qui existe | Inspiré de | Reste à faire |
 |-----------|---------------|------------|---------------|
-| **Physique et moteur** | Toutes les touches sont configurables (`controls.cfg`). Des touches par défaut pour chaque main : le jeu se joue d'une seule main. Tir automatique, pour ne pas avoir à appuyer sans cesse. | Options de configuration de la plupart des jeux PC | Vitesse du jeu, manette |
+| **Physique et moteur** | Toutes les touches sont configurables (`controls.cfg`). Des touches par défaut pour chaque main : le jeu se joue d'une seule main. Tir automatique, actif par défaut, pour ne pas avoir à appuyer sans cesse. | Options de configuration de la plupart des jeux PC | Vitesse du jeu, manette |
 | **Visuel** | Couleurs des joueurs tirées de la palette Okabe-Ito, que les daltoniens distinguent. Jamais la couleur seule : chaque vaisseau affiche « P1 » et « (you) », et les notifications nomment le joueur. | Modes daltoniens des jeux multijoueurs | Interface du jeu redimensionnable, contraste élevé |
 | **Audio** | Le son n'est jamais le seul indice : les tirs, les explosions, la lueur de charge, la bannière de niveau et l'écran de fin montrent à l'écran ce que disent les sons. | Indices visuels de la plupart des jeux d'action | Réglages de volume, coupure du son |
 | **Mental et cognitif** | Des menus d'une page, quelques actions claires, une bannière « Level 2 » et les scores finaux. Trois niveaux de difficulté et le choix du niveau de départ, dans la salle d'attente. | Réglages de difficulté de la plupart des jeux d'action | Un rappel des commandes, la réduction des effets clignotants |

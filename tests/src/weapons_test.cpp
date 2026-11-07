@@ -166,7 +166,9 @@ TEST_F(WeaponTest, HoldingTheKeyChargesWithoutFiring)
 
 TEST_F(WeaponTest, PressesFasterThanTheFireRateAreIgnored)
 {
-    for (int i = 0; i < 4; ++i) {
+    const int presses = static_cast<int>(stats().fireInterval / Tick) / 2;
+    ASSERT_GE(presses, 2);
+    for (int i = 0; i < presses; ++i) {
         hold(true, 1);
         hold(false, 1);
     }

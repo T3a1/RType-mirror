@@ -64,7 +64,7 @@ inline constexpr std::array FrameLimits{15, 30, 60, 120, 0};
 struct Settings {
     float musicVolume = 0.4F;
     float soundVolume = 1.0F;
-    bool autoFire = false;
+    bool autoFire = true;
     bool playerLabels = true;
     bool fullscreen = false;
     bool vsync = true;
