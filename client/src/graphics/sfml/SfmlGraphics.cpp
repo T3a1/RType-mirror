@@ -7,6 +7,7 @@
 
 #include "SfmlGraphics.hpp"
 #include "ExecutableDirectory.hpp"
+#include "engine/Logger.hpp"
 
 #include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/Graphics/Sprite.hpp>
@@ -14,12 +15,14 @@
 #include <SFML/Graphics/View.hpp>
 #include <SFML/System/Err.hpp>
 #include <SFML/Window/Event.hpp>
-#include <SFML/Window/Joystick.hpp>
 #include <SFML/Window/Keyboard.hpp>
 #include <SFML/Window/Mouse.hpp>
 #include <SFML/Window/VideoMode.hpp>
 
 #include <algorithm>
+#include <array>
+#include <cstdlib>
+#include <ios>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -93,116 +96,243 @@ sf::Keyboard::Key toSfml(Key key)
     }
 }
 
-/** @brief The gamepad read: the first one plugged in. */
-constexpr unsigned int Gamepad = 0;
 /** @brief How far a stick, a trigger or the D-pad must be pushed to count, out
  * of SFML's 100. */
 constexpr float AxisThreshold = 50.0F;
-/** @brief The USB vendor of Sony, whose gamepads number their middle buttons
- * differently. */
+/** @brief The fewest buttons a device needs to be taken for a gamepad: the
+ * motion sensors and the touchpad of a DualSense are devices too. */
+constexpr unsigned int MinGamepadButtons = 6;
+/** @brief The USB vendor of Sony. */
 constexpr unsigned int SonyVendor = 0x054C;
-
-/**
- * @struct PadButtons
- * @brief The numbers SFML gives to some buttons of a gamepad. They follow the
- * driver: these are the ones of Linux, the same for Xbox and PlayStation
- * gamepads except for the middle buttons.
- * @param a The bottom face button.
- * @param b The right face button.
- * @param lb The left shoulder button.
- * @param rb The right shoulder button.
- * @param start The right middle button.
- * @param select The left middle button.
- **/
-struct PadButtons {
-    unsigned int a = 0;
-    unsigned int b = 1;
-    unsigned int lb = 4;
-    unsigned int rb = 5;
-    unsigned int start = 7;
-    unsigned int select = 6;
+/** @brief The name of each axis of SFML, in the order of sf::Joystick::Axis. */
+constexpr std::array<const char *, sf::Joystick::AxisCount> AxisNames{
+    "X", "Y", "Z", "R", "U", "V", "PovX", "PovY",
 };
 
 /**
- * @brief Returns the numbers of the buttons of the plugged gamepad.
- * @return Those of a PlayStation gamepad, or of an Xbox one otherwise.
+ * @enum Triggers
+ * @brief How a driver gives the two triggers of a gamepad.
+ * @param SeparateAxes The Z axis for the left one and R for the right one,
+ * from -100 released to 100.
+ * @param Buttons Two buttons, lt and rt in PadLayout.
+ * @param SharedAxis One Z axis for both, positive for the left one and
+ * negative for the right one.
  **/
-PadButtons padButtons()
+enum class Triggers : std::uint8_t { SeparateAxes, Buttons, SharedAxis };
+
+/**
+ * @struct PadLayout
+ * @brief The numbers SFML gives to the buttons of a gamepad, which depend on
+ * the system and the vendor. RTYPE_PAD_DEBUG=1 prints them to check a layout.
+ * @param a The bottom face button: A, or Cross.
+ * @param b The right face button: B, or Circle.
+ * @param lb The left shoulder button.
+ * @param rb The right shoulder button.
+ * @param lt The left trigger, when triggers is Buttons.
+ * @param rt The right trigger, when triggers is Buttons.
+ * @param select The left middle button: Back, or Create.
+ * @param start The right middle button: Start, or Options.
+ * @param triggers How the triggers are read.
+ * @param povUpPositive Whether up on the D-pad makes PovY positive.
+ **/
+struct PadLayout {
+    unsigned int a;
+    unsigned int b;
+    unsigned int lb;
+    unsigned int rb;
+    unsigned int lt;
+    unsigned int rt;
+    unsigned int select;
+    unsigned int start;
+    Triggers triggers;
+    bool povUpPositive;
+};
+
+// The driver of Linux puts the bottom button first for every vendor, and up on
+// the D-pad makes PovY negative.
+/** @brief An Xbox gamepad on Linux. */
+constexpr PadLayout LinuxXbox{.a = 0,
+                              .b = 1,
+                              .lb = 4,
+                              .rb = 5,
+                              .lt = 6,
+                              .rt = 7,
+                              .select = 6,
+                              .start = 7,
+                              .triggers = Triggers::SeparateAxes,
+                              .povUpPositive = false};
+/** @brief A PlayStation gamepad on Linux. */
+constexpr PadLayout LinuxSony{.a = 0,
+                              .b = 1,
+                              .lb = 4,
+                              .rb = 5,
+                              .lt = 6,
+                              .rt = 7,
+                              .select = 8,
+                              .start = 9,
+                              .triggers = Triggers::SeparateAxes,
+                              .povUpPositive = false};
+// Windows and macOS keep the order of the gamepad: Square, Cross, Circle,
+// Triangle on a PlayStation one.
+/** @brief A PlayStation gamepad on Windows or macOS. */
+constexpr PadLayout HidSony{.a = 1,
+                            .b = 2,
+                            .lb = 4,
+                            .rb = 5,
+                            .lt = 6,
+                            .rt = 7,
+                            .select = 8,
+                            .start = 9,
+                            .triggers = Triggers::Buttons,
+                            .povUpPositive = true};
+/** @brief An Xbox gamepad on Windows or macOS. */
+constexpr PadLayout HidXbox{.a = 0,
+                            .b = 1,
+                            .lb = 4,
+                            .rb = 5,
+                            .lt = 6,
+                            .rt = 7,
+                            .select = 6,
+                            .start = 7,
+                            .triggers = Triggers::SharedAxis,
+                            .povUpPositive = true};
+
+/**
+ * @brief Returns the layout of a gamepad on this system.
+ * @param vendorId The USB vendor of the gamepad.
+ * @return The layout of a PlayStation gamepad for Sony, of an Xbox one
+ * otherwise.
+ **/
+PadLayout padLayout(unsigned int vendorId)
 {
-    PadButtons buttons;
-    if (sf::Joystick::getIdentification(Gamepad).vendorId == SonyVendor) {
-        buttons.start = 9;
-        buttons.select = 8;
-    }
-    return buttons;
+    const bool sony = vendorId == SonyVendor;
+#if defined(_WIN32) || defined(__APPLE__)
+    return sony ? HidSony : HidXbox;
+#else
+    return sony ? LinuxSony : LinuxXbox;
+#endif
 }
 
 /**
- * @brief Returns the position of an axis of the gamepad.
+ * @brief Finds the gamepad to read.
+ * @return The first connected device with enough buttons and a stick, if any.
+ **/
+std::optional<unsigned int> findGamepad()
+{
+    for (unsigned int i = 0; i < sf::Joystick::Count; ++i) {
+        if (sf::Joystick::isConnected(i) &&
+            sf::Joystick::getButtonCount(i) >= MinGamepadButtons &&
+            sf::Joystick::hasAxis(i, sf::Joystick::Axis::X) &&
+            sf::Joystick::hasAxis(i, sf::Joystick::Axis::Y)) {
+            return i;
+        }
+    }
+    return std::nullopt;
+}
+
+/**
+ * @brief Returns the position of an axis of a gamepad.
+ * @param gamepad The gamepad.
  * @param axis The axis.
  * @return Its position from -100 to 100, or 0 if the gamepad has no such axis.
  **/
-float axis(sf::Joystick::Axis axis)
+float axisOf(unsigned int gamepad, sf::Joystick::Axis axis)
 {
-    return sf::Joystick::hasAxis(Gamepad, axis)
-               ? sf::Joystick::getAxisPosition(Gamepad, axis)
+    return sf::Joystick::hasAxis(gamepad, axis)
+               ? sf::Joystick::getAxisPosition(gamepad, axis)
                : 0.0F;
 }
 
 /**
- * @brief Tells whether a button of the gamepad, or a direction of its left
- * stick or D-pad, is held.
- * @param key A key for which isPadKey() is true.
- * @return `false` if no gamepad is plugged in.
+ * @brief Tells whether a trigger of a gamepad is held.
+ * @param gamepad The gamepad.
+ * @param layout Its layout.
+ * @param left Whether it is the left trigger.
+ * @return `true` if it is pushed past the middle.
  **/
-bool isPadDown(Key key)
+bool isTriggerDown(unsigned int gamepad, const PadLayout &layout, bool left)
 {
     using Axis = sf::Joystick::Axis;
-    if (!sf::Joystick::isConnected(Gamepad)) {
-        return false;
+    switch (layout.triggers) {
+    case Triggers::SeparateAxes:
+        return axisOf(gamepad, left ? Axis::Z : Axis::R) > 0.0F;
+    case Triggers::Buttons:
+        return sf::Joystick::isButtonPressed(gamepad,
+                                             left ? layout.lt : layout.rt);
+    case Triggers::SharedAxis: {
+        const float z = axisOf(gamepad, Axis::Z);
+        return left ? z > AxisThreshold : z < -AxisThreshold;
     }
-    const PadButtons buttons = padButtons();
-    const auto pressed = [](unsigned int button) {
-        return sf::Joystick::isButtonPressed(Gamepad, button);
+    }
+    return false;
+}
+
+/**
+ * @brief Tells whether a button of a gamepad, or a direction of its left
+ * stick or D-pad, is held.
+ * @param key A key for which isPadKey() is true.
+ * @param gamepad The gamepad.
+ * @param layout Its layout.
+ * @return `true` if it is held.
+ **/
+bool isPadDown(Key key, unsigned int gamepad, const PadLayout &layout)
+{
+    using Axis = sf::Joystick::Axis;
+    const auto pressed = [gamepad](unsigned int button) {
+        return sf::Joystick::isButtonPressed(gamepad, button);
     };
-    // A stick is negative up and left. A trigger goes from -100, released, to
-    // 100. SFML gives the D-pad as the PovX and PovY axes, positive up.
+    const float povUp = layout.povUpPositive ? axisOf(gamepad, Axis::PovY)
+                                             : -axisOf(gamepad, Axis::PovY);
+    // A stick is negative up and left.
     switch (key) {
     case Key::PadUp:
-        return axis(Axis::PovY) > AxisThreshold;
+        return povUp > AxisThreshold;
     case Key::PadDown:
-        return axis(Axis::PovY) < -AxisThreshold;
+        return povUp < -AxisThreshold;
     case Key::PadLeft:
-        return axis(Axis::PovX) < -AxisThreshold;
+        return axisOf(gamepad, Axis::PovX) < -AxisThreshold;
     case Key::PadRight:
-        return axis(Axis::PovX) > AxisThreshold;
+        return axisOf(gamepad, Axis::PovX) > AxisThreshold;
     case Key::PadStickUp:
-        return axis(Axis::Y) < -AxisThreshold;
+        return axisOf(gamepad, Axis::Y) < -AxisThreshold;
     case Key::PadStickDown:
-        return axis(Axis::Y) > AxisThreshold;
+        return axisOf(gamepad, Axis::Y) > AxisThreshold;
     case Key::PadStickLeft:
-        return axis(Axis::X) < -AxisThreshold;
+        return axisOf(gamepad, Axis::X) < -AxisThreshold;
     case Key::PadStickRight:
-        return axis(Axis::X) > AxisThreshold;
+        return axisOf(gamepad, Axis::X) > AxisThreshold;
     case Key::PadA:
-        return pressed(buttons.a);
+        return pressed(layout.a);
     case Key::PadB:
-        return pressed(buttons.b);
+        return pressed(layout.b);
     case Key::PadLB:
-        return pressed(buttons.lb);
+        return pressed(layout.lb);
     case Key::PadRB:
-        return pressed(buttons.rb);
+        return pressed(layout.rb);
     case Key::PadLT:
-        return axis(Axis::Z) > 0.0F;
+        return isTriggerDown(gamepad, layout, true);
     case Key::PadRT:
-        return axis(Axis::R) > 0.0F;
+        return isTriggerDown(gamepad, layout, false);
     case Key::PadStart:
-        return pressed(buttons.start);
+        return pressed(layout.start);
     case Key::PadSelect:
-        return pressed(buttons.select);
+        return pressed(layout.select);
     default:
         return false;
     }
+}
+
+/**
+ * @brief Returns in which third of its range an axis is.
+ * @param position The position of the axis, from -100 to 100.
+ * @return -1 past the threshold below, 1 past it above, 0 between.
+ **/
+int axisZone(float position)
+{
+    if (position > AxisThreshold) {
+        return 1;
+    }
+    return position < -AxisThreshold ? -1 : 0;
 }
 
 } // namespace
@@ -228,6 +358,7 @@ SfmlGraphics::SfmlGraphics(const WindowConfig &config)
     }
     m_window.setVerticalSyncEnabled(config.vsync);
     m_hasFont = m_font.openFromFile(m_directory / fontPath);
+    m_padDebug = std::getenv("RTYPE_PAD_DEBUG") != nullptr;
 }
 
 bool SfmlGraphics::shouldClose()
@@ -245,7 +376,57 @@ bool SfmlGraphics::shouldClose()
             m_mousePressed = true;
         }
     }
+    updateGamepad();
     return m_closeRequested;
+}
+
+void SfmlGraphics::updateGamepad()
+{
+    const std::optional<unsigned int> found = findGamepad();
+    if (found != m_gamepad) {
+        m_gamepad = found;
+        m_padVendor =
+            found ? sf::Joystick::getIdentification(*found).vendorId : 0;
+        m_padButtons.fill(false);
+        m_padAxes.fill(0);
+        if (m_padDebug && found) {
+            const sf::Joystick::Identification id =
+                sf::Joystick::getIdentification(*found);
+            BB_INFO("[pad] device "
+                    << *found << ": \"" << id.name.toAnsiString()
+                    << "\", vendor " << std::hex << id.vendorId << ", product "
+                    << id.productId << std::dec << ", "
+                    << sf::Joystick::getButtonCount(*found) << " buttons");
+        }
+    }
+    if (m_padDebug && m_gamepad) {
+        logGamepad(*m_gamepad);
+    }
+}
+
+void SfmlGraphics::logGamepad(unsigned int gamepad)
+{
+    const unsigned int buttons = std::min(sf::Joystick::getButtonCount(gamepad),
+                                          sf::Joystick::ButtonCount);
+    for (unsigned int i = 0; i < buttons; ++i) {
+        const bool down = sf::Joystick::isButtonPressed(gamepad, i);
+        if (down != m_padButtons.at(i)) {
+            m_padButtons.at(i) = down;
+            BB_INFO("[pad] button " << i << (down ? " pressed" : " released"));
+        }
+    }
+    for (unsigned int i = 0; i < sf::Joystick::AxisCount; ++i) {
+        const auto axis = static_cast<sf::Joystick::Axis>(i);
+        if (!sf::Joystick::hasAxis(gamepad, axis)) {
+            continue;
+        }
+        const float position = sf::Joystick::getAxisPosition(gamepad, axis);
+        const int zone = axisZone(position);
+        if (zone != m_padAxes.at(i)) {
+            m_padAxes.at(i) = zone;
+            BB_INFO("[pad] axis " << AxisNames.at(i) << " = " << position);
+        }
+    }
 }
 
 engine::Vec2f SfmlGraphics::screenSize() const
@@ -384,7 +565,7 @@ bool SfmlGraphics::isKeyDown(Key key) const
         return false;
     }
     if (isPadKey(key)) {
-        return isPadDown(key);
+        return m_gamepad && isPadDown(key, *m_gamepad, padLayout(m_padVendor));
     }
     return sf::Keyboard::isKeyPressed(toSfml(key));
 }
