@@ -279,9 +279,11 @@ void Game::registerRenderSystems()
     using engine::Duration;
     using engine::Registry;
 
-    addRender(Layer::Background, "background", [this](Registry &r, Duration) {
-        backgroundRenderSystem(r, *m_graphics);
-    });
+    addRender(Layer::Background, "background",
+              [this](Registry &r, Duration) {
+                  backgroundRenderSystem(r, *m_graphics);
+              },
+              {.when = [this] { return m_settings.background; }});
     addRender(Layer::World, "sprites",
               [this](Registry &r, Duration) { renderSystem(r, *m_graphics); });
     addRender(Layer::World, "chargeGlow", [this](Registry &r, Duration) {

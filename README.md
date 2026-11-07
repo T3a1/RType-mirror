@@ -98,6 +98,7 @@ vsync = on
 frame_limit = 0
 auto_fire = on
 player_labels = on
+background = on
 ```
 
 Window sizes: `1280x720`, `1600x900`, `1920x1080`, `2560x1440`. Frame limits: `15`,
@@ -110,6 +111,9 @@ starts, and that setting keeps its value. Saving replaces the whole file, so you
   key still turns it on or off during a session, without changing this option.
 - **Player labels**: shows "P1" and "(you)" above the ships. Without them, only
   the color tells the ships apart during a game.
+- **Background**: draws the scrolling stars and planets, by default. Off, the
+  game is drawn on a still black screen, for players bothered by the motion or
+  who need more contrast.
 
 ## Getting started
 

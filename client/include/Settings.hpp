@@ -55,6 +55,8 @@ inline constexpr std::array FrameLimits{15, 30, 60, 120, 0};
  * @param soundVolume The volume of the sounds, from 0 to 1.
  * @param autoFire Whether auto-fire is on when the game starts.
  * @param playerLabels Whether the name of each player is shown above the ship.
+ * @param background Whether the scrolling background is drawn. Off, the game
+ * is drawn on a still black screen, for players bothered by the motion.
  * @param fullscreen Whether the window covers the screen.
  * @param vsync Whether frames wait for the screen's refresh. It replaces the
  * frame limit.
@@ -66,6 +68,7 @@ struct Settings {
     float soundVolume = 1.0F;
     bool autoFire = true;
     bool playerLabels = true;
+    bool background = true;
     bool fullscreen = false;
     bool vsync = true;
     std::size_t windowSize = 0;
@@ -100,6 +103,9 @@ inline constexpr std::array Toggles{
     ToggleDef{.key = "player_labels",
               .label = "Player labels",
               .field = &Settings::playerLabels},
+    ToggleDef{.key = "background",
+              .label = "Background",
+              .field = &Settings::background},
 };
 
 /**

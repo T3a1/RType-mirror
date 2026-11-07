@@ -50,6 +50,7 @@ TEST(Settings, ReadsNothingFromAnEmptyFile)
     EXPECT_FLOAT_EQ(settings.soundVolume, defaults.soundVolume);
     EXPECT_EQ(settings.autoFire, defaults.autoFire);
     EXPECT_EQ(settings.playerLabels, defaults.playerLabels);
+    EXPECT_EQ(settings.background, defaults.background);
 }
 
 TEST(Settings, ShowsThePlayerLabelsAndAutoFiresByDefault)
@@ -58,6 +59,15 @@ TEST(Settings, ShowsThePlayerLabelsAndAutoFiresByDefault)
 
     EXPECT_TRUE(settings.playerLabels);
     EXPECT_TRUE(settings.autoFire);
+}
+
+TEST(Settings, ShowsTheBackgroundByDefaultAndCanHideIt)
+{
+    Settings settings;
+    EXPECT_TRUE(settings.background);
+
+    EXPECT_TRUE(read("background = off\n", settings).empty());
+    EXPECT_FALSE(settings.background);
 }
 
 TEST(Settings, ReadsEverySetting)

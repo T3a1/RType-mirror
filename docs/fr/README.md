@@ -54,6 +54,42 @@ autofire = Tab
 - Une ligne que le jeu ne peut pas lire est signalée au démarrage, et l'action
   concernée garde ses touches par défaut.
 
+**Changez le volume ou la fenêtre** : ouvrez Settings dans le menu principal. L'onglet
+Audio contient les volumes. L'onglet Video contient le plein écran, la taille de la
+fenêtre, la V-Sync et la limite d'images par seconde, que la V-Sync remplace quand elle
+est active. Le jeu enregistre votre choix dans un fichier `settings.cfg` du dossier
+depuis lequel vous le lancez, que vous pouvez aussi modifier à la main. Un volume va de
+0 à 1 :
+
+```text
+# nom = valeur
+music_volume = 0.4
+sound_volume = 1
+fullscreen = off
+window_size = 1280x720
+vsync = on
+frame_limit = 0
+auto_fire = on
+player_labels = on
+background = on
+```
+
+Tailles de fenêtre : `1280x720`, `1600x900`, `1920x1080`, `2560x1440`. Limites
+d'images : `15`, `30`, `60`, `120`, ou `0` pour aucune limite. Une ligne que le jeu ne
+peut pas lire est signalée au démarrage, et ce réglage garde sa valeur. Enregistrer
+remplace tout le fichier, donc vos commentaires ne sont pas gardés.
+
+**Options d'accessibilité** : ouvrez Accessibility dans le menu principal.
+
+- **Auto-fire** : le tir automatique est actif au début de la partie, par défaut. La
+  touche de tir automatique l'active ou le coupe toujours pendant une session, sans
+  changer cette option.
+- **Player labels** : affiche « P1 » et « (you) » au-dessus des vaisseaux. Sans eux,
+  seule la couleur distingue les vaisseaux pendant une partie.
+- **Background** : dessine le fond d'étoiles et de planètes qui défile, par défaut.
+  Désactivé, le jeu est dessiné sur un écran noir immobile, pour les joueurs gênés par
+  le mouvement ou qui ont besoin de plus de contraste.
+
 ## Pour commencer
 
 R-Type fonctionne sous **Linux** et **Windows**. Un seul script compile et lance tout :
