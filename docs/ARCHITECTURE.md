@@ -930,8 +930,10 @@ and `help`.
 |------|-------|--------|-----|
 | Server | Input | `SessionSystem` | `Connected` / `Disconnected`: create or destroy ships, push `Welcome`, `PlayerJoined`, `PlayerLeft` |
 | Server | Input | `NetworkInputSystem` | `Input`: write `InputState` on the right ship |
+| Server | Input | `ChatSystem` | `Chat`: add the author's slot, push `ChatMessage` to `All` |
 | Server | Output | `SnapshotSystem` | Every 3rd tick, push a `Snapshot` to `All` |
 | Client | Input | `networkSyncSystem` | Create and update entities from snapshots, remove them on `EntityDestroyed`, note who joined or left |
+| Client | Output | `updateChat`, `chatOverlay` | Give the keyboard to the chat while it is open, send the line, draw the chat |
 | Client | Input | `inputSystem`, `sendInput` | Read the keyboard, send the input state |
 | Client | Simulation | `smoothingSystem` | Place remote entities between two snapshots |
 | Client | Simulation | `predictionSystem` | Predict the local ship and fade out the corrections |

@@ -278,6 +278,8 @@ montre que le client ne dépend pas de sa bibliothèque graphique, mais le jeu e
 - Un terminal n'envoie que les appuis de touches et leurs répétitions, jamais les relâchements. Une touche compte
   comme maintenue environ une demi-seconde après son appui, puis tant qu'elle se répète. Une seule touche
   fonctionne à la fois : impossible de bouger et de tirer ensemble.
+- Le chat de la salle s'affiche, mais on ne peut pas y écrire : `q` quitte le jeu dans ce client, donc les touches ne
+  peuvent pas servir à la saisie.
 - Quittez avec Échap, `q` ou Ctrl+C.
 - Les journaux vont dans `r-type_client.log` dans le dossier courant au lieu du terminal. Avec `--native`,
   `rtype.py` écrit la sortie du serveur dans `build/server.log`, et ne lance qu'un client (lancez les autres

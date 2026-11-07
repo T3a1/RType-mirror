@@ -1,4 +1,4 @@
-# Protocole réseau de R-Type (version 12)
+# Protocole réseau de R-Type (version 13)
 
 Ce document spécifie le protocole binaire parlé entre le serveur de R-Type et ses clients. Il est
 assez précis pour écrire un client ou un serveur compatible sans lire notre code. L'implémentation
@@ -71,7 +71,7 @@ Chaque paquet commence par cet en-tête de 12 octets :
 | Position | Taille | Champ | Valeur |
 |---------:|-------:|-------|--------|
 | 0 | 2 | magic | `52 54` (ASCII `"RT"`). Reconnaît nos paquets : un datagramme quelconque ne commence presque jamais par ces octets |
-| 2 | 1 | version | `12`. Voir [Gestion des versions](#12-gestion-des-versions) |
+| 2 | 1 | version | `13`. Voir [Gestion des versions](#12-gestion-des-versions) |
 | 3 | 1 | type | La charge utile qui suit. Voir [Types de paquets](#5-types-de-paquets) |
 | 4 | 1 | flags | Bit 0 : **Reliable**. Les bits 1 à 7 sont réservés et **MUST** valoir 0 |
 | 5 | 1 | reserved | **MUST** valoir 0 |
@@ -92,7 +92,7 @@ Un récepteur vérifie un datagramme dans cet ordre et le rejette au premier éc
 | 1 | 1200 octets au maximum | `TooLarge` |
 | 2 | 12 octets au minimum | `TooShort` |
 | 3 | Le magic est `"RT"` | `BadMagic` |
-| 4 | La version est 12 | `BadVersion` |
+| 4 | La version est 13 | `BadVersion` |
 | 5 | Le type figure à la section 5 | `UnknownType` |
 | 6 | Aucun bit de drapeau réservé, et Reliable mis exactement sur les types fiables | `BadFlags` |
 | 7 | L'octet réservé vaut 0 | `BadReserved` |
@@ -112,9 +112,11 @@ La vérification 8 attrape les datagrammes tronqués ou rembourrés avant tout d
 | `0x04` | `Disconnect` | Les deux | Non fiable (au mieux) | 1 |
 | `0x05` | `Ack` | Les deux | Non fiable | 0 |
 | `0x10` | `Input` | Client | Non fiable | 5 |
+| `0x11` | `ChatSend` | Client | Fiable | 2 à 81 |
 | `0x20` | `Snapshot` | Serveur | Non fiable | 8 + bloc des joueurs + 16 par entité |
 | `0x21` | `Welcome` | Serveur | Fiable | 9 |
 | `0x22` | `GameEvent` | Serveur | Fiable | 1 à 5 |
+| `0x23` | `ChatMessage` | Serveur | Fiable | 3 à 82 |
 | `0x30` | `RoomList` | Serveur | Non fiable, répété | 1 + 6 par salle |
 | `0x31` | `JoinRoom` | Client | Fiable | 4 |
 | `0x32` | `LeaveRoom` | Client | Fiable | 0 |
@@ -273,6 +275,31 @@ invalides.
 | 12 | BossHive (le second boss de fin de niveau ; sa vie complète est la vie de son premier enregistrement) |
 | 13 | Obstacle (un mur du niveau : il arrête tous les tirs et détruit les vaisseaux qui le touchent) |
 | 14 | DestroyableTile (un bloc du niveau qui arrête les tirs et casse après quelques coups ; sa vie complète est `TileMaxHealth`, 150) |
+
+### `ChatSend` (0x11), `ChatMessage` (0x23)
+
+Une ligne du chat d'une salle. Un joueur envoie `ChatSend` ; le serveur ajoute l'auteur et envoie `ChatMessage` à tous
+les joueurs de la salle, auteur compris. L'auteur est le numéro que le serveur connaît pour ce client : un client ne peut
+pas parler à la place d'un autre. Dans le lobby, un `ChatSend` est ignoré.
+
+`ChatSend` :
+
+| Position | Taille | Champ | Valeurs |
+|---------:|-------:|-------|---------|
+| 0 | 1 | size | De 1 à 80 |
+| 1 | size | text | ASCII imprimable (`0x20` à `0x7E`) |
+
+`ChatMessage` commence par l'auteur, puis a les mêmes champs :
+
+| Position | Taille | Champ | Valeurs |
+|---------:|-------:|-------|---------|
+| 0 | 1 | slot | De 1 à 4 |
+| 1 | 1 | size | De 1 à 80 |
+| 2 | size | text | ASCII imprimable (`0x20` à `0x7E`) |
+
+Une ligne d'une autre taille ou avec un autre caractère est un `BadPayload`. Un serveur **MUST** limiter les lignes de
+chaque client, car chacune est renvoyée à chaque joueur jusqu'à son acquittement : ce serveur en accepte 5 d'affilée, puis
+1 par seconde, et ignore les autres sans le dire au client.
 
 ### `GameEvent` (0x22)
 
@@ -470,6 +497,8 @@ limite :
 - Un compteur lu dans un paquet (`entityCount`, `playerCount`) est comparé aux octets réellement présents **avant** toute réservation de
   mémoire. Un paquet de 20 octets annonçant 65535 entités est rejeté sans rien allouer.
 - Un récepteur lit chaque datagramme dans un tampon de taille fixe ; tout ce qui dépasse 1200 octets est rejeté, jamais réalloué.
+- La taille d'une ligne de chat est comparée à sa limite et aux octets présents avant toute réservation de mémoire, et ses
+  caractères excluent les retours à la ligne et les caractères de contrôle, ce qui les garde hors des logs du serveur.
 - Le nombre de paquets fiables stockés par pair est plafonné ([section 7](#renvoyer)).
 
 **Limite connue.** Cette version n'a pas de jeton à la connexion. Un `Connect` envoyé avec une adresse source falsifiée fait envoyer par
@@ -490,7 +519,7 @@ Tous les octets sont en hexadécimal.
 Séquence non fiable 298, acquittant le paquet fiable 17, entrée numéro 1000 :
 
 ```text
-52 54 0C 10 00 00 2A 01 11 00 05 00   header: "RT", v12, Input, no flags,
+52 54 0D 10 00 00 2A 01 11 00 05 00   header: "RT", v13, Input, no flags,
                                               sequence 298, ack 17, size 5
 E8 03 00 00                           sequence 1000
 11                                    actions 0x11 = Up | Fire
@@ -501,7 +530,7 @@ E8 03 00 00                           sequence 1000
 Séquence fiable 2, numéro 2, vaisseau 58, tick 1200 :
 
 ```text
-52 54 0C 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
+52 54 0D 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
                                               sequence 2, ack 0, size 9
 02                                    slot 2
 3A 00 00 00                           shipId 58
@@ -511,7 +540,7 @@ B0 04 00 00                           tick 1200
 ### `Snapshot` avec un joueur et une entité
 
 ```text
-52 54 0C 20 00 00 2B 01 11 00 29 00   header: Snapshot, size 41
+52 54 0D 20 00 00 2B 01 11 00 29 00   header: Snapshot, size 41
 2C 01 00 00                           tick 300
 00 01                                 part 0 of 1
 01 00                                 1 entity
@@ -549,3 +578,4 @@ B0 04 00 00                           tick 1200
 | 10 | `StartGame` porte les réglages de partie (difficulté, niveau de départ, boss), `RoomJoined` le nombre de niveaux ; nouveau type d'entité `BossHive`. |
 | 11 | Nouveaux types d'entité `Obstacle` et `DestroyableTile` (obstacles lus depuis les fichiers de niveau, [LEVELS.md](LEVELS.md)). |
 | 12 | Les bonus donnent des boosts temporaires d'un type tiré au hasard : bits Boost (5 et 6) des drapeaux d'un `PowerUp`, ajout de `boosts` au bloc des joueurs (16 octets par joueur) ([WEAPONS.md](WEAPONS.md)). |
+| 13 | Chat textuel d'une salle : nouveaux `ChatSend` et `ChatMessage`. |

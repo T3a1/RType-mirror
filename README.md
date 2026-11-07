@@ -29,6 +29,7 @@ hand only.
 | Space | Right Ctrl | Shoot: one shot per press. Held for 1 second, then released: a charged shot that goes through enemies |
 | F | Right Shift | Auto-fire on or off: the ship shoots on its own, 4 times per second |
 | Escape | Escape | Leave the room. In the room list: back to the main menu |
+| T | T | Write to your room, in the waiting room or during the game: Enter sends, Escape cancels. The ship stops while you type |
 
 In the menus, the arrow keys move the selection, and Space or Enter chooses.
 
@@ -48,7 +49,7 @@ fire = Enter Space
 autofire = Tab
 ```
 
-- Actions: `up`, `down`, `left`, `right`, `fire`, `autofire`.
+- Actions: `up`, `down`, `left`, `right`, `fire`, `autofire`, `chat`.
 - Keys: `Up`, `Down`, `Left`, `Right`, `Space`, `Enter`, `Tab`, `LeftShift`,
   `RightShift`, `LeftCtrl`, `RightCtrl`, `LeftAlt`, `RightAlt`, the letters
   `A` to `Z` and the digits `0` to `9`. With the default (Raylib) client a
