@@ -735,6 +735,22 @@ TEST(MenuPages, CaptureNeverTakesEscape)
     EXPECT_TRUE(rig.page.capture.slot().has_value());
 }
 
+TEST(MenuPages, CaptureNeverTakesAGamepadButton)
+{
+    SettingsRig rig;
+    rig.page.tab = 1;
+    rig.page.capture.start({.control = Control::Fire, .index = 0});
+    static_cast<void>(rig.frame());
+
+    rig.graphics.held = {gfx::Key::PadA};
+    EXPECT_FALSE(rig.frame().controlsChanged);
+    EXPECT_TRUE(rig.page.capture.slot().has_value());
+
+    rig.graphics.held = {gfx::Key::G};
+    EXPECT_TRUE(rig.frame().controlsChanged);
+    EXPECT_EQ(rig.keysOf(Control::Fire).front(), gfx::Key::G);
+}
+
 TEST(MenuPages, TheCapturedKeyDoesNotReachTheWidgets)
 {
     SettingsRig rig;

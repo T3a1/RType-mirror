@@ -12,15 +12,19 @@ namespace client {
 namespace {
 
 /**
- * @brief Returns the key held, if any.
+ * @brief Returns the key of the keyboard held, if any.
  * @param graphics The graphics backend.
- * @return The first key held, leaving out Escape.
+ * @return The first key held, leaving out Escape and the gamepad, whose
+ * buttons are not keyboard keys.
  **/
 std::optional<gfx::Key> heldKey(const gfx::IGraphics &graphics)
 {
     for (std::size_t i = 0; i < gfx::KeyCount; ++i) {
         const auto key = static_cast<gfx::Key>(i);
-        if (key != gfx::Key::Escape && graphics.isKeyDown(key)) {
+        if (key == gfx::Key::Escape || gfx::isPadKey(key)) {
+            continue;
+        }
+        if (graphics.isKeyDown(key)) {
             return key;
         }
     }

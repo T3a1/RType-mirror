@@ -461,8 +461,8 @@ void Game::finishSettingsPage(const SettingsResult &result)
  **/
 void Game::drawSettings()
 {
-    const SettingsResult result =
-        settingsPage(menuContext(), m_menu.settings, m_settings, m_controls);
+    const SettingsResult result = settingsPage(menuContext(), m_menu.settings,
+                                               m_settings, m_controls.keyboard);
     if (result.changed) {
         applyVolumes();
     }
@@ -510,7 +510,8 @@ void Game::drawMenu()
         drawAccessibility();
         break;
     case MenuPage::HowToPlay:
-        if (howToPlayPage(context, m_menu.howToPlayCursor, m_controls)) {
+        if (howToPlayPage(context, m_menu.howToPlayCursor,
+                          m_controls.keyboard)) {
             m_menu.page = MenuPage::Main;
         }
         break;
@@ -625,7 +626,7 @@ void Game::drawChat()
         return;
     }
     const std::vector<gfx::Key> &keys =
-        m_controls.at(static_cast<std::size_t>(Control::Chat));
+        m_controls.keyboard.at(static_cast<std::size_t>(Control::Chat));
     if (!m_sync.started && !m_sync.chat.open && m_sync.chat.lines.empty() &&
         !keys.empty() && m_graphics->hasTextInput()) {
         chatHint(keyName(keys.front()), *m_graphics);

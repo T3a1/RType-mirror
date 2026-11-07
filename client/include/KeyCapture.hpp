@@ -33,6 +33,7 @@ struct KeySlot {
  *
  * The key that started the capture is still held at that moment, so it first
  * waits for every key to be released. Escape is never captured: it cancels.
+ * Only keyboard keys are captured: a gamepad button is ignored.
  **/
 class KeyCapture {
   public:

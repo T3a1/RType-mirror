@@ -39,16 +39,19 @@ constexpr std::array ActionBindings{
 
 } // namespace
 
-bool isHeld(const gfx::IGraphics &graphics, const Controls &controls,
+bool isHeld(const gfx::IGraphics &graphics, const PlayerControls &controls,
             Control control)
 {
-    return std::ranges::any_of(
-        controls.at(static_cast<std::size_t>(control)),
-        [&graphics](gfx::Key key) { return graphics.isKeyDown(key); });
+    const auto down = [&graphics](gfx::Key key) {
+        return graphics.isKeyDown(key);
+    };
+    const auto index = static_cast<std::size_t>(control);
+    return std::ranges::any_of(controls.keyboard.at(index), down) ||
+           std::ranges::any_of(controls.gamepad.at(index), down);
 }
 
 std::uint8_t inputSystem(const gfx::IGraphics &graphics,
-                         const Controls &controls, AutoFire &autoFire,
+                         const PlayerControls &controls, AutoFire &autoFire,
                          engine::Duration dt)
 {
     const bool toggle = isHeld(graphics, controls, Control::AutoFire);

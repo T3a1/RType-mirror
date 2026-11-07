@@ -56,6 +56,9 @@ constexpr std::array<std::string_view, ControlCount> ControlNames{
     "up", "down", "left", "right", "fire", "autofire", "chat",
 };
 
+/** @brief The start of the name of a gamepad line in the file. */
+constexpr std::string_view PadPrefix = "pad_";
+
 /** @brief The number of letter keys, from Key::A. */
 constexpr int LetterCount = 26;
 /** @brief The number of digit keys, from Key::Num0. */
@@ -96,7 +99,8 @@ std::string_view trim(std::string_view text)
  * @param controls The controls to change.
  * @return An error message, or nothing if the line was applied or empty.
  **/
-std::optional<std::string> readLine(std::string_view line, Controls &controls)
+std::optional<std::string> readLine(std::string_view line,
+                                    PlayerControls &controls)
 {
     line = trim(line);
     if (line.empty() || line.front() == '#') {
@@ -107,16 +111,29 @@ std::optional<std::string> readLine(std::string_view line, Controls &controls)
         return "expected \"control = key...\"";
     }
     const std::string_view name = trim(line.substr(0, equal));
-    const std::optional<Control> control = controlFromName(name);
+    const bool pad = name.size() > PadPrefix.size() &&
+                     sameName(name.substr(0, PadPrefix.size()), PadPrefix);
+    const std::optional<Control> control =
+        controlFromName(pad ? name.substr(PadPrefix.size()) : name);
     if (!control) {
         return "unknown control \"" + std::string{name} + "\"";
     }
+    const std::string_view controlName =
+        ControlNames.at(static_cast<std::size_t>(*control));
     std::vector<Key> keys;
     std::istringstream words{std::string{line.substr(equal + 1)}};
     for (std::string word; words >> word;) {
         const std::optional<Key> key = keyFromName(word);
         if (!key) {
             return "unknown key \"" + word + "\"";
+        }
+        if (gfx::isPadKey(*key) && !pad) {
+            return word + " is a gamepad button: write it in " +
+                   std::string{PadPrefix} + std::string{controlName};
+        }
+        if (!gfx::isPadKey(*key) && pad) {
+            return word + " is a keyboard key: write it in " +
+                   std::string{controlName};
         }
         if (std::ranges::find(keys, *key) == keys.end()) {
             keys.push_back(*key);
@@ -128,8 +145,31 @@ std::optional<std::string> readLine(std::string_view line, Controls &controls)
     if (keys.size() > MaxKeysPerControl) {
         return "too many keys for \"" + std::string{name} + "\"";
     }
-    controls.at(static_cast<std::size_t>(*control)) = std::move(keys);
+    Controls &device = pad ? controls.gamepad : controls.keyboard;
+    device.at(static_cast<std::size_t>(*control)) = std::move(keys);
     return std::nullopt;
+}
+
+/**
+ * @brief Writes the lines of one device in a controls file.
+ * @param out The file to write.
+ * @param controls The keys of the device.
+ * @param prefix What starts the name of each line: empty for the keyboard,
+ * PadPrefix for the gamepad.
+ **/
+void writeDevice(std::ostream &out, const Controls &controls,
+                 std::string_view prefix)
+{
+    for (std::size_t i = 0; i < ControlCount; ++i) {
+        if (controls.at(i).empty()) {
+            continue;
+        }
+        out << prefix << ControlNames.at(i) << " =";
+        for (const Key key : controls.at(i)) {
+            out << ' ' << keyName(key);
+        }
+        out << '\n';
+    }
 }
 
 } // namespace
@@ -147,6 +187,21 @@ Controls defaultControls()
     set(Control::Fire, {Key::Space, Key::RightControl});
     set(Control::AutoFire, {Key::F, Key::RightShift});
     set(Control::Chat, {Key::T});
+    return controls;
+}
+
+Controls defaultPadControls()
+{
+    Controls controls;
+    const auto set = [&controls](Control control, std::vector<Key> keys) {
+        controls.at(static_cast<std::size_t>(control)) = std::move(keys);
+    };
+    set(Control::Up, {Key::PadUp, Key::PadStickUp});
+    set(Control::Down, {Key::PadDown, Key::PadStickDown});
+    set(Control::Left, {Key::PadLeft, Key::PadStickLeft});
+    set(Control::Right, {Key::PadRight, Key::PadStickRight});
+    set(Control::Fire, {Key::PadA, Key::PadRT});
+    set(Control::AutoFire, {Key::PadRB});
     return controls;
 }
 
@@ -200,7 +255,8 @@ std::optional<Control> controlFromName(std::string_view name)
     return std::nullopt;
 }
 
-std::vector<std::string> readControls(std::istream &in, Controls &controls)
+std::vector<std::string> readControls(std::istream &in,
+                                      PlayerControls &controls)
 {
     std::vector<std::string> errors;
     int number = 0;
@@ -213,24 +269,16 @@ std::vector<std::string> readControls(std::istream &in, Controls &controls)
     return errors;
 }
 
-void writeControls(std::ostream &out, const Controls &controls)
+void writeControls(std::ostream &out, const PlayerControls &controls)
 {
     out << "# R-Type controls\n";
-    for (std::size_t i = 0; i < ControlCount; ++i) {
-        if (controls.at(i).empty()) {
-            continue;
-        }
-        out << ControlNames.at(i) << " =";
-        for (const Key key : controls.at(i)) {
-            out << ' ' << keyName(key);
-        }
-        out << '\n';
-    }
+    writeDevice(out, controls.keyboard, "");
+    writeDevice(out, controls.gamepad, PadPrefix);
 }
 
-Controls loadControlsFile(const std::optional<std::string> &path)
+PlayerControls loadControlsFile(const std::optional<std::string> &path)
 {
-    Controls controls = defaultControls();
+    PlayerControls controls;
     const std::string file = path.value_or(DefaultControlsPath);
     std::ifstream in(file);
     if (!in) {
@@ -245,7 +293,7 @@ Controls loadControlsFile(const std::optional<std::string> &path)
     return controls;
 }
 
-bool saveControlsFile(const std::string &path, const Controls &controls)
+bool saveControlsFile(const std::string &path, const PlayerControls &controls)
 {
     std::ofstream out(path);
     writeControls(out, controls);

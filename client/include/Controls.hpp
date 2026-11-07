@@ -70,6 +70,27 @@ using Controls = std::array<std::vector<gfx::Key>, ControlCount>;
 [[nodiscard]] Controls defaultControls();
 
 /**
+ * @brief The default gamepad buttons: D-pad or left stick to move, A (Cross)
+ * or RT (R2) to fire, RB (R1) for auto-fire. The chat has none, as writing
+ * needs a keyboard.
+ * @return The default gamepad controls.
+ **/
+[[nodiscard]] Controls defaultPadControls();
+
+/**
+ * @struct PlayerControls
+ * @brief The keys of each control on each device. Both work at the same time.
+ * @param keyboard The keys of the keyboard.
+ * @param gamepad The buttons of the gamepad.
+ **/
+struct PlayerControls {
+    Controls keyboard = defaultControls();
+    Controls gamepad = defaultPadControls();
+
+    bool operator==(const PlayerControls &) const = default;
+};
+
+/**
  * @brief Finds a key by its name, ignoring case: "Up", "Space", "Enter",
  * "Tab", "LeftShift", "RightCtrl", "LeftAlt", "A" to "Z", "0" to "9"...
  * @param name The name of the key.
@@ -94,21 +115,24 @@ using Controls = std::array<std::vector<gfx::Key>, ControlCount>;
 
 /**
  * @brief Reads a controls file. Each line is `control = key key...`
- * (`fire = Space Enter`) and replaces the keys of that control; empty
- * lines and lines starting with `#` are ignored. A bad line is skipped
- * and reported, the other lines still apply.
+ * (`fire = Space Enter`) and replaces the keyboard keys of that control, or
+ * `pad_control = button...` (`pad_fire = PadA`) for the gamepad. Empty lines
+ * and lines starting with `#` are ignored. A bad line, such as a gamepad button
+ * on a keyboard line, is skipped and reported; the other lines still apply.
  * @param in The file to read.
- * @param controls The controls to change, usually defaultControls().
+ * @param controls The controls to change, usually the default ones.
  * @return One message per line that could not be read, with its number.
  **/
-std::vector<std::string> readControls(std::istream &in, Controls &controls);
+std::vector<std::string> readControls(std::istream &in,
+                                      PlayerControls &controls);
 
 /**
- * @brief Writes a controls file that readControls() can read back.
+ * @brief Writes a controls file that readControls() can read back: the
+ * keyboard lines, then the gamepad lines.
  * @param out The file to write.
  * @param controls The controls.
  **/
-void writeControls(std::ostream &out, const Controls &controls);
+void writeControls(std::ostream &out, const PlayerControls &controls);
 
 /**
  * @brief Reads a controls file over the default controls and reports its bad
@@ -119,7 +143,8 @@ void writeControls(std::ostream &out, const Controls &controls);
  * @throws std::runtime_error If the file given with --controls cannot be
  * opened.
  **/
-[[nodiscard]] Controls loadControlsFile(const std::optional<std::string> &path);
+[[nodiscard]] PlayerControls
+loadControlsFile(const std::optional<std::string> &path);
 
 /**
  * @brief Replaces a controls file, and reports on stderr if it cannot.
@@ -127,7 +152,7 @@ void writeControls(std::ostream &out, const Controls &controls);
  * @param controls The controls.
  * @return Whether the file was written.
  **/
-bool saveControlsFile(const std::string &path, const Controls &controls);
+bool saveControlsFile(const std::string &path, const PlayerControls &controls);
 
 /**
  * @brief Binds a key to one place of a control. If the control already has the

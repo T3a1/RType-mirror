@@ -19,6 +19,7 @@
 
 using client::Control;
 using client::Controls;
+using client::PlayerControls;
 using client::gfx::Key;
 
 namespace {
@@ -65,13 +66,14 @@ TEST(Controls, KeyNamesIgnoreCase)
 
 TEST(Controls, FileReplacesTheKeysOfEachLine)
 {
-    Controls controls = client::defaultControls();
+    PlayerControls players;
+    const Controls &controls = players.keyboard;
     std::istringstream file{"# ZQSD layout\n"
                             "\n"
                             "  UP = z  Up\n"
                             "left=Q\n"
                             "fire = Enter Enter\r\n"};
-    EXPECT_TRUE(client::readControls(file, controls).empty());
+    EXPECT_TRUE(client::readControls(file, players).empty());
     EXPECT_EQ(keysOf(controls, Control::Up),
               (std::vector<Key>{Key::Z, Key::Up}));
     EXPECT_EQ(keysOf(controls, Control::Left), (std::vector<Key>{Key::Q}));
@@ -82,15 +84,15 @@ TEST(Controls, FileReplacesTheKeysOfEachLine)
 
 TEST(Controls, BadLinesAreReportedAndSkipped)
 {
-    Controls controls = client::defaultControls();
+    PlayerControls players;
+    const Controls &controls = players.keyboard;
     std::istringstream file{"jump = Space\n"
                             "fire Space\n"
                             "fire = Banana\n"
                             "down =\n"
                             "up = A B C D E F G H I\n"
                             "right = L\n"};
-    const std::vector<std::string> errors =
-        client::readControls(file, controls);
+    const std::vector<std::string> errors = client::readControls(file, players);
     ASSERT_EQ(errors.size(), 5U);
     EXPECT_EQ(errors[0].rfind("line 1:", 0), 0U);
     EXPECT_EQ(errors[4].rfind("line 5:", 0), 0U);
@@ -101,12 +103,14 @@ TEST(Controls, BadLinesAreReportedAndSkipped)
 
 TEST(Controls, ReadsBackWhatItWrites)
 {
-    Controls written = client::defaultControls();
-    written.at(static_cast<std::size_t>(Control::Fire)) = {Key::Enter, Key::G};
+    PlayerControls written;
+    written.keyboard.at(static_cast<std::size_t>(Control::Fire)) = {Key::Enter,
+                                                                    Key::G};
+    written.gamepad.at(static_cast<std::size_t>(Control::Fire)) = {Key::PadB};
     std::ostringstream out;
     client::writeControls(out, written);
 
-    Controls controls = client::defaultControls();
+    PlayerControls controls;
     std::istringstream in(out.str());
     EXPECT_TRUE(client::readControls(in, controls).empty());
 
@@ -117,16 +121,18 @@ TEST(Controls, WritesTheNamesOfTheFile)
 {
     std::ostringstream out;
 
-    client::writeControls(out, client::defaultControls());
+    client::writeControls(out, PlayerControls{});
 
     EXPECT_NE(out.str().find("fire = Space RightCtrl\n"), std::string::npos);
     EXPECT_NE(out.str().find("autofire = F RightShift\n"), std::string::npos);
+    EXPECT_NE(out.str().find("pad_fire = PadA PadRT\n"), std::string::npos);
+    EXPECT_EQ(out.str().find("pad_chat"), std::string::npos);
 }
 
 TEST(Controls, SkipsAControlWithoutKeysWhenWriting)
 {
-    Controls controls = client::defaultControls();
-    controls.at(static_cast<std::size_t>(Control::Fire)).clear();
+    PlayerControls controls;
+    controls.keyboard.at(static_cast<std::size_t>(Control::Fire)).clear();
     std::ostringstream out;
 
     client::writeControls(out, controls);
@@ -139,8 +145,7 @@ TEST(Controls, SavesAFileItCanRead)
     const std::filesystem::path path =
         std::filesystem::temp_directory_path() / "rtype_controls_test.cfg";
 
-    EXPECT_TRUE(
-        client::saveControlsFile(path.string(), client::defaultControls()));
+    EXPECT_TRUE(client::saveControlsFile(path.string(), PlayerControls{}));
     EXPECT_TRUE(std::filesystem::exists(path));
     std::filesystem::remove(path);
 }
@@ -150,8 +155,7 @@ TEST(Controls, ReportsAFileItCannotWrite)
     const std::filesystem::path path = std::filesystem::temp_directory_path() /
                                        "rtype_no_such_folder" / "controls.cfg";
 
-    EXPECT_FALSE(
-        client::saveControlsFile(path.string(), client::defaultControls()));
+    EXPECT_FALSE(client::saveControlsFile(path.string(), PlayerControls{}));
 }
 
 TEST(Controls, LoadsTheFileGivenOverTheDefaults)
@@ -160,12 +164,14 @@ TEST(Controls, LoadsTheFileGivenOverTheDefaults)
         std::filesystem::temp_directory_path() / "rtype_controls_load_test.cfg";
     std::ofstream(path) << "fire = G\n";
 
-    const Controls controls = client::loadControlsFile(path.string());
+    const PlayerControls controls = client::loadControlsFile(path.string());
     std::filesystem::remove(path);
 
-    EXPECT_EQ(keysOf(controls, Control::Fire), (std::vector<Key>{Key::G}));
-    EXPECT_EQ(keysOf(controls, Control::Up),
+    EXPECT_EQ(keysOf(controls.keyboard, Control::Fire),
+              (std::vector<Key>{Key::G}));
+    EXPECT_EQ(keysOf(controls.keyboard, Control::Up),
               keysOf(client::defaultControls(), Control::Up));
+    EXPECT_EQ(controls.gamepad, client::defaultPadControls());
 }
 
 TEST(Controls, KeepsTheDefaultsOfABadLineWhenLoading)
@@ -174,10 +180,10 @@ TEST(Controls, KeepsTheDefaultsOfABadLineWhenLoading)
         std::filesystem::temp_directory_path() / "rtype_controls_bad_test.cfg";
     std::ofstream(path) << "fire = NotAKey\n";
 
-    const Controls controls = client::loadControlsFile(path.string());
+    const PlayerControls controls = client::loadControlsFile(path.string());
     std::filesystem::remove(path);
 
-    EXPECT_EQ(controls, client::defaultControls());
+    EXPECT_EQ(controls, PlayerControls{});
 }
 
 TEST(Controls, RefusesAFileGivenThatCannotBeOpened)
@@ -197,14 +203,15 @@ TEST(Controls, LoadsTheDefaultFileOnlyIfItExists)
     std::filesystem::create_directories(folder);
     std::filesystem::current_path(folder);
 
-    const Controls withoutFile = client::loadControlsFile(std::nullopt);
+    const PlayerControls withoutFile = client::loadControlsFile(std::nullopt);
     std::ofstream(client::DefaultControlsPath) << "fire = G\n";
-    const Controls withFile = client::loadControlsFile(std::nullopt);
+    const PlayerControls withFile = client::loadControlsFile(std::nullopt);
 
     std::filesystem::current_path(previous);
     std::filesystem::remove_all(folder);
-    EXPECT_EQ(withoutFile, client::defaultControls());
-    EXPECT_EQ(keysOf(withFile, Control::Fire), (std::vector<Key>{Key::G}));
+    EXPECT_EQ(withoutFile, PlayerControls{});
+    EXPECT_EQ(keysOf(withFile.keyboard, Control::Fire),
+              (std::vector<Key>{Key::G}));
 }
 
 TEST(Controls, BindKeyReplacesOnePlace)
@@ -259,4 +266,67 @@ TEST(Controls, FindsAnotherControlWithAKey)
                      .has_value());
     EXPECT_FALSE(
         client::otherControlWith(controls, Control::Fire, Key::G).has_value());
+}
+
+TEST(Controls, GamepadMovesWithTheDPadOrTheStick)
+{
+    const Controls pad = client::defaultPadControls();
+
+    EXPECT_EQ(keysOf(pad, Control::Up),
+              (std::vector<Key>{Key::PadUp, Key::PadStickUp}));
+    EXPECT_EQ(keysOf(pad, Control::Fire),
+              (std::vector<Key>{Key::PadA, Key::PadRT}));
+    EXPECT_EQ(keysOf(pad, Control::AutoFire), (std::vector<Key>{Key::PadRB}));
+    EXPECT_TRUE(keysOf(pad, Control::Chat).empty());
+}
+
+TEST(Controls, DefaultGamepadButtonsAreOnlyGamepadKeys)
+{
+    for (const auto &keys : client::defaultPadControls()) {
+        for (const Key key : keys) {
+            EXPECT_TRUE(client::gfx::isPadKey(key)) << client::keyName(key);
+        }
+    }
+    for (const auto &keys : client::defaultControls()) {
+        for (const Key key : keys) {
+            EXPECT_FALSE(client::gfx::isPadKey(key)) << client::keyName(key);
+        }
+    }
+}
+
+TEST(Controls, EachDeviceHasItsOwnLines)
+{
+    PlayerControls controls;
+    std::istringstream file{"pad_fire = PadB\n"
+                            "PAD_Up = PadUp\n"
+                            "left = Q\n"};
+
+    EXPECT_TRUE(client::readControls(file, controls).empty());
+
+    EXPECT_EQ(keysOf(controls.gamepad, Control::Fire),
+              (std::vector<Key>{Key::PadB}));
+    EXPECT_EQ(keysOf(controls.gamepad, Control::Up),
+              (std::vector<Key>{Key::PadUp}));
+    EXPECT_EQ(keysOf(controls.keyboard, Control::Fire),
+              keysOf(client::defaultControls(), Control::Fire));
+    EXPECT_EQ(keysOf(controls.keyboard, Control::Left),
+              (std::vector<Key>{Key::Q}));
+    EXPECT_EQ(keysOf(controls.gamepad, Control::Left),
+              keysOf(client::defaultPadControls(), Control::Left));
+}
+
+TEST(Controls, RefusesAKeyOfTheOtherDevice)
+{
+    PlayerControls controls;
+    std::istringstream file{"fire = Space PadA\n"
+                            "pad_fire = Space\n"
+                            "pad_ = PadA\n"
+                            "pad_jump = PadA\n"};
+
+    const std::vector<std::string> errors =
+        client::readControls(file, controls);
+
+    ASSERT_EQ(errors.size(), 4U);
+    EXPECT_NE(errors[0].find("pad_fire"), std::string::npos);
+    EXPECT_EQ(controls, PlayerControls{});
 }

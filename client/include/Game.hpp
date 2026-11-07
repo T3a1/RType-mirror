@@ -47,7 +47,7 @@ inline constexpr std::size_t BackgroundLayerCount = 2;
  * its game at once.
  * @param bench The network benchmark to run instead of the keyboard, if
  * any.
- * @param controls The keys bound to each control.
+ * @param controls The keys and gamepad buttons bound to each control.
  * @param controlsPath The file the keys are saved in when they change.
  * @param settings The settings of the player.
  **/
@@ -56,7 +56,7 @@ struct GameOptions {
     bool predict = true;
     std::optional<std::uint32_t> room;
     std::optional<BenchConfig> bench;
-    Controls controls = defaultControls();
+    PlayerControls controls;
     std::string controlsPath = DefaultControlsPath;
     Settings settings;
 };
@@ -160,7 +160,7 @@ class Game {
     std::optional<std::uint32_t> m_autoJoin;
     float m_gameOverTime = 0.0F;
     std::optional<Bench> m_bench;
-    Controls m_controls;
+    PlayerControls m_controls;
     std::string m_controlsPath;
     Settings m_settings;
     AutoFire m_autoFire;
