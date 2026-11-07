@@ -34,6 +34,8 @@ set(SOURCE_FILES
     src/access_list_test.cpp
     src/admin_commands_test.cpp
     src/room_phase_system_test.cpp
+    src/chat_system_test.cpp
+    src/rate_limiter_test.cpp
     src/instance_manager_test.cpp
     src/game_over_system_test.cpp
 )
@@ -42,9 +44,9 @@ set(SOURCE_FILES
 # built.
 if(TARGET r-type_client_network)
     list(APPEND SOURCE_FILES src/network_client_test.cpp src/controls_test.cpp src/sound_board_test.cpp
-        src/player_notices_test.cpp src/menu_test.cpp src/settings_test.cpp)
+        src/player_notices_test.cpp src/chat_test.cpp src/menu_test.cpp src/settings_test.cpp)
     set(CLIENT_NETWORK_LIBRARY r-type_client_network r-type_client_controls r-type_client_audio
-        r-type_client_menu r-type_client_settings)
+        r-type_client_menu r-type_client_settings r-type_client_chat)
 endif()
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})

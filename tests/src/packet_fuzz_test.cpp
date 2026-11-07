@@ -61,6 +61,8 @@ std::vector<Bytes> validPackets()
         encodeBytes(RoomJoined{.room = 3}),
         encodeBytes(RoomRefused{}),
         encodeBytes(RoomClosed{}),
+        encodeBytes(ChatSend{.text = "hello"}),
+        encodeBytes(ChatMessage{.slot = 1, .text = "hello"}),
     };
 }
 

@@ -12,6 +12,7 @@
 #include "engine/MessageQueue.hpp"
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
 namespace server {
 
@@ -38,8 +39,15 @@ enum class Recipient : std::uint8_t { All, AllExcept, One };
  * kicked.
  * @param Input A newer input from a client.
  * @param Start A client asks to start the game.
+ * @param Chat A client writes to its room.
  **/
-enum class InboundKind : std::uint8_t { Connected, Disconnected, Input, Start };
+enum class InboundKind : std::uint8_t {
+    Connected,
+    Disconnected,
+    Input,
+    Start,
+    Chat,
+};
 
 /**
  * @struct InboundMessage
@@ -51,6 +59,7 @@ enum class InboundKind : std::uint8_t { Connected, Disconnected, Input, Start };
  * @param sequence The input sequence number, for Input.
  * @param actions The held actions as Action bits, for Input.
  * @param settings The settings of the game, for Start.
+ * @param text The line written, for Chat.
  **/
 struct InboundMessage {
     std::uint32_t clientId = 0;
@@ -60,6 +69,7 @@ struct InboundMessage {
     std::uint32_t sequence = 0;
     std::uint8_t actions = 0;
     rtype::protocol::StartGame settings;
+    std::string text;
 };
 
 /**

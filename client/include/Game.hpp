@@ -129,6 +129,8 @@ class Game {
     void drawWaitingRoom();
     void drawGame();
     void drawScreens();
+    void updateChat();
+    void drawChat();
     void handleLobbyMessages(const std::vector<rtype::protocol::Payload> &all);
     void applyLobbyChoice(std::optional<std::uint32_t> room);
     void leaveRoom();
@@ -167,6 +169,8 @@ class Game {
     std::uint8_t m_actions = 0;
     std::uint32_t m_sequence = 0;
     MenuKeys m_menuKeys;
+    bool m_chatKeyHeld = false;
+    bool m_enterHeld = false;
     engine::Scheduler m_scheduler;
     std::array<engine::Scheduler, static_cast<std::size_t>(Layer::Count)>
         m_layers;

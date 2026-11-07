@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <ranges>
 #include <string>
 
 namespace client {
@@ -39,6 +40,21 @@ constexpr float HudY = 20.0F;
 constexpr int HudFontSize = 28;
 /** @brief The height of a line of the HUD, in pixels. */
 constexpr float HudLineHeight = 34.0F;
+
+/** @brief The font size of the chat, in pixels: a full line with its author
+ * fits in the smallest window. */
+constexpr int ChatFontSize = 22;
+/** @brief The height of a line of the chat, in pixels. */
+constexpr float ChatLineHeight = 28.0F;
+/** @brief The distance between the chat and the bottom, in pixels. */
+constexpr float ChatBottom = 20.0F;
+/** @brief The space on the left and right of a text on its backdrop, in pixels.
+ */
+constexpr float ChatPadding = 6.0F;
+/** @brief The backdrop of the chat, so that it stays readable over the game. */
+constexpr gfx::Color ChatBackdrop{.r = 0, .g = 0, .b = 0, .a = 170};
+/** @brief The color of the hints of the chat. */
+constexpr gfx::Color ChatHintColor = gfx::rgb(170, 170, 185);
 
 /** @brief The width of the game over panel, in pixels. */
 constexpr float PanelWidth = 520.0F;
@@ -209,6 +225,57 @@ void levelBannerScreen(const SyncState &state, gfx::IGraphics &graphics)
                                   : "LEVEL " + std::to_string(state.level),
                  centerX, y, TitleFontSize,
                  faded(BannerColor, state.levelBanner));
+}
+
+namespace {
+
+/**
+ * @brief Draws a line of the chat over its backdrop.
+ * @param graphics The graphics backend to draw with.
+ * @param text The text.
+ * @param y The top of the line.
+ * @param color The color of the text.
+ **/
+void drawChatRow(gfx::IGraphics &graphics, const std::string &text, float y,
+                 gfx::Color color)
+{
+    const float width = static_cast<float>(text.size()) *
+                        static_cast<float>(ChatFontSize) * GlyphWidth;
+    gfx::Color backdrop = ChatBackdrop;
+    backdrop.a = std::min(backdrop.a, color.a);
+    graphics.drawRectangle({.x = HudX - ChatPadding,
+                            .y = y,
+                            .width = width + (2.0F * ChatPadding),
+                            .height = ChatLineHeight},
+                           backdrop);
+    graphics.drawText(text, {.x = HudX, .y = y + 3.0F}, ChatFontSize, color);
+}
+
+} // namespace
+
+void chatOverlay(const ChatState &chat, gfx::IGraphics &graphics)
+{
+    float y = graphics.screenSize().y - ChatBottom - ChatLineHeight;
+    if (chat.open) {
+        drawChatRow(graphics, "> " + chat.draft + "_", y,
+                    gfx::colors::OffWhite);
+        y -= ChatLineHeight;
+        drawChatRow(graphics, "Enter: send   Esc: cancel", y, ChatHintColor);
+        y -= ChatLineHeight;
+    }
+    for (const ChatLine &line : chat.lines | std::views::reverse) {
+        drawChatRow(graphics,
+                    "Player " + std::to_string(line.slot) + ": " + line.text, y,
+                    faded(playerColor(line.slot), line.timeLeft));
+        y -= ChatLineHeight;
+    }
+}
+
+void chatHint(const std::string &keyName, gfx::IGraphics &graphics)
+{
+    drawChatRow(graphics, keyName + ": write to the room",
+                graphics.screenSize().y - ChatBottom - ChatLineHeight,
+                ChatHintColor);
 }
 
 void playerNoticeSystem(const SyncState &state, gfx::IGraphics &graphics)

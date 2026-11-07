@@ -448,6 +448,11 @@ void networkSyncSystem(engine::Registry &registry,
             applyEvent(registry, *event, state, sheets, sounds);
         } else if (const auto *welcome = std::get_if<Welcome>(&payload)) {
             applyWelcome(registry, *welcome, state, sheets);
+        } else if (const auto *line = std::get_if<ChatMessage>(&payload)) {
+            addChatLine(state.chat, line->slot, line->text);
+            if (line->slot != state.localSlot) {
+                sounds.play(audio::SoundEvent::MenuMove);
+            }
         }
     }
     if (state.predict && state.shipTick == state.ackTick &&

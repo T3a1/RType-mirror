@@ -149,6 +149,19 @@ class IGraphics {
      * @return `true` if it was pressed since the last shouldClose().
      **/
     [[nodiscard]] virtual bool isMousePressed() const = 0;
+    /**
+     * @brief Tells whether the backend can read typed text.
+     * @return `true` if takeTextInput() gives what the player types. False by
+     * default: on such a backend, the keys are read for the game only.
+     **/
+    [[nodiscard]] virtual bool hasTextInput() const { return false; }
+    /**
+     * @brief Returns the text typed since the last call. Call it every frame,
+     * so that what is typed outside of a text field is not kept.
+     * @return The characters typed, in order, with their keyboard layout;
+     * TextBackspace for the Backspace key, repeated while it is held.
+     **/
+    [[nodiscard]] virtual std::u32string takeTextInput() { return {}; }
 };
 
 /**

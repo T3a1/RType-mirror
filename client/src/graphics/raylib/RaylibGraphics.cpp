@@ -225,6 +225,19 @@ void RaylibGraphics::drawText(const std::string &text, engine::Vec2f position,
              static_cast<int>(position.y), fontSize, toRaylib(color));
 }
 
+std::u32string RaylibGraphics::takeTextInput()
+{
+    std::u32string text;
+    for (int character = GetCharPressed(); character != 0;
+         character = GetCharPressed()) {
+        text.push_back(static_cast<char32_t>(character));
+    }
+    if (IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE)) {
+        text.push_back(TextBackspace);
+    }
+    return text;
+}
+
 bool RaylibGraphics::isKeyDown(Key key) const
 {
     return IsKeyDown(toRaylib(key));

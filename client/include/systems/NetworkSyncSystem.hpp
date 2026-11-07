@@ -8,6 +8,7 @@
 #ifndef CLIENT_SYSTEMS_NETWORKSYNCSYSTEM_HPP
 #define CLIENT_SYSTEMS_NETWORKSYNCSYSTEM_HPP
 
+#include "Chat.hpp"
 #include "PlayerNotices.hpp"
 #include "SpriteSheets.hpp"
 #include "audio/SoundBoard.hpp"
@@ -67,6 +68,7 @@ inline constexpr float LevelBannerTime = 3.0F;
  * @param levelBanner How long the banner of that level is still shown, in
  * seconds.
  * @param notices The players who just joined or left, oldest first.
+ * @param chat The chat of the room.
  **/
 struct SyncState {
     std::unordered_map<std::uint32_t, engine::Entity> entities;
@@ -91,6 +93,7 @@ struct SyncState {
     bool levelAnnounced = false;
     float levelBanner = 0.0F;
     std::vector<PlayerNotice> notices;
+    ChatState chat;
 };
 
 /**

@@ -23,9 +23,12 @@ namespace rtype::protocol {
  * @param Disconnect Either side ends the connection.
  * @param Ack Acknowledges reliable packets when nothing else is sent.
  * @param Input The actions a player holds (client to server).
+ * @param ChatSend A player writes to its room (client to server, reliable).
  * @param Snapshot One part of the world state at a tick (server to client).
  * @param Welcome The slot and ship of a new player (reliable).
  * @param GameEvent A one-off game fact, such as a destruction (reliable).
+ * @param ChatMessage A line of the chat of the room (server to client,
+ * reliable).
  * @param RoomList The rooms of the server, for a client in the lobby.
  * @param JoinRoom A client asks to enter a room (reliable).
  * @param LeaveRoom A client goes back to the lobby (reliable).
@@ -41,9 +44,11 @@ enum class PacketType : std::uint8_t {
     Disconnect = 0x04,
     Ack = 0x05,
     Input = 0x10,
+    ChatSend = 0x11,
     Snapshot = 0x20,
     Welcome = 0x21,
     GameEvent = 0x22,
+    ChatMessage = 0x23,
     RoomList = 0x30,
     JoinRoom = 0x31,
     LeaveRoom = 0x32,
@@ -60,7 +65,7 @@ inline constexpr std::array AllPacketTypes{
     PacketType::Snapshot,   PacketType::Welcome,    PacketType::GameEvent,
     PacketType::RoomList,   PacketType::JoinRoom,   PacketType::LeaveRoom,
     PacketType::StartGame,  PacketType::RoomJoined, PacketType::RoomRefused,
-    PacketType::RoomClosed,
+    PacketType::RoomClosed, PacketType::ChatSend,   PacketType::ChatMessage,
 };
 
 /**
@@ -100,6 +105,7 @@ enum class Side : std::uint8_t {
         return true;
     case PacketType::Connect:
     case PacketType::Input:
+    case PacketType::ChatSend:
     case PacketType::JoinRoom:
     case PacketType::LeaveRoom:
     case PacketType::StartGame:
@@ -109,6 +115,7 @@ enum class Side : std::uint8_t {
     case PacketType::Snapshot:
     case PacketType::Welcome:
     case PacketType::GameEvent:
+    case PacketType::ChatMessage:
     case PacketType::RoomList:
     case PacketType::RoomJoined:
     case PacketType::RoomRefused:
@@ -131,6 +138,8 @@ enum class Side : std::uint8_t {
     case PacketType::Accept:
     case PacketType::Welcome:
     case PacketType::GameEvent:
+    case PacketType::ChatSend:
+    case PacketType::ChatMessage:
     case PacketType::JoinRoom:
     case PacketType::LeaveRoom:
     case PacketType::StartGame:

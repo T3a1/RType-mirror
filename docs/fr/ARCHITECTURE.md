@@ -745,8 +745,10 @@ L'opérateur tape des commandes dans le terminal du serveur : `status`, `rooms`,
 |------|-------|---------|------|
 | Serveur | Input | `SessionSystem` | `Connected` / `Disconnected` : créer ou détruire les vaisseaux, pousser `Welcome`, `PlayerJoined`, `PlayerLeft` |
 | Serveur | Input | `NetworkInputSystem` | `Input` : écrire `InputState` sur le bon vaisseau |
+| Serveur | Input | `ChatSystem` | `Chat` : ajoute le numéro de l'auteur, envoie `ChatMessage` à `All` |
 | Serveur | Output | `SnapshotSystem` | Un tick sur 3, pousser un `Snapshot` à `All` |
 | Client | Input | `networkSyncSystem` | Créer et mettre à jour les entités d'après les snapshots, les retirer sur `EntityDestroyed`, noter qui arrive ou part |
+| Client | Output | `updateChat`, `chatOverlay` | Donne le clavier au chat quand il est ouvert, envoie la ligne, dessine le chat |
 | Client | Input | `inputSystem`, `sendInput` | Lire le clavier, envoyer l'état des entrées |
 | Client | Simulation | `smoothingSystem` | Placer les entités distantes entre deux snapshots |
 | Client | Simulation | `predictionSystem` | Prédire le vaisseau local et estomper les corrections |

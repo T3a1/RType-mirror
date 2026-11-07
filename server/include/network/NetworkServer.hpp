@@ -14,6 +14,7 @@
 #include "common/protocol/ReliableChannel.hpp"
 #include "engine/CommandConsole.hpp"
 #include "engine/MessageQueue.hpp"
+#include "engine/RateLimiter.hpp"
 #include "engine/network/Endpoint.hpp"
 #include "engine/network/IUdpSocket.hpp"
 #include "network/NetworkMessages.hpp"
@@ -33,6 +34,13 @@ namespace server {
 /** @brief The clock of the sessions' timers. */
 using TimePoint = rtype::protocol::ReliableChannel::TimePoint;
 
+/** @brief How many lines of chat a client may send in a row. */
+inline constexpr float ChatBurst = 5.0F;
+/** @brief How many lines of chat per second a client may send after that: every
+ * line is reliable for each player of the room, so a flood must not fill their
+ * channels. */
+inline constexpr float ChatPerSecond = 1.0F;
+
 /**
  * @struct Session
  * @brief The network thread's state for one connected client.
@@ -43,6 +51,7 @@ using TimePoint = rtype::protocol::ReliableChannel::TimePoint;
  * @param lastHeard When the last valid packet was received, for the timeout.
  * @param kicked Set when the client must be disconnected at the next
  * update.
+ * @param chatLimit Limits the lines of chat of the client.
  **/
 struct Session {
     std::uint32_t id{};
@@ -51,6 +60,7 @@ struct Session {
     rtype::protocol::ReliableChannel channel;
     TimePoint lastHeard;
     bool kicked = false;
+    engine::RateLimiter chatLimit{ChatBurst, ChatPerSecond};
 };
 
 /** @brief A position in the table of sessions. */

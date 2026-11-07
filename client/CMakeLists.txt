@@ -80,6 +80,17 @@ target_include_directories(r-type_client_settings
     PUBLIC include
 )
 
+# The chat logic is a library so the tests can run it without a window.
+add_library(r-type_client_chat STATIC src/Chat.cpp)
+
+target_include_directories(r-type_client_chat
+    PUBLIC include
+)
+
+target_link_libraries(r-type_client_chat
+    PUBLIC r-type_common
+)
+
 # The menu widgets are a library so the tests can run them on a fake backend.
 add_library(r-type_client_menu STATIC src/KeyCapture.cpp src/Menu.cpp
     src/MenuPages.cpp)
@@ -101,7 +112,8 @@ target_include_directories(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE r-type_client_network r-type_client_controls r-type_client_audio
-    r-type_client_menu r-type_client_settings ${GRAPHICS_LIBRARIES}
+    r-type_client_menu r-type_client_settings r-type_client_chat
+    ${GRAPHICS_LIBRARIES}
 )
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

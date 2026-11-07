@@ -86,6 +86,10 @@ decodePacket(std::span<const std::uint8_t> datagram, Side sender)
         return decodePayload<Ack>(header, in);
     case PacketType::Input:
         return decodePayload<Input>(header, in);
+    case PacketType::ChatSend:
+        return decodePayload<ChatSend>(header, in);
+    case PacketType::ChatMessage:
+        return decodePayload<ChatMessage>(header, in);
     case PacketType::Snapshot:
         return decodePayload<SnapshotPart>(header, in);
     case PacketType::Welcome:
