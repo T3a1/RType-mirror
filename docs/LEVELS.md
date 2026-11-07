@@ -79,7 +79,7 @@ crashes the server.
 | Name | What it does |
 |------|--------------|
 | `warship` | Comes in from the right, stops, then moves up and down. 2500 health points, shown in a bar at the bottom of the screen. Three phases as it is damaged: aimed shots, then a spread of 3 shots plus an aimed one, then a faster fan of 5 shots while moving faster. |
-| `hive` | A larger, slower organic boss with the same three attack phases. |
+| `hive` | A larger, slower organic boss that sits on the ground and never moves once in place, with the same three attack phases. |
 
 ## Game settings
 

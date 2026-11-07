@@ -143,7 +143,7 @@ void bossSystem(engine::Registry &registry, SpawnCommands &commands,
     registry.each<Boss, rtype::Enemy, rtype::Transform, rtype::Velocity,
                   rtype::Health>([&](engine::Entity entity, Boss &boss,
                                      const rtype::Enemy &enemy,
-                                     const rtype::Transform &transform,
+                                     rtype::Transform &transform,
                                      rtype::Velocity &velocity,
                                      const rtype::Health &health) {
         const EnemyDef &stat = enemyDef(enemy);
@@ -155,6 +155,12 @@ void bossSystem(engine::Registry &registry, SpawnCommands &commands,
             boss.phase = phase;
         }
         const PhaseStats &stats = Phases.at(phase - 1U);
+        // The hive sits on the ground: it never moves up or down.
+        const bool grounded = enemy.type == rtype::EnemyType::Hive;
+        if (grounded) {
+            transform.position.y =
+                rtype::PlayfieldHeight - (stat.size.y / 2.0F);
+        }
         if (!boss.arrived) {
             boss.arrived = transform.position.x <= stopX;
             velocity.value = {.x = boss.arrived ? 0.0F : -stat.speed,
@@ -166,7 +172,9 @@ void bossSystem(engine::Registry &registry, SpawnCommands &commands,
         } else if (transform.position.y >= bottom) {
             boss.direction = -1.0F;
         }
-        velocity.value = {.x = 0.0F, .y = boss.direction * stats.verticalSpeed};
+        velocity.value = {.x = 0.0F,
+                          .y = grounded ? 0.0F
+                                        : boss.direction * stats.verticalSpeed};
 
         boss.cooldown -= dt;
         if (boss.cooldown.count() > 0.0F) {

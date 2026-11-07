@@ -7,6 +7,7 @@
 
 #include "EntityFactory.hpp"
 #include "common/Playfield.hpp"
+#include "common/components/Collider.hpp"
 #include "common/components/Enemy.hpp"
 #include "common/components/Health.hpp"
 #include "common/components/Player.hpp"
@@ -105,6 +106,38 @@ TEST_F(BossTest, ComesInStopsAndMovesUpAndDown)
     EXPECT_NE(position.y, y);
     EXPECT_GE(position.y, 0.0F);
     EXPECT_LE(position.y, rtype::PlayfieldHeight);
+}
+
+TEST(HiveBoss, SitsOnTheGroundAndNeverMoves)
+{
+    engine::Registry registry;
+    server::EntityFactory factory;
+    server::SpawnCommands commands;
+    const engine::Entity hive = factory.create(
+        registry,
+        server::SpawnEnemy{.type = rtype::EnemyType::Hive,
+                           .position = {.x = rtype::PlayfieldWidth + 200.0F,
+                                        .y = rtype::PlayfieldHeight / 2.0F}});
+    const auto run = [&](float seconds) {
+        const auto ticks = static_cast<int>(seconds / Tick.count());
+        for (int i = 0; i < ticks; ++i) {
+            server::bossSystem(registry, commands, Tick);
+            rtype::movementSystem(registry, Tick);
+            commands.clear();
+        }
+    };
+    const float ground = rtype::PlayfieldHeight -
+                         (registry.get<rtype::Collider>(hive).size.y / 2.0F);
+
+    run(6.0F);
+    ASSERT_TRUE(registry.get<server::Boss>(hive).arrived);
+    const auto arrived = registry.get<rtype::Transform>(hive).position;
+    EXPECT_FLOAT_EQ(arrived.y, ground);
+
+    run(3.0F);
+    const auto &position = registry.get<rtype::Transform>(hive).position;
+    EXPECT_FLOAT_EQ(position.x, arrived.x);
+    EXPECT_FLOAT_EQ(position.y, ground);
 }
 
 TEST_F(BossTest, ShootsMoreInLaterPhases)

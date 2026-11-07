@@ -80,7 +80,7 @@ serveur.
 | Nom | Ce qu'il fait |
 |-----|---------------|
 | `warship` | Arrive par la droite, s'arrête, puis monte et descend. 2500 points de vie, affichés dans une barre en bas de l'écran. Trois phases selon ses dégâts : des tirs visés, puis un éventail de 3 tirs plus un tir visé, puis un éventail plus rapide de 5 tirs en bougeant plus vite. |
-| `hive` | Un boss organique plus grand et plus lent, avec les mêmes trois phases d'attaque. |
+| `hive` | Un boss organique plus grand et plus lent, posé au sol et immobile une fois en place, avec les mêmes trois phases d'attaque. |
 
 ## Réglages de partie
 

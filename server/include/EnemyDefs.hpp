@@ -117,7 +117,7 @@ inline constexpr std::array<EnemyDef, 8> ENEMY_DEFS = {
             .dropsPowerUp = true,
         },
         {
-            // The hive: slower, larger, moved and armed by bossSystem().
+            // The hive: slower, larger, on the ground; armed by bossSystem().
             .speed = 110.0F,
             .health = rtype::BossMaxHealth,
             .size = {.x = 400.0F, .y = 230.0F},
