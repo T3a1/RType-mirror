@@ -465,8 +465,8 @@ void Game::finishSettingsPage(const SettingsResult &result)
  **/
 void Game::drawSettings()
 {
-    const SettingsResult result = settingsPage(menuContext(), m_menu.settings,
-                                               m_settings, m_controls.keyboard);
+    const SettingsResult result =
+        settingsPage(menuContext(), m_menu.settings, m_settings, m_controls);
     if (result.changed) {
         applyVolumes();
     }

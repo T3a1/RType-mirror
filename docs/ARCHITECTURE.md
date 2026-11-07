@@ -455,7 +455,8 @@ what it can: Raylib uses a borderless window, SFML creates its window again in
 fullscreen, and ncurses only follows V-Sync, as a terminal has no window to change. A
 benchmark ignores these choices, so that its results can be compared.
 
-**Changing a key.** Each action shows two keys on the Controls tab of Settings:
+**Changing a key.** Each action shows two keys on the Keyboard tab of Settings, and
+two buttons on its Gamepad tab:
 
 1. Choosing a key calls `KeyCapture::start()`.
 2. `KeyCapture::update()` waits until every key is released, or the key that started

@@ -44,7 +44,7 @@ enum class MenuPage : std::uint8_t {
  * @struct SettingsPageState
  * @brief What the Settings page keeps between two frames.
  * @param cursor The keyboard selection of the page.
- * @param tab The current tab: 0 Audio, 1 Controls, 2 Video.
+ * @param tab The current tab: 0 Audio, 1 Keyboard, 2 Gamepad, 3 Video.
  * @param capture The key being changed, if any.
  * @param notice The text under the keys, to report a key used twice.
  **/
@@ -122,20 +122,20 @@ struct SettingsResult {
 };
 
 /**
- * @brief Draws the settings of the player, in screen pixels, in three tabs.
+ * @brief Draws the settings of the player, in screen pixels, in four tabs.
  * On Audio, the sound volume plays a sound of the game when it changes, so the
- * player can hear it. On Controls, each control has two keys to change. Video
- * holds the window and the frame rate.
+ * player can hear it. On Keyboard and Gamepad, each control has two keys or
+ * buttons to change. Video holds the window and the frame rate.
  * @param context What the menu needs for this frame.
  * @param state The state of this page, updated.
  * @param settings The settings, updated.
- * @param controls The keys bound to each control, updated.
+ * @param controls The keys bound to each control on each device, updated.
  * @return What the player did.
  **/
 [[nodiscard]] SettingsResult settingsPage(const MenuContext &context,
                                           SettingsPageState &state,
                                           Settings &settings,
-                                          Controls &controls);
+                                          PlayerControls &controls);
 
 /**
  * @brief Draws one checkbox per line of Toggles, in screen pixels.
