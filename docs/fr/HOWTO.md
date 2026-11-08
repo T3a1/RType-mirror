@@ -12,6 +12,8 @@ ne demande pas de C++, voir [écrire des niveaux](LEVELS.md) et
 3. [Ajouter un type de paquet](#3-ajouter-un-type-de-paquet)
 4. [Compiler et déboguer](#4-compiler-et-déboguer)
 5. [Ajouter un son](#5-ajouter-un-son)
+6. [Ajouter une page de menu](#6-ajouter-une-page-de-menu)
+7. [Ajouter un réglage](#7-ajouter-un-réglage)
 
 ## 1. Ajouter un composant et un système
 
@@ -302,3 +304,114 @@ pas de nouveau paquet. Une musique fonctionne de la même façon, avec `MusicTra
 
 **5. Ne vous reposez pas sur lui seul** : un joueur qui n'entend pas doit quand même recevoir
 l'information, donc vérifiez que quelque chose à l'écran montre la même chose.
+
+## 6. Ajouter une page de menu
+
+L'exemple ajoute une page Records au menu principal. Voir
+l'[architecture des menus](ARCHITECTURE.md#45-menus) pour le fonctionnement des pages et
+des widgets.
+
+**1. Nommez la page** dans `client/include/MenuPages.hpp`, dans l'enum `MenuPage` et son
+commentaire Doxygen, et donnez-lui un curseur dans `MenuState` :
+
+```cpp
+enum class MenuPage : std::uint8_t { /* ... */ Records };
+
+struct MenuState {
+    // ...
+    MenuCursor recordsCursor;
+};
+```
+
+**2. Écrivez la page** dans `client/src/MenuPages.cpp` et déclarez-la dans l'en-tête. Une
+page dessine avec un `MenuPanel` et renvoie ce qu'a fait le joueur, ce qui la garde
+testable. Ici, `RecordLines` est une table de lignes à écrire à côté de `CreditsLines` :
+
+```cpp
+bool recordsPage(const MenuContext &context, MenuCursor &cursor)
+{
+    MenuPanel panel(context, cursor);
+    gfx::IGraphics &graphics = *context.graphics;
+
+    const float top = drawMenuTitle(graphics, "RECORDS");
+    const float y = drawLines(graphics, RecordLines, top);
+    return panel.backButton(menuRow(graphics.screenSize(), y + MenuLineHeight),
+                            "Back");
+}
+```
+
+**3. Ajoutez son bouton** : une valeur dans l'enum `MainChoice` et une ligne dans
+`MainEntries`, dans l'ordre du menu :
+
+```cpp
+MainEntry{.label = "Records", .choice = MainChoice::Records},
+```
+
+**4. Branchez-la** dans `client/src/Game.cpp`, dans `Game::applyMainChoice()` et
+`Game::drawMenu()` :
+
+```cpp
+case MainChoice::Records:
+    m_menu.page = MenuPage::Records;
+    break;
+```
+
+```cpp
+case MenuPage::Records:
+    if (recordsPage(context, m_menu.recordsCursor)) {
+        m_menu.page = MenuPage::Main;
+    }
+    break;
+```
+
+Échap revient déjà en arrière depuis toute page autre que le menu principal, et le
+clavier, la manette, la souris et les sons viennent avec les widgets. Testez la page dans
+`tests/src/menu_test.cpp`, qui fait tourner les menus sur un faux client graphique.
+
+Pour ajouter un widget, ajoutez une méthode à `MenuPanel` dans `client/src/Menu.cpp`.
+Elle doit appeler `nextIsSelected()` exactement une fois, pour que la sélection au clavier
+le compte. Les pages passent toujours par le panneau : un bouton dessiné à la main
+échapperait à la sélection au clavier.
+
+## 7. Ajouter un réglage
+
+Les réglages sont dans la structure `Settings` (`client/include/Settings.hpp`), qui ne
+contient que des données. Ils sont enregistrés dans `settings.cfg`.
+
+### Un réglage activé ou désactivé
+
+**1. Ajoutez le champ** à `Settings`, avec sa valeur par défaut et son commentaire
+Doxygen :
+
+```cpp
+bool reduceFlashing = false;
+```
+
+**2. Ajoutez une ligne** à la table `Toggles`. Le fichier des réglages et la page
+Accessibility lisent tous deux cette table, donc rien d'autre n'est à écrire de ce côté :
+
+```cpp
+ToggleDef{.key = "reduce_flashing",
+          .label = "Reduce flashing",
+          .field = &Settings::reduceFlashing},
+```
+
+**3. Utilisez-le** dans `Game`, depuis `m_settings`. Un système qui ne tourne que lorsque
+l'option est active peut utiliser la condition `.when` de ses `SystemOptions`, comme les
+étiquettes des joueurs.
+
+### Tout autre réglage
+
+Un volume sert de modèle pour une valeur qui n'est pas activée ou désactivée :
+
+1. Ajoutez le champ à `Settings`.
+2. Lisez-le dans `readLine()` et écrivez-le dans `writeSettings()`, dans
+   `client/src/Settings.cpp`. Une valeur incorrecte doit renvoyer une erreur et garder
+   l'ancienne.
+3. Ajoutez son widget à une page, par exemple un `panel.slider()` dans `audioTab()` de
+   `client/src/MenuPages.cpp`. Mettez `changed` dans le résultat, pour que `Game`
+   enregistre le fichier.
+4. Appliquez-le dans `Game`, comme le fait `applyVolumes()` pour les volumes.
+
+Testez le fichier dans `tests/src/settings_test.cpp`, et décrivez l'option dans le
+[README](README.md) si les joueurs l'utilisent.

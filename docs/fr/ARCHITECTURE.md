@@ -4,7 +4,8 @@ Ce document décrit l'organisation du code de R-Type : le moteur partagé, l'Ent
 leur communication, la boucle de jeu et le modèle de threads. Le protocole réseau est décrit dans [PROTOCOL.md](PROTOCOL.md).
 
 Le pourquoi de ces choix, comparés aux alternatives, est expliqué dans l'[étude technique](TECHNICAL_STUDY.md). Les
-[guides pratiques](HOWTO.md) montrent comment ajouter un composant, un système, un ennemi ou un paquet.
+[guides pratiques](HOWTO.md) montrent comment ajouter un composant, un système, un ennemi, un paquet, un son, une page de menu ou un
+réglage.
 
 ## 1. Objectifs
 
@@ -47,7 +48,7 @@ flowchart BT
 | `engine/` | `r-type_engine` | ECS générique (entités, composants, registre, systèmes), ordonnanceur, horloge, types mathématiques, interface de socket UDP (`engine::net`). Ne connaît rien de R-Type. | Bibliothèque standard uniquement |
 | `common/` | `r-type_common` | Composants R-Type partagés par les deux programmes (`Transform`, `Velocity`, `Health`...), messages du protocole et leur sérialisation, backend de socket. | `r-type_engine` ; Asio en dépendance **privée** (Conan, ou le paquet Alpine `asio-dev` dans le `Dockerfile`) |
 | `server/` | `r-type_server` (et `r-type_server_network`, `r-type_server_spawn`) | Boucle de jeu du serveur, systèmes de jeu (mouvement, collisions, apparition, niveaux, armes, IA), sessions des clients, thread réseau. | `r-type_common` ; nlohmann-json pour les fichiers de niveaux et d'armes (Conan, ou le paquet Alpine `nlohmann-json` dans le `Dockerfile`) |
-| `client/` | `r-type_client` (et `r-type_client_network`, `r-type_client_audio`) | Rendu, entrées, audio, interpolation, connexion au serveur. | `r-type_common`, bibliothèque graphique (Conan) |
+| `client/` | `r-type_client` (et `r-type_client_network`, `r-type_client_audio`, `r-type_client_controls`, `r-type_client_settings`, `r-type_client_menu`) | Rendu, entrées, audio, menus, réglages du joueur, interpolation, connexion au serveur. | `r-type_common`, bibliothèque graphique (Conan) |
 
 Règles :
 
@@ -102,7 +103,7 @@ directement un en-tête du système ou d'une bibliothèque.
 | Sous-système | Où va le code de plateforme ou de bibliothèque | Interface utilisée par le reste du code |
 |--------------|------------------------------------------------|-----------------------------------------|
 | Réseau (sockets, adresses, codes d'erreur du système) | `common/src/network/<backend>/` | `engine::net::IUdpSocket`, `rtype::network::openUdpSocket()` |
-| Graphisme, fenêtres, clavier | `client/src/graphics/<backend>/` | `client::gfx::IGraphics` |
+| Graphisme, fenêtres, clavier, manette | `client/src/graphics/<backend>/` | `client::gfx::IGraphics` |
 | Effets sonores et musique | `client/src/audio/<backend>/` | `client::audio::IAudio`, `client::audio::createAudio()` |
 
 Du nouveau code de plateforme (par exemple des sockets Windows) va dans un nouveau dossier de backend derrière une interface, jamais
@@ -350,6 +351,92 @@ redemandé pendant qu'il joue repart du début au lieu d'ajouter une seconde cop
 
 Un benchmark (`--bench`) met les deux volumes à 0. Les effets sonores et les musiques sont générés par `tools/generate_sounds.py` ; pour en
 ajouter un, voir [Ajouter un son](HOWTO.md#5-ajouter-un-son).
+
+### 4.5 Menus
+
+Les menus sont en mode immédiat : une page est une fonction que `Game` appelle à chaque image. Elle recrée ses widgets, les dessine
+et renvoie ce qu'a fait le joueur. Aucun widget ne survit à l'image : une page montre donc ses données telles qu'elles sont, et rien
+n'est à tenir synchronisé.
+
+```mermaid
+flowchart LR
+    Game -->|"MenuContext, données"| Page["Page<br/>(mainMenuPage, settingsPage...)"]
+    Page --> Panel[MenuPanel]
+    Panel --> Backends["IGraphics, SoundBoard"]
+    Page -->|"Ce qu'a fait le joueur"| Game
+    Game --> Effects["Changer de page, appliquer les volumes,<br/>enregistrer settings.cfg et controls.cfg"]
+```
+
+`Game` donne à chaque page un `MenuContext` et les données qu'elle peut modifier. La page dessine à travers un `MenuPanel` et
+renvoie son résultat, que `Game` applique. Les pages ne changent jamais de page et n'écrivent aucun fichier : c'est ce qui permet aux
+tests de les faire tourner sur un faux client graphique.
+
+| Élément | Fichier | Rôle |
+|---------|---------|------|
+| `MenuInput`, `MenuKeys` | `Menu.hpp` | Les touches de menu appuyées à cette image, et non tenues. Elles sont fixes : flèches, Espace ou Entrée, Échap, et sur une manette la croix directionnelle ou le stick gauche, A, B et Back |
+| `MenuPanel`, `MenuCursor` | `Menu.hpp` | Les widgets : `button`, `backButton`, `checkbox`, `slider`, `selector`, `tabs` |
+| `drawMenuTitle`, `menuRow`, `menuGridCell` | `Menu.hpp` | La mise en page commune aux pages |
+| Pages, `MenuState` | `MenuPages.hpp` | Menu principal, Settings, Accessibility, How to play, Credits |
+| `lobbyScreen`, `waitingRoomScreen` | `RoomPages.hpp` | La liste des salles et la salle d'attente, qui ont besoin des types du protocole |
+| `gameOverScreen` | `systems/HudSystem.hpp` | Les scores finaux |
+| `Settings`, `Toggles`, `WindowSizes`, `FrameLimits` | `Settings.hpp` | Les options du joueur et `settings.cfg` |
+| `Controls`, `PlayerControls` | `Controls.hpp` | Les touches de chaque action, au clavier et à la manette, et `controls.cfg` |
+| `KeyCapture` | `KeyCapture.hpp` | Attend la touche d'un appareil à associer à une action |
+
+**La sélection au clavier.** `MenuPanel` numérote ses widgets dans l'ordre où la page les crée, et le widget dont le numéro vaut
+`MenuCursor::selected` est sélectionné. Le curseur est la seule chose qui dure d'une image à l'autre. Quand le panneau est détruit, il
+retient le nombre de widgets : le curseur boucle et reste valide si une page raccourcit. Chaque page a son propre curseur dans
+`MenuState`, et les écrans d'une salle ont les leurs dans `LobbyState`.
+
+**Revenir en arrière.** `MenuKeys` a deux touches pour revenir en arrière : `back` (Échap, ou B sur une manette) et `leave` (Échap, ou
+Back). `Game::handleBackKey()` les lit avant que les pages ne se dessinent. Dans une salle, seule `leave` la quitte, pour que B, appuyé
+pour revenir dans un menu, ne mette jamais fin à une partie. Hors d'une salle, `back` annule une capture de touche ou revient au menu
+principal. Rien ne se passe dans le menu principal ni pendant qu'on rejoint une salle, et un benchmark se termine. Le chat, tant qu'il
+est ouvert, se ferme avec `back` et prend toutes les autres touches.
+
+**Réglages.** `Settings` ne contient que des données, et la table `Toggles` décrit les options activées ou désactivées. Le fichier et la
+page Accessibility lisent tous deux cette table. Une page signale un changement par `SettingsResult`, puis `Game` l'applique et écrit le
+fichier aussitôt : fermer le jeu ne fait rien perdre. Une ligne incorrecte de `settings.cfg` ou de `controls.cfg` est signalée sur
+stderr et garde la valeur précédente. Pour ajouter une page ou un réglage, voir [Ajouter une page de menu](HOWTO.md#6-ajouter-une-page-de-menu)
+et [Ajouter un réglage](HOWTO.md#7-ajouter-un-réglage).
+
+**Vidéo.** L'onglet Video de Settings ne modifie que `Settings`. `Game` les transforme en `gfx::VideoConfig` et appelle
+`IGraphics::applyVideo()`, au démarrage et après chaque changement. V-Sync remplace la limite d'images, car SFML déconseille d'utiliser
+les deux. Chaque backend fait ce qu'il peut : Raylib utilise une fenêtre sans bordure, SFML recrée sa fenêtre en plein écran, et
+ncurses ne suit que V-Sync, puisqu'un terminal n'a pas de fenêtre à changer. Un benchmark ignore ces choix, pour que ses résultats
+restent comparables.
+
+**Changer une touche.** Chaque action montre deux touches dans l'onglet Keyboard de Settings, et deux boutons dans son onglet Gamepad :
+
+1. Choisir une touche appelle `KeyCapture::start()`.
+2. `KeyCapture::update()` attend que toutes les touches soient relâchées, sinon la touche qui a lancé la capture serait prise pour la
+   nouvelle. Elle renvoie ensuite la prochaine touche appuyée, parmi celles de l'appareil de l'onglet seulement. Échap n'est jamais
+   capturé, car il annule, et B non plus dans l'onglet Gamepad, pour la même raison.
+3. `bindKey()` modifie les touches que le jeu lit déjà : la touche fonctionne aussitôt. Si l'action a déjà cette touche à son autre
+   place, les deux places s'échangent, pour qu'une action n'ait jamais deux fois la même touche.
+4. `otherControlWith()` cherche une autre action qui utilise cette touche. Deux actions peuvent partager une touche, et la page le
+   signale.
+5. `Game` enregistre `controls.cfg`, ou le fichier donné avec `--controls`.
+
+Pendant une capture, les widgets reçoivent des `MenuKeys` vides : la touche capturée ne peut donc pas aussi valider un bouton ou
+déplacer la sélection. `KeyCapture` lit les touches avec `isKeyDown()`, donc les backends graphiques n'ont besoin d'aucun code à eux
+pour cela.
+
+**Manette.** Les boutons d'une manette et les directions de sa croix directionnelle et de son stick gauche sont des valeurs de
+`gfx::Key`, de `PadUp` à `PadSelect` (`gfx::isPadKey()`) : tout ce qui lit les touches par `isKeyDown()` lit donc aussi la manette. Un
+stick compte comme une direction au-delà de la moitié de sa course : le serveur reçoit toujours des bits d'action, et une diagonale en
+est deux, que le serveur ramène à la vitesse d'une ligne droite. `PlayerControls` contient deux `Controls` : `keyboard`, et `gamepad`,
+dont les boutons par défaut viennent de `defaultPadControls()` et sont enregistrés comme lignes `pad_` de `controls.cfg`. `isHeld()`
+lit les deux, et le fichier refuse un bouton de manette sur une ligne du clavier ou l'inverse, pour que chaque appareil garde ses
+touches.
+
+Chaque backend lit la manette à sa façon :
+
+| Backend | Comment | Limites |
+|---------|---------|---------|
+| Raylib | La base de manettes de GLFW nomme les boutons selon leur place, pour Xbox, PlayStation et la plupart des manettes, sur tous les systèmes. Le client lit les quatre places que suit Raylib : Linux montre aussi le pavé tactile d'une DualSense comme un appareil, qui peut prendre la première place mais ne donne jamais de bouton | Raylib 6.0 ou plus récent : la 5.5 pouvait s'arrêter au branchement d'une DualSense sous Linux, car elle copiait le long nom de son pavé tactile dans 64 caractères |
+| SFML | SFML ne donne que des numéros de boutons, qui dépendent du système et du pilote. `findGamepad()` prend le premier appareil qui a assez de boutons et un stick, et `padLayout()` choisit un `PadLayout` selon le système (Linux, ou Windows et macOS) et le fabricant (Sony, ou autre) | Vérifié sous Linux avec une DualSense, sauf L1, Create et Options. Avec `RTYPE_PAD_DEBUG`, le client journalise la manette trouvée et chaque bouton et axe qui change, pour vérifier ou corriger une correspondance |
+| ncurses | Non lue : un terminal ne voit jamais de manette | |
 
 ## 5. Le temps et la boucle de jeu
 
@@ -772,6 +859,8 @@ L'opérateur tape des commandes dans le terminal du serveur : `status`, `rooms`,
   aléatoires.
 - La file de messages (capacité, ordre de vidage) et la logique de fiabilité (acquittements, renvois, doublons, réordonnancement) se testent sans socket, en
   leur donnant directement des paquets.
+- Les menus tournent sur un faux client graphique qui simule les touches et la souris, et les fichiers des réglages et des touches se
+  testent en relisant ce qui a été écrit.
 
 ## 9. Valeurs ajustables
 
