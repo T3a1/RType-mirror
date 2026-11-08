@@ -1,4 +1,4 @@
-# Protocole réseau de R-Type (version 14)
+# Protocole réseau de R-Type (version 15)
 
 Ce document spécifie le protocole binaire parlé entre le serveur de R-Type et ses clients. Il est
 assez précis pour écrire un client ou un serveur compatible sans lire notre code. L'implémentation
@@ -71,7 +71,7 @@ Chaque paquet commence par cet en-tête de 12 octets :
 | Position | Taille | Champ | Valeur |
 |---------:|-------:|-------|--------|
 | 0 | 2 | magic | `52 54` (ASCII `"RT"`). Reconnaît nos paquets : un datagramme quelconque ne commence presque jamais par ces octets |
-| 2 | 1 | version | `14`. Voir [Gestion des versions](#12-gestion-des-versions) |
+| 2 | 1 | version | `15`. Voir [Gestion des versions](#12-gestion-des-versions) |
 | 3 | 1 | type | La charge utile qui suit. Voir [Types de paquets](#5-types-de-paquets) |
 | 4 | 1 | flags | Bit 0 : **Reliable**. Les bits 1 à 7 sont réservés et **MUST** valoir 0 |
 | 5 | 1 | reserved | **MUST** valoir 0 |
@@ -92,7 +92,7 @@ Un récepteur vérifie un datagramme dans cet ordre et le rejette au premier éc
 | 1 | 1200 octets au maximum | `TooLarge` |
 | 2 | 12 octets au minimum | `TooShort` |
 | 3 | Le magic est `"RT"` | `BadMagic` |
-| 4 | La version est 14 | `BadVersion` |
+| 4 | La version est 15 | `BadVersion` |
 | 5 | Le type figure à la section 5 | `UnknownType` |
 | 6 | Aucun bit de drapeau réservé, et Reliable mis exactement sur les types fiables | `BadFlags` |
 | 7 | L'octet réservé vaut 0 | `BadReserved` |
@@ -276,6 +276,19 @@ invalides.
 | 12 | BossHive (le second boss de fin de niveau ; sa vie complète est la vie de son premier enregistrement) |
 | 13 | Obstacle (un mur du niveau : il arrête tous les tirs et détruit les vaisseaux qui le touchent) |
 | 14 | DestroyableTile (un bloc du niveau qui arrête les tirs et casse après quelques coups ; sa vie complète est `TileMaxHealth`, 150) |
+| 15 | EnemySpinner |
+| 16 | EnemyBubble |
+| 17 | EnemySpore |
+| 18 | EnemyJelly |
+| 19 | EnemyCrab |
+| 20 | BossWalker (le boss qui marche au sol ; sa vie complète est la vie de son premier enregistrement) |
+| 21 | BossTwin (la moitié au sol du boss jumeau, qui porte sa vie) |
+| 22 | BossTwinTop (la moitié au plafond du boss jumeau ; vie 0, les coups qu'elle reçoit touchent le BossTwin) |
+| 23 | BossBehemoth (le corps du dernier boss, qui porte sa vie) |
+| 24 | BehemothHead (la tête du behemoth, son point faible ; vie 0) |
+| 25 | BehemothTail (un segment de la queue du behemoth ; vie 0) |
+| 26 | BehemothTailTip (le bout de la queue du behemoth ; vie 0) |
+| 27 | BossFireball (un tir du walker) |
 
 ### `ChatSend` (0x11), `ChatMessage` (0x23)
 
@@ -520,7 +533,7 @@ Tous les octets sont en hexadécimal.
 Séquence non fiable 298, acquittant le paquet fiable 17, entrée numéro 1000 :
 
 ```text
-52 54 0E 10 00 00 2A 01 11 00 05 00   header: "RT", v14, Input, no flags,
+52 54 0F 10 00 00 2A 01 11 00 05 00   header: "RT", v15, Input, no flags,
                                               sequence 298, ack 17, size 5
 E8 03 00 00                           sequence 1000
 11                                    actions 0x11 = Up | Fire
@@ -531,7 +544,7 @@ E8 03 00 00                           sequence 1000
 Séquence fiable 2, numéro 2, vaisseau 58, tick 1200 :
 
 ```text
-52 54 0E 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
+52 54 0F 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
                                               sequence 2, ack 0, size 9
 02                                    slot 2
 3A 00 00 00                           shipId 58
@@ -541,7 +554,7 @@ B0 04 00 00                           tick 1200
 ### `Snapshot` avec un joueur et une entité
 
 ```text
-52 54 0E 20 00 00 2B 01 11 00 29 00   header: Snapshot, size 41
+52 54 0F 20 00 00 2B 01 11 00 29 00   header: Snapshot, size 41
 2C 01 00 00                           tick 300
 00 01                                 part 0 of 1
 01 00                                 1 entity
@@ -581,3 +594,4 @@ B0 04 00 00                           tick 1200
 | 12 | Les bonus donnent des boosts temporaires d'un type tiré au hasard : bits Boost (5 et 6) des drapeaux d'un `PowerUp`, ajout de `boosts` au bloc des joueurs (16 octets par joueur) ([WEAPONS.md](WEAPONS.md)). |
 | 13 | Chat textuel d'une salle : nouveaux `ChatSend` et `ChatMessage`. |
 | 14 | Action `Charge` d'`Input` (bit 5) : la touche de tir ne fait que charger, les tirs normaux viennent de `Fire`. |
+| 15 | Nouveaux types d'entité 15 à 27 : les ennemis et les boss des niveaux 3 à 5 ([LEVELS.md](LEVELS.md)). |

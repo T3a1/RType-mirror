@@ -65,8 +65,16 @@ Chaque clé de `enemies` est le nom d'un type, utilisé par les fichiers de nive
 | `large` | Lent et résistant, tire, laisse un bonus. | 500 de vie, vitesse 70, 500 points |
 | `warship` | **Boss** : entre, s'arrête, monte et descend, trois phases d'attaque. | 2500 de vie, 5000 points |
 | `hive` | **Boss** : plus grand et plus lent, posé au sol et immobile une fois en place, mêmes trois phases. | 2500 de vie, 5000 points |
+| `spinner` | Niveau 3. Un anneau qui tourne, suit une onde sinusoïdale et tire. | 120 de vie, vitesse 160, un tir toutes les 1,6 s, 180 points |
+| `bubble` | Niveau 3. Rapide, suit une large onde sinusoïdale. | 60 de vie, vitesse 300, 80 points |
+| `spore` | Niveau 4. Lent et résistant, suit un zigzag, laisse un bonus. | 260 de vie, vitesse 110, 250 points |
+| `jelly` | Niveau 4. Attend, puis fonce sur le joueur le plus proche. | 90 de vie, vitesse 220, 120 points |
+| `crab` | Niveau 4. Vole tout droit et tire, laisse un bonus. | 180 de vie, vitesse 130, un tir toutes les 1,2 s, 260 points |
+| `walker` | **Boss** du niveau 3 : marche au sol ([LEVELS.md](LEVELS.md)). | 3000 de vie, 7000 points |
+| `twin` | **Boss** du niveau 4 : une moitié au sol et une au plafond. | 3600 de vie, 8000 points |
+| `behemoth` | **Boss** du niveau 5 : corps, tête (3 fois les dégâts) et queue. | 4500 de vie, 10000 points |
 
-Un type basé sur `warship` ou `hive` est un boss : il ne peut être que le `boss` d'un
+Un type basé sur `warship`, `hive`, `walker`, `twin` ou `behemoth` est un boss : il ne peut être que le `boss` d'un
 niveau, et les autres types n'arrivent qu'en vagues.
 
 ### Clés
@@ -97,6 +105,14 @@ Tailles des apparences, à reporter dans `width` et `height` :
 | `large` | 126 × 96 |
 | `warship` | 380 × 230 |
 | `hive` | 400 × 230 |
+| `spinner` | 76 × 70 |
+| `bubble` | 76 × 66 |
+| `spore` | 90 × 84 |
+| `jelly` | 76 × 76 |
+| `crab` | 90 × 80 |
+| `walker` | 180 × 200 |
+| `twin` | 200 × 210 (chaque moitié) |
+| `behemoth` | 220 × 400 (le corps, sans sa tête ni sa queue) |
 
 ## Ajouter un ennemi sans écrire de C++
 

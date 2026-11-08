@@ -31,6 +31,14 @@ void animationSystem(engine::Registry &registry, engine::Duration dt);
  **/
 void shipTiltSystem(engine::Registry &registry, engine::Duration dt);
 
+/**
+ * @brief Gives every entity with a Facing the clip of the direction it last
+ * moved in, keeping the time in the clip. Runs before animationSystem().
+ * @param registry The client's registry.
+ * @param dt The time elapsed since the last frame (unused).
+ **/
+void facingSystem(engine::Registry &registry, engine::Duration dt);
+
 } // namespace client
 
 #endif // CLIENT_SYSTEMS_ANIMATIONSYSTEM_HPP

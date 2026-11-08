@@ -86,4 +86,18 @@ void shipTiltSystem(engine::Registry &registry, engine::Duration dt)
         });
 }
 
+void facingSystem(engine::Registry &registry, engine::Duration /*dt*/)
+{
+    registry.each<Facing, Animation, rtype::Transform>(
+        [](engine::Entity, Facing &facing, Animation &animation,
+           const rtype::Transform &transform) {
+            const float move = transform.position.x - facing.previousX;
+            if (std::abs(move) <= MoveThreshold) {
+                return;
+            }
+            facing.previousX = transform.position.x;
+            animation.clip = move < 0.0F ? facing.left : facing.right;
+        });
+}
+
 } // namespace client

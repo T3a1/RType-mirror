@@ -18,7 +18,9 @@ namespace {
 /** @brief The names of the built-in kinds, in the order of rtype::EnemyType.
  */
 constexpr std::array<std::string_view, ENEMY_DEFS.size()> BuiltinNames{
-    "basic", "wave", "shooter", "small", "medium", "large", "warship", "hive",
+    "basic",   "wave",   "shooter", "small",    "medium", "large",
+    "warship", "hive",   "spinner", "bubble",   "spore",  "jelly",
+    "crab",    "walker", "twin",    "behemoth",
 };
 
 /**

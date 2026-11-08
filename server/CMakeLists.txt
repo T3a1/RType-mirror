@@ -64,6 +64,7 @@ add_library(r-type_server_spawn STATIC
     src/Level.cpp
     src/Despawn.cpp
     src/Weapons.cpp
+    src/systems/BossPartSystem.cpp
     src/systems/BossSystem.cpp
     src/systems/CollisionSystem.cpp
     src/systems/DamageSystem.cpp

@@ -49,7 +49,7 @@ struct EnemyDef {
  * rtype::EnemyType, used when server/enemies.json does not change them.
  *The colliders match the sizes the clients draw (client/src/SpriteSheets.cpp).
  **/
-inline constexpr std::array<EnemyDef, 8> ENEMY_DEFS = {
+inline constexpr std::array<EnemyDef, 16> ENEMY_DEFS = {
     {
         {
             .speed = 200.0F,
@@ -123,6 +123,85 @@ inline constexpr std::array<EnemyDef, 8> ENEMY_DEFS = {
             .size = {.x = 400.0F, .y = 230.0F},
             .entityType = rtype::EntityType::BossHive,
             .score = 5000,
+            .dropsPowerUp = true,
+        },
+        {
+            .speed = 160.0F,
+            .health = 120,
+            .size = {.x = 76.0F, .y = 70.0F},
+            .entityType = rtype::EntityType::EnemySpinner,
+            .score = 180,
+            .fireInterval = engine::Duration{1.6F},
+            .pattern = {.kind = rtype::MovementKind::Sine,
+                        .amplitude = 160.0F,
+                        .frequency = 0.4F},
+        },
+        {
+            .speed = 300.0F,
+            .health = 60,
+            .size = {.x = 76.0F, .y = 66.0F},
+            .entityType = rtype::EntityType::EnemyBubble,
+            .score = 80,
+            .pattern = {.kind = rtype::MovementKind::Sine,
+                        .amplitude = 220.0F,
+                        .frequency = 0.8F},
+        },
+        {
+            .speed = 110.0F,
+            .health = 260,
+            .size = {.x = 90.0F, .y = 84.0F},
+            .entityType = rtype::EntityType::EnemySpore,
+            .score = 250,
+            .pattern = {.kind = rtype::MovementKind::Zigzag,
+                        .amplitude = 200.0F,
+                        .frequency = 0.3F},
+            .dropsPowerUp = true,
+        },
+        {
+            .speed = 220.0F,
+            .health = 90,
+            .size = {.x = 76.0F, .y = 76.0F},
+            .entityType = rtype::EntityType::EnemyJelly,
+            .score = 120,
+            .pattern = {.kind = rtype::MovementKind::Dive,
+                        .diveDelay = engine::Duration{1.5F},
+                        .diveSpeed = 700.0F},
+        },
+        {
+            .speed = 130.0F,
+            .health = 180,
+            .size = {.x = 90.0F, .y = 80.0F},
+            .entityType = rtype::EntityType::EnemyCrab,
+            .score = 260,
+            .fireInterval = engine::Duration{1.2F},
+            .dropsPowerUp = true,
+        },
+        {
+            // The walker: on the ground, walks left and right.
+            .speed = 140.0F,
+            .health = 3000,
+            .size = {.x = 180.0F, .y = 200.0F},
+            .entityType = rtype::EntityType::BossWalker,
+            .score = 7000,
+            .dropsPowerUp = true,
+        },
+        {
+            // The twin: this half on the ground, the other on the ceiling
+            // (a BossPart), neither moving once in place.
+            .speed = 120.0F,
+            .health = 3600,
+            .size = {.x = 200.0F, .y = 210.0F},
+            .entityType = rtype::EntityType::BossTwin,
+            .score = 8000,
+            .dropsPowerUp = true,
+        },
+        {
+            // The behemoth's body; its head and tail are BossParts.
+            .speed = 90.0F,
+            .health = 4500,
+            .size = {.x = 220.0F, .y = 400.0F},
+            .entityType = rtype::EntityType::BossBehemoth,
+            .score = 10000,
             .dropsPowerUp = true,
         },
     },
