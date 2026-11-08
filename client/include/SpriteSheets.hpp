@@ -37,6 +37,12 @@ namespace client {
  * @param PowerUp The power-ups.
  * @param Hive The second end-level boss.
  * @param Obstacles The walls and destroyable tiles of the levels.
+ * @param Rings The spinner and bubble enemies.
+ * @param Walker The walker boss and its fireballs.
+ * @param Twin The two halves of the twin boss.
+ * @param Spores The spore and jelly enemies.
+ * @param Crabs The crab enemy.
+ * @param Behemoth The behemoth boss: body, head and tail.
  * @param Count The number of sheets, not a sheet.
  **/
 enum class Sheet : std::uint8_t {
@@ -54,6 +60,12 @@ enum class Sheet : std::uint8_t {
     PowerUp,
     Hive,
     Obstacles,
+    Rings,
+    Walker,
+    Twin,
+    Spores,
+    Crabs,
+    Behemoth,
     Count,
 };
 

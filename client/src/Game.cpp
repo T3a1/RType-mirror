@@ -243,6 +243,7 @@ void Game::registerSystems()
                         updateChatLines(m_sync.chat, dt.count());
                     });
     m_scheduler.add(Stage::Simulation, "shipTilt", shipTiltSystem);
+    m_scheduler.add(Stage::Simulation, "facing", facingSystem);
     m_scheduler.add(Stage::Simulation, "animation", animationSystem);
     m_scheduler.add(Stage::Simulation, "tileCrack", tileCrackSystem);
 

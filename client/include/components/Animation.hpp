@@ -59,6 +59,19 @@ struct ShipTilt {
     float lean = 0.0F;
 };
 
+/**
+ * @struct Facing
+ * @brief Plays the clip of the direction an entity walks in: left or right.
+ * @param left The clip played while it moves left, never null.
+ * @param right The clip played while it moves right, never null.
+ * @param previousX Its horizontal position at its last move.
+ **/
+struct Facing {
+    const AnimationClip *left = nullptr;
+    const AnimationClip *right = nullptr;
+    float previousX = 0.0F;
+};
+
 } // namespace client
 
 #endif // CLIENT_COMPONENTS_ANIMATION_HPP
