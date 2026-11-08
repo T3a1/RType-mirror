@@ -1,0 +1,33 @@
+{
+    "name": "Iron march",
+    "boss": "walker",
+    "waves": [
+        { "time": 2, "enemy": "spinner", "count": 3, "spacing": 0.6, "y": 300 },
+        { "time": 5, "enemy": "bubble", "count": 6, "spacing": 0.25, "y": 700 },
+        { "time": 9, "enemy": "basic", "count": 5, "spacing": 0.3, "stepY": 110, "fromCenter": true, "y": 540 },
+        { "time": 12, "enemy": "spinner", "count": 4, "stepY": 220, "y": 540 },
+        { "time": 16, "enemy": "shooter", "count": 3, "stepY": 300, "y": 540 },
+        { "time": 18, "enemy": "bubble", "count": 8, "spacing": 0.2, "y": 300 },
+        {
+            "time": 23, "enemy": "small", "count": 8, "spacing": 0.15, "y": 540,
+            "pattern": { "kind": "zigzag", "amplitude": 320, "frequency": 0.6 }
+        },
+        { "time": 26, "enemy": "medium", "count": 2, "stepY": 400, "y": 540 },
+        { "time": 29, "enemy": "spinner", "count": 5, "spacing": 0.4, "stepY": 90, "y": 540 },
+        { "time": 33, "enemy": "bubble", "count": 6, "spacing": 0.25, "y": 250 },
+        { "time": 34, "enemy": "bubble", "count": 6, "spacing": 0.25, "y": 830 },
+        {
+            "time": 38, "enemy": "wave", "count": 6, "spacing": 0.3, "stepY": 60,
+            "pattern": { "kind": "dive", "diveDelay": 1.5, "diveSpeed": 750 }
+        },
+        { "time": 42, "enemy": "large", "y": 400 },
+        { "time": 44, "enemy": "spinner", "count": 6, "stepY": 150, "y": 540 },
+        { "time": 48, "enemy": "shooter", "count": 4, "spacing": 0.5, "stepY": 200, "y": 540 }
+    ],
+    "obstacles": [
+        { "time": 7, "kind": "tile", "y": 32, "rows": 3, "columns": 3 },
+        { "time": 20, "kind": "wall", "y": 856, "rows": 4, "columns": 4 },
+        { "time": 31, "kind": "tile", "y": 412, "rows": 4, "columns": 2 },
+        { "time": 40, "kind": "wall", "y": 32, "rows": 4, "columns": 5 }
+    ]
+}
