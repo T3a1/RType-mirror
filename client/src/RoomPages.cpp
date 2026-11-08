@@ -137,6 +137,12 @@ std::string bossName(rtype::protocol::BossChoice boss)
         return "Warship";
     case rtype::protocol::BossChoice::Hive:
         return "Hive";
+    case rtype::protocol::BossChoice::Walker:
+        return "Walker";
+    case rtype::protocol::BossChoice::Twin:
+        return "Twin";
+    case rtype::protocol::BossChoice::Behemoth:
+        return "Behemoth";
     }
     return "?";
 }
@@ -168,7 +174,8 @@ void nextSetting(LobbyState &state, std::size_t setting)
         break;
     default:
         settings.boss = static_cast<rtype::protocol::BossChoice>(
-            (static_cast<int>(settings.boss) + 1) % 3);
+            (static_cast<int>(settings.boss) + 1) %
+            rtype::protocol::BossChoiceCount);
         break;
     }
 }

@@ -93,8 +93,8 @@ Le joueur qui lance la partie choisit, dans la salle d'attente :
   souvent), Normale, ou Difficile (150 % de leur vie, tirs 30 % plus fréquents, vagues
   aléatoires du mode sans fin 30 % plus rapprochées).
 - **Le départ** : un niveau, ce qui saute les niveaux précédents, ou le mode sans fin.
-- **Le boss** : celui de chaque fichier de niveau, ou le warship ou le hive pour tous
-  les niveaux qui ont un boss.
+- **Le boss** : celui de chaque fichier de niveau, ou l'un des cinq boss (warship,
+  hive, walker, twin, behemoth) pour tous les niveaux qui ont un boss.
 
 ### Vague
 

@@ -242,7 +242,7 @@ bool decode(ByteReader &in, StartGame &message)
         return false;
     }
     message.level = in.u8();
-    return readEnum(in, BossChoice::Hive, message.boss);
+    return readEnum(in, BossChoice::Behemoth, message.boss);
 }
 
 bool decode(ByteReader &in, RoomJoined &message)

@@ -145,7 +145,7 @@ Sizes of the looks, to copy into `width` and `height`:
    wave of the level is cleared, and the level ends when it is destroyed. Its
    health bar fills from the health it arrives with.
 
-The boss chosen in the game settings (warship or hive) still replaces the boss
+The boss chosen in the game settings (warship, hive, walker, twin or behemoth) still replaces the boss
 of every level.
 
 ## What still needs code

@@ -147,7 +147,7 @@ TEST(Packet, MatchesTheDocumentedLayout)
     }));
     const std::vector<std::uint8_t> expected{
         0x52, 0x54,             // magic "RT"
-        0x0F,                   // version
+        0x10,                   // version
         0x10,                   // type Input
         0x00,                   // flags
         0x00,                   // reserved
@@ -193,6 +193,7 @@ TEST(Packet, RoundTripsEveryPayload)
         StartGame{.difficulty = Difficulty::Hard,
                   .level = EndlessLevel,
                   .boss = BossChoice::Hive},
+        StartGame{.level = 5, .boss = BossChoice::Behemoth},
         RoomJoined{.room = 7},
         RoomJoined{.room = 7, .levels = 3},
         RoomRefused{},
@@ -273,7 +274,7 @@ TEST(Packet, MarksReliableTypesReliable)
     const auto bytes =
         encodeBytes(packetOf(Welcome{.slot = 2, .shipId = 58, .tick = 1200}));
     const std::vector<std::uint8_t> expected{
-        0x52, 0x54, 0x0F, 0x21, // magic, version, type Welcome
+        0x52, 0x54, 0x10, 0x21, // magic, version, type Welcome
         0x01, 0x00,             // flags Reliable, reserved
         0x2A, 0x01, 0x11, 0x00, // sequence 298, ack 17
         0x09, 0x00,             // payload size 9
