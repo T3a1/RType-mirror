@@ -414,4 +414,4 @@ Un volume sert de modèle pour une valeur qui n'est pas activée ou désactivée
 4. Appliquez-le dans `Game`, comme le fait `applyVolumes()` pour les volumes.
 
 Testez le fichier dans `tests/src/settings_test.cpp`, et décrivez l'option dans le
-[README](README.md) si les joueurs l'utilisent.
+[README](https://github.com/T3a1/RType-mirror#readme) si les joueurs l'utilisent.
