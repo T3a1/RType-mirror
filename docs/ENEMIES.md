@@ -63,7 +63,7 @@ Each key of `enemies` is the name of a kind, used by the level files:
 | `medium` | Follows a zigzag and shoots, drops a power-up. | 150 health, speed 150, 200 points |
 | `large` | Slow and tough, shoots, drops a power-up. | 500 health, speed 70, 500 points |
 | `warship` | **Boss**: comes in, stops, moves up and down, three attack phases. | 2500 health, 5000 points |
-| `hive` | **Boss**: larger and slower, same three phases. | 2500 health, 5000 points |
+| `hive` | **Boss**: larger and slower, sits on the ground and never moves once in place, same three phases. | 2500 health, 5000 points |
 
 A kind based on `warship` or `hive` is a boss: it can only be the `boss` of a
 level, and the other kinds only come in waves.
