@@ -24,7 +24,7 @@ namespace rtype::protocol {
 inline constexpr std::array<std::uint8_t, 2> Magic{'R', 'T'};
 /** @brief The version of the protocol: peers of different versions do not
  * talk to each other. */
-inline constexpr std::uint8_t ProtocolVersion = 15;
+inline constexpr std::uint8_t ProtocolVersion = 16;
 /** @brief The size of the header, in bytes. */
 inline constexpr std::size_t HeaderSize = 12;
 /** @brief The largest payload that fits in a packet, in bytes. */

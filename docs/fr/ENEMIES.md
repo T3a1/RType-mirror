@@ -145,7 +145,7 @@ Tailles des apparences, à reporter dans `width` et `height` :
    vagues du niveau éliminées, et le niveau se termine quand il est détruit. Sa barre de
    vie se remplit à partir de la vie avec laquelle il arrive.
 
-Le boss choisi dans les réglages de partie (warship ou hive) remplace toujours le boss de
+Le boss choisi dans les réglages de partie (warship, hive, walker, twin ou behemoth) remplace toujours le boss de
 chaque niveau.
 
 ## Ce qui demande encore du code

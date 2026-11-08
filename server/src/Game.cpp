@@ -236,6 +236,15 @@ void Game::applySettings(const rtype::protocol::StartGame &settings)
             case rtype::protocol::BossChoice::Hive:
                 progress.boss = rtype::EnemyType::Hive;
                 break;
+            case rtype::protocol::BossChoice::Walker:
+                progress.boss = rtype::EnemyType::Walker;
+                break;
+            case rtype::protocol::BossChoice::Twin:
+                progress.boss = rtype::EnemyType::Twin;
+                break;
+            case rtype::protocol::BossChoice::Behemoth:
+                progress.boss = rtype::EnemyType::Behemoth;
+                break;
             }
         });
     for (const engine::Entity world : endless) {

@@ -1,4 +1,4 @@
-# Protocole réseau de R-Type (version 15)
+# Protocole réseau de R-Type (version 16)
 
 Ce document spécifie le protocole binaire parlé entre le serveur de R-Type et ses clients. Il est
 assez précis pour écrire un client ou un serveur compatible sans lire notre code. L'implémentation
@@ -71,7 +71,7 @@ Chaque paquet commence par cet en-tête de 12 octets :
 | Position | Taille | Champ | Valeur |
 |---------:|-------:|-------|--------|
 | 0 | 2 | magic | `52 54` (ASCII `"RT"`). Reconnaît nos paquets : un datagramme quelconque ne commence presque jamais par ces octets |
-| 2 | 1 | version | `15`. Voir [Gestion des versions](#12-gestion-des-versions) |
+| 2 | 1 | version | `16`. Voir [Gestion des versions](#12-gestion-des-versions) |
 | 3 | 1 | type | La charge utile qui suit. Voir [Types de paquets](#5-types-de-paquets) |
 | 4 | 1 | flags | Bit 0 : **Reliable**. Les bits 1 à 7 sont réservés et **MUST** valoir 0 |
 | 5 | 1 | reserved | **MUST** valoir 0 |
@@ -92,7 +92,7 @@ Un récepteur vérifie un datagramme dans cet ordre et le rejette au premier éc
 | 1 | 1200 octets au maximum | `TooLarge` |
 | 2 | 12 octets au minimum | `TooShort` |
 | 3 | Le magic est `"RT"` | `BadMagic` |
-| 4 | La version est 15 | `BadVersion` |
+| 4 | La version est 16 | `BadVersion` |
 | 5 | Le type figure à la section 5 | `UnknownType` |
 | 6 | Aucun bit de drapeau réservé, et Reliable mis exactement sur les types fiables | `BadFlags` |
 | 7 | L'octet réservé vaut 0 | `BadReserved` |
@@ -169,7 +169,7 @@ si la partie a déjà commencé : les réglages du premier `StartGame` s'appliqu
 |---------:|-------:|-------|---------|
 | 0 | 1 | difficulty | `0` Easy, `1` Normal, `2` Hard : la vie et la cadence de tir des ennemis, et la fréquence des vagues aléatoires du mode sans fin |
 | 1 | 1 | level | Le niveau de départ, à partir de `1` (un niveau au-delà du dernier lance le dernier), ou `0` pour le mode sans fin seul |
-| 2 | 1 | boss | `0` le boss de chaque fichier de niveau, `1` Warship, `2` Hive : remplace le boss de chaque niveau qui en a un |
+| 2 | 1 | boss | `0` le boss de chaque fichier de niveau, `1` Warship, `2` Hive, `3` Walker, `4` Twin, `5` Behemoth : remplace le boss de chaque niveau qui en a un |
 
 ### `LeaveRoom` (0x32), `RoomRefused` (0x35), `RoomClosed` (0x36)
 
@@ -533,7 +533,7 @@ Tous les octets sont en hexadécimal.
 Séquence non fiable 298, acquittant le paquet fiable 17, entrée numéro 1000 :
 
 ```text
-52 54 0F 10 00 00 2A 01 11 00 05 00   header: "RT", v15, Input, no flags,
+52 54 10 10 00 00 2A 01 11 00 05 00   header: "RT", v16, Input, no flags,
                                               sequence 298, ack 17, size 5
 E8 03 00 00                           sequence 1000
 11                                    actions 0x11 = Up | Fire
@@ -544,7 +544,7 @@ E8 03 00 00                           sequence 1000
 Séquence fiable 2, numéro 2, vaisseau 58, tick 1200 :
 
 ```text
-52 54 0F 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
+52 54 10 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
                                               sequence 2, ack 0, size 9
 02                                    slot 2
 3A 00 00 00                           shipId 58
@@ -554,7 +554,7 @@ B0 04 00 00                           tick 1200
 ### `Snapshot` avec un joueur et une entité
 
 ```text
-52 54 0F 20 00 00 2B 01 11 00 29 00   header: Snapshot, size 41
+52 54 10 20 00 00 2B 01 11 00 29 00   header: Snapshot, size 41
 2C 01 00 00                           tick 300
 00 01                                 part 0 of 1
 01 00                                 1 entity
@@ -595,3 +595,4 @@ B0 04 00 00                           tick 1200
 | 13 | Chat textuel d'une salle : nouveaux `ChatSend` et `ChatMessage`. |
 | 14 | Action `Charge` d'`Input` (bit 5) : la touche de tir ne fait que charger, les tirs normaux viennent de `Fire`. |
 | 15 | Nouveaux types d'entité 15 à 27 : les ennemis et les boss des niveaux 3 à 5 ([LEVELS.md](LEVELS.md)). |
+| 16 | Choix de boss `3` Walker, `4` Twin et `5` Behemoth dans `StartGame`. |

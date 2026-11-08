@@ -1,4 +1,4 @@
-# R-Type network protocol (version 15)
+# R-Type network protocol (version 16)
 
 This document specifies the binary protocol spoken between the R-Type server
 and its clients. It is precise enough to write a compatible client or server
@@ -73,7 +73,7 @@ Every packet starts with this 12-byte header:
 | Offset | Size | Field | Value |
 |-------:|-----:|-------|-------|
 | 0 | 2 | magic | `52 54` (ASCII `"RT"`). Recognizes our packets: a random datagram almost never starts with these bytes |
-| 2 | 1 | version | `15`. See [Versioning](#12-versioning) |
+| 2 | 1 | version | `16`. See [Versioning](#12-versioning) |
 | 3 | 1 | type | Which payload follows. See [Packet types](#5-packet-types) |
 | 4 | 1 | flags | Bit 0: **Reliable**. Bits 1 to 7 are reserved and **MUST** be 0 |
 | 5 | 1 | reserved | **MUST** be 0 |
@@ -94,7 +94,7 @@ The names are the `DecodeError` values of the reference implementation.
 | 1 | At most 1200 bytes | `TooLarge` |
 | 2 | At least 12 bytes | `TooShort` |
 | 3 | Magic is `"RT"` | `BadMagic` |
-| 4 | Version is 15 | `BadVersion` |
+| 4 | Version is 16 | `BadVersion` |
 | 5 | Type is listed in section 5 | `UnknownType` |
 | 6 | No reserved flag bit, and Reliable set exactly on reliable types | `BadFlags` |
 | 7 | Reserved byte is 0 | `BadReserved` |
@@ -175,7 +175,7 @@ settings of the first `StartGame` are used.
 |-------:|-----:|-------|--------|
 | 0 | 1 | difficulty | `0` Easy, `1` Normal, `2` Hard: enemy health and fire rate, and how often the random waves of the endless mode come |
 | 1 | 1 | level | The level to start at, from `1` (a level past the last one starts the last one), or `0` for the endless mode only |
-| 2 | 1 | boss | `0` the boss of each level file, `1` Warship, `2` Hive: replaces the boss of every level that has one |
+| 2 | 1 | boss | `0` the boss of each level file, `1` Warship, `2` Hive, `3` Walker, `4` Twin, `5` Behemoth: replaces the boss of every level that has one |
 
 ### `LeaveRoom` (0x32), `RoomRefused` (0x35), `RoomClosed` (0x36)
 
@@ -578,7 +578,7 @@ All bytes in hexadecimal.
 Unreliable sequence 298, acknowledging reliable packet 17, input number 1000:
 
 ```text
-52 54 0F 10 00 00 2A 01 11 00 05 00   header: "RT", v15, Input, no flags,
+52 54 10 10 00 00 2A 01 11 00 05 00   header: "RT", v16, Input, no flags,
                                               sequence 298, ack 17, size 5
 E8 03 00 00                           sequence 1000
 11                                    actions 0x11 = Up | Fire
@@ -589,7 +589,7 @@ E8 03 00 00                           sequence 1000
 Reliable sequence 2, slot 2, ship 58, tick 1200:
 
 ```text
-52 54 0F 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
+52 54 10 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
                                               sequence 2, ack 0, size 9
 02                                    slot 2
 3A 00 00 00                           shipId 58
@@ -599,7 +599,7 @@ B0 04 00 00                           tick 1200
 ### `Snapshot` with one player and one entity
 
 ```text
-52 54 0F 20 00 00 2B 01 11 00 29 00   header: Snapshot, size 41
+52 54 10 20 00 00 2B 01 11 00 29 00   header: Snapshot, size 41
 2C 01 00 00                           tick 300
 00 01                                 part 0 of 1
 01 00                                 1 entity
@@ -641,3 +641,4 @@ B0 04 00 00                           tick 1200
 | 13 | Text chat of a room: new `ChatSend` and `ChatMessage`. |
 | 14 | `Input` action `Charge` (bit 5): the fire key only charges, normal shots come from `Fire`. |
 | 15 | New entity types 15 to 27: the enemies and bosses of levels 3 to 5 ([LEVELS.md](LEVELS.md)). |
+| 16 | `StartGame` boss choices `3` Walker, `4` Twin and `5` Behemoth. |

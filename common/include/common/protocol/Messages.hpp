@@ -422,8 +422,21 @@ enum class Difficulty : std::uint8_t { Easy, Normal, Hard };
  * @param LevelBoss The boss written in each level file.
  * @param Warship The warship, in every level that has a boss.
  * @param Hive The hive, in every level that has a boss.
+ * @param Walker The walker, in every level that has a boss.
+ * @param Twin The twin, in every level that has a boss.
+ * @param Behemoth The behemoth, in every level that has a boss.
  **/
-enum class BossChoice : std::uint8_t { LevelBoss, Warship, Hive };
+enum class BossChoice : std::uint8_t {
+    LevelBoss,
+    Warship,
+    Hive,
+    Walker,
+    Twin,
+    Behemoth
+};
+
+/** @brief The number of BossChoice values. */
+inline constexpr int BossChoiceCount = 6;
 
 /** @brief StartGame::level to skip the levels and play the endless mode. */
 inline constexpr std::uint8_t EndlessLevel = 0;

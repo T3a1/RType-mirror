@@ -92,8 +92,8 @@ The player who starts the game chooses, in the waiting room:
   less often), Normal, or Hard (150 % of their health, shots 30 % more often,
   random waves of the endless mode 30 % closer together).
 - **Start at**: a level, which skips the levels before it, or the endless mode.
-- **Boss**: the boss of each level file, or the warship or the hive for every
-  level that has a boss.
+- **Boss**: the boss of each level file, or one of the five bosses (warship,
+  hive, walker, twin, behemoth) for every level that has a boss.
 
 ### Wave
 
