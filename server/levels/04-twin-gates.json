@@ -1,0 +1,29 @@
+{
+    "name": "Twin gates",
+    "boss": "twin",
+    "waves": [
+        { "time": 2, "enemy": "spore", "count": 3, "spacing": 0.8, "y": 540 },
+        { "time": 5, "enemy": "jelly", "count": 4, "spacing": 0.4, "stepY": 150, "y": 540 },
+        { "time": 9, "enemy": "crab", "count": 2, "stepY": 500, "y": 540 },
+        { "time": 12, "enemy": "small", "count": 10, "spacing": 0.15, "y": 300 },
+        { "time": 14, "enemy": "spore", "count": 4, "stepY": 240, "y": 540 },
+        { "time": 18, "enemy": "jelly", "count": 6, "spacing": 0.3, "stepY": 100, "fromCenter": true, "y": 540 },
+        { "time": 22, "enemy": "crab", "count": 3, "spacing": 0.6, "stepY": 300, "y": 540 },
+        { "time": 25, "enemy": "spinner", "count": 4, "spacing": 0.5, "y": 800 },
+        { "time": 28, "enemy": "medium", "count": 3, "stepY": 300, "y": 540 },
+        { "time": 31, "enemy": "jelly", "count": 8, "spacing": 0.25, "y": 250 },
+        { "time": 33, "enemy": "spore", "count": 5, "spacing": 0.5, "stepY": 160, "y": 540 },
+        { "time": 37, "enemy": "crab", "count": 4, "stepY": 240, "y": 540 },
+        { "time": 40, "enemy": "bubble", "count": 8, "spacing": 0.2, "y": 800 },
+        { "time": 44, "enemy": "large", "count": 2, "stepY": 500, "y": 540 },
+        { "time": 47, "enemy": "jelly", "count": 6, "spacing": 0.3, "stepY": 120, "y": 540 },
+        { "time": 50, "enemy": "crab", "count": 3, "spacing": 0.4, "stepY": 260, "y": 540 }
+    ],
+    "obstacles": [
+        { "time": 6, "kind": "wall", "y": 32, "rows": 2, "columns": 8 },
+        { "time": 6, "kind": "wall", "y": 984, "rows": 2, "columns": 8 },
+        { "time": 20, "kind": "tile", "y": 284, "rows": 3, "columns": 2 },
+        { "time": 20, "kind": "tile", "y": 668, "rows": 3, "columns": 2 },
+        { "time": 35, "kind": "wall", "y": 476, "rows": 3, "columns": 3 }
+    ]
+}

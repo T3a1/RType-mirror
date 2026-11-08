@@ -25,6 +25,7 @@
 #include "common/components/Velocity.hpp"
 #include "common/components/Weapon.hpp"
 #include "components/Boss.hpp"
+#include "components/BossPart.hpp"
 #include "components/DestroyOffScreen.hpp"
 #include "components/KeepInPlayfield.hpp"
 #include "components/Obstacle.hpp"
@@ -64,7 +65,8 @@ class EntityFactory {
      *
      * The enemy moves left at its speed, collides with players and player
      * projectiles, is destroyed off-screen, and gets an unarmed Weapon if
-     * its type shoots.
+     * its type shoots. A boss made of several parts (twin, behemoth) also
+     * gets them, as BossPart entities.
      * @param registry The registry to create the enemy in.
      * @param request The type and position of the enemy.
      * @return The created entity.
@@ -123,6 +125,12 @@ class EntityFactory {
                           const SpawnObstacle &request);
 
   private:
+    void createBossParts(engine::Registry &registry, engine::Entity boss,
+                         rtype::EnemyType type, const EnemyDef &stat);
+    engine::Entity createBossPart(engine::Registry &registry,
+                                  const BossPart &part, rtype::EntityType look,
+                                  engine::Vec2f size);
+
     std::uint32_t m_nextNetworkId = 1;
     DifficultyStats m_difficulty;
 };

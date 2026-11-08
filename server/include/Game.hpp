@@ -21,6 +21,7 @@
 #include "engine/Registry.hpp"
 #include "engine/Scheduler.hpp"
 #include "network/NetworkMessages.hpp"
+#include "systems/BossPartSystem.hpp"
 #include "systems/BossSystem.hpp"
 #include "systems/BoundarySystem.hpp"
 #include "systems/ChatSystem.hpp"

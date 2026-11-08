@@ -10,6 +10,7 @@
 
 #include "EnemyCatalog.hpp"
 #include "common/components/Enemy.hpp"
+#include "common/components/EntityType.hpp"
 #include "common/components/MovementPattern.hpp"
 #include "common/components/PowerUpKind.hpp"
 #include "engine/Entity.hpp"
@@ -59,6 +60,7 @@ struct SpawnPlayer {
  * @param damage The damage it deals.
  * @param charged Whether it is a player's charged shot: larger, and it goes
  * through the enemies it hits.
+ * @param look What the clients draw for an enemy shot.
  **/
 struct SpawnProjectile {
     engine::Entity owner{};
@@ -67,6 +69,7 @@ struct SpawnProjectile {
     bool fromPlayer = true;
     int damage = 50;
     bool charged = false;
+    rtype::EntityType look = rtype::EntityType::EnemyMissile;
 };
 
 /**

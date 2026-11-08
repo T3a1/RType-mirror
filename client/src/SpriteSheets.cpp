@@ -44,6 +44,12 @@ constexpr std::array<const char *, SheetCount> SheetPaths{
     "assets/sprites/r-typesheet3.gif",  // PowerUp
     "assets/sprites/r-typesheet32.gif", // Hive
     "assets/sprites/obstacles.png",     // Obstacles
+    "assets/sprites/r-typesheet13.gif", // Rings
+    "assets/sprites/r-typesheet14.gif", // Walker
+    "assets/sprites/r-typesheet17.gif", // Twin
+    "assets/sprites/r-typesheet18.gif", // Spores
+    "assets/sprites/r-typesheet20.gif", // Crabs
+    "assets/sprites/r-typesheet30.gif", // Behemoth
 };
 
 /**
@@ -164,6 +170,70 @@ constexpr auto ObstacleFrames = row(evenly<3>(0.0F, 16.0F), 0.0F, 16.0F, 16.0F);
  * rtype::TileSize. */
 constexpr float ObstacleScale = 4.0F;
 
+/**
+ * @brief The frames of two rows of eight, read one row after the other.
+ * @param first The top edge of the first row.
+ * @param second The top edge of the second row.
+ * @param height The height of a frame.
+ * @return The sixteen frames, 32 pixels wide, 33 pixels apart.
+ **/
+constexpr std::array<Rect, 16> twoRows(float first, float second, float height)
+{
+    const auto top = row(evenly<8>(1.0F, 33.0F), first, 32.0F, height);
+    const auto bottom = row(evenly<8>(1.0F, 33.0F), second, 32.0F, height);
+    std::array<Rect, 16> frames{};
+    for (std::size_t i = 0; i < top.size(); ++i) {
+        frames.at(i) = top.at(i);
+        frames.at(i + top.size()) = bottom.at(i);
+    }
+    return frames;
+}
+
+/** @brief The frames of a spinner: a ring turning around its eye. */
+constexpr auto EnemySpinnerFrames = twoRows(3.0F, 37.0F, 29.0F);
+/** @brief The frames of a bubble. */
+constexpr auto EnemyBubbleFrames = twoRows(70.0F, 103.0F, 28.0F);
+/** @brief The frames of a spore. */
+constexpr auto EnemySporeFrames =
+    row(evenly<4>(1.0F, 33.0F), 2.0F, 32.0F, 29.0F);
+/** @brief The frames of a jellyfish. */
+constexpr auto EnemyJellyFrames =
+    row(evenly<4>(1.0F, 33.0F), 67.0F, 32.0F, 32.0F);
+/** @brief The frames of a crab. */
+constexpr auto EnemyCrabFrames =
+    row<3>({18.0F, 51.0F, 83.0F}, 3.0F, 32.0F, 28.0F);
+/** @brief The frames of the walker walking left: the first half of the top
+ * row of its sheet. */
+constexpr auto WalkerLeftFrames =
+    row<5>({1.0F, 50.0F, 101.0F, 151.0F, 200.0F}, 2.0F, 48.0F, 47.0F);
+/** @brief The frames of the walker walking right: the second half. */
+constexpr auto WalkerRightFrames =
+    row<5>({249.0F, 298.0F, 348.0F, 399.0F, 448.0F}, 2.0F, 48.0F, 47.0F);
+/** @brief The frames of the walker's fireball, growing and shrinking. */
+constexpr auto BossFireballFrames =
+    row(evenly<8>(181.0F, 17.0F), 140.0F, 16.0F, 12.0F);
+/** @brief The left edges of the frames of the twin. */
+constexpr std::array<float, 8> TwinXs{1.0F,   66.0F,  131.0F, 196.0F,
+                                      262.0F, 327.0F, 392.0F, 457.0F};
+/** @brief The frames of the twin's ground half: its heads point up. */
+constexpr auto BossTwinFrames = row(TwinXs, 1.0F, 64.0F, 64.0F);
+/** @brief The frames of the twin's ceiling half: its heads point down. */
+constexpr auto BossTwinTopFrames = row(TwinXs, 67.0F, 64.0F, 64.0F);
+/** @brief The frames of the behemoth's body: the first row of its sheet,
+ * where only its upper mouth moves (the next rows open its belly, where its
+ * head is drawn instead). */
+constexpr auto BossBehemothFrames =
+    row<4>({27.0F, 189.0F, 351.0F, 513.0F}, 2.0F, 155.0F, 204.0F);
+/** @brief The frames of the behemoth's head, coming out of its belly. */
+constexpr auto BehemothHeadFrames =
+    row<3>({570.0F, 603.0F, 636.0F}, 1964.0F, 32.0F, 32.0F);
+/** @brief The only frame of a segment of the behemoth's tail. */
+constexpr std::array<Rect, 1> BehemothTailFrames{
+    {{.x = 544.0F, .y = 2000.0F, .width = 16.0F, .height = 15.0F}}};
+/** @brief The frames of the tip of the behemoth's tail, a turning claw. */
+constexpr auto BehemothTailTipFrames =
+    row<4>({576.0F, 599.0F, 623.0F, 646.0F}, 2063.0F, 21.0F, 20.0F);
+
 /** @brief The frames of an explosion. */
 constexpr auto ExplosionFrames =
     row(evenly<6>(128.0F, 33.0F), 0.0F, 33.0F, 34.0F);
@@ -193,6 +263,45 @@ constexpr AnimationClip EnemyLargeClip{.frames = EnemyLargeFrames,
 constexpr AnimationClip BossClip{.frames = BossFrames, .frameTime = 0.3F};
 /** @brief The animation of the second boss. */
 constexpr AnimationClip HiveClip{.frames = HiveFrames, .frameTime = 0.15F};
+/** @brief The animation of a spinner. */
+constexpr AnimationClip EnemySpinnerClip{.frames = EnemySpinnerFrames,
+                                         .frameTime = 0.06F};
+/** @brief The animation of a bubble. */
+constexpr AnimationClip EnemyBubbleClip{.frames = EnemyBubbleFrames,
+                                        .frameTime = 0.06F};
+/** @brief The animation of a spore. */
+constexpr AnimationClip EnemySporeClip{.frames = EnemySporeFrames,
+                                       .frameTime = 0.15F};
+/** @brief The animation of a jellyfish. */
+constexpr AnimationClip EnemyJellyClip{.frames = EnemyJellyFrames,
+                                       .frameTime = 0.12F};
+/** @brief The animation of a crab. */
+constexpr AnimationClip EnemyCrabClip{.frames = EnemyCrabFrames,
+                                      .frameTime = 0.15F};
+/** @brief The animation of the walker walking left. */
+constexpr AnimationClip WalkerLeftClip{.frames = WalkerLeftFrames,
+                                       .frameTime = 0.14F};
+/** @brief The animation of the walker walking right. */
+constexpr AnimationClip WalkerRightClip{.frames = WalkerRightFrames,
+                                        .frameTime = 0.14F};
+/** @brief The animation of the walker's fireball. */
+constexpr AnimationClip BossFireballClip{.frames = BossFireballFrames,
+                                         .frameTime = 0.05F};
+/** @brief The animation of the twin's ground half. */
+constexpr AnimationClip BossTwinClip{.frames = BossTwinFrames,
+                                     .frameTime = 0.15F};
+/** @brief The animation of the twin's ceiling half. */
+constexpr AnimationClip BossTwinTopClip{.frames = BossTwinTopFrames,
+                                        .frameTime = 0.15F};
+/** @brief The animation of the behemoth's body. */
+constexpr AnimationClip BossBehemothClip{.frames = BossBehemothFrames,
+                                         .frameTime = 0.2F};
+/** @brief The animation of the behemoth's head. */
+constexpr AnimationClip BehemothHeadClip{.frames = BehemothHeadFrames,
+                                         .frameTime = 0.15F};
+/** @brief The animation of the tip of the behemoth's tail. */
+constexpr AnimationClip BehemothTailTipClip{.frames = BehemothTailTipFrames,
+                                            .frameTime = 0.1F};
 /** @brief The animation of a charged shot. */
 constexpr AnimationClip ChargedShotClip{.frames = ChargedShotFrames,
                                         .frameTime = 0.08F};
@@ -340,6 +449,86 @@ Look lookOf(rtype::EntityType type, std::uint8_t slot)
                 .scale = 2.5F,
                 .fallback = rgb(150, 40, 60),
                 .clip = &BossClip};
+    case rtype::EntityType::EnemySpinner:
+        return {.sheet = Sheet::Rings,
+                .frames = EnemySpinnerFrames,
+                .scale = 2.5F,
+                .fallback = rgb(200, 170, 90),
+                .clip = &EnemySpinnerClip};
+    case rtype::EntityType::EnemyBubble:
+        return {.sheet = Sheet::Rings,
+                .frames = EnemyBubbleFrames,
+                .scale = 2.5F,
+                .fallback = rgb(60, 140, 240),
+                .clip = &EnemyBubbleClip};
+    case rtype::EntityType::EnemySpore:
+        return {.sheet = Sheet::Spores,
+                .frames = EnemySporeFrames,
+                .scale = 3.0F,
+                .fallback = rgb(60, 150, 70),
+                .clip = &EnemySporeClip};
+    case rtype::EntityType::EnemyJelly:
+        return {.sheet = Sheet::Spores,
+                .frames = EnemyJellyFrames,
+                .scale = 2.5F,
+                .fallback = rgb(220, 140, 140),
+                .clip = &EnemyJellyClip};
+    case rtype::EntityType::EnemyCrab:
+        return {.sheet = Sheet::Crabs,
+                .frames = EnemyCrabFrames,
+                .scale = 3.0F,
+                .fallback = rgb(230, 80, 30),
+                .clip = &EnemyCrabClip};
+    case rtype::EntityType::BossWalker:
+        return {.sheet = Sheet::Walker,
+                .frames = WalkerLeftFrames,
+                .scale = 4.5F,
+                .fallback = rgb(240, 120, 30),
+                .clip = &WalkerLeftClip};
+    case rtype::EntityType::BossFireball:
+        return {.sheet = Sheet::Walker,
+                .frames = BossFireballFrames,
+                .scale = 3.0F,
+                .fallback = rgb(255, 200, 60),
+                .clip = &BossFireballClip};
+    case rtype::EntityType::BossTwin:
+        return {.sheet = Sheet::Twin,
+                .frames = BossTwinFrames,
+                .scale = 3.5F,
+                .fallback = rgb(70, 160, 110),
+                .clip = &BossTwinClip};
+    case rtype::EntityType::BossTwinTop:
+        return {.sheet = Sheet::Twin,
+                .frames = BossTwinTopFrames,
+                .scale = 3.5F,
+                .fallback = rgb(70, 160, 110),
+                .clip = &BossTwinTopClip};
+    case rtype::EntityType::BossBehemoth:
+        return {.sheet = Sheet::Behemoth,
+                .frames = BossBehemothFrames,
+                .scale = 2.5F,
+                .fallback = rgb(220, 130, 90),
+                .clip = &BossBehemothClip};
+    case rtype::EntityType::BehemothHead:
+        return {.sheet = Sheet::Behemoth,
+                .frames = BehemothHeadFrames,
+                .scale = 2.5F,
+                .fallback = rgb(170, 190, 90),
+                .layer = 2,
+                .clip = &BehemothHeadClip};
+    case rtype::EntityType::BehemothTail:
+        return {.sheet = Sheet::Behemoth,
+                .frames = BehemothTailFrames,
+                .scale = 3.0F,
+                .fallback = rgb(220, 130, 90),
+                .layer = 0};
+    case rtype::EntityType::BehemothTailTip:
+        return {.sheet = Sheet::Behemoth,
+                .frames = BehemothTailTipFrames,
+                .scale = 3.0F,
+                .fallback = rgb(230, 220, 180),
+                .layer = 0,
+                .clip = &BehemothTailTipClip};
     }
     return {.frames = ShipFrames.back()};
 }
@@ -407,18 +596,28 @@ void attachSprite(engine::Registry &registry, engine::Entity entity,
     if (look.clip != nullptr) {
         registry.emplace<Animation>(entity, Animation{.clip = look.clip});
     }
+    if (type == rtype::EntityType::BossWalker) {
+        registry.emplace<Facing>(
+            entity,
+            Facing{.left = &WalkerLeftClip,
+                   .right = &WalkerRightClip,
+                   .previousX =
+                       registry.get<rtype::Transform>(entity).position.x});
+    }
 }
 
 void chargeGlowSystem(engine::Registry &registry, const SpriteSheets &sheets,
-                      gfx::IGraphics &graphics)
+                      gfx::IGraphics &graphics, bool animated)
 {
     const gfx::Texture texture = sheets.texture(Sheet::Shots);
     const auto seconds =
         std::chrono::duration<float>(
             std::chrono::steady_clock::now().time_since_epoch())
             .count();
-    const auto index = static_cast<std::size_t>(seconds / ChargeGlowFrameTime) %
-                       ChargeGlowFrames.size();
+    const auto index =
+        animated ? static_cast<std::size_t>(seconds / ChargeGlowFrameTime) %
+                       ChargeGlowFrames.size()
+                 : ChargeGlowFrames.size() / 2;
     const Rect &frame = ChargeGlowFrames.at(index);
     const engine::Vec2f size{.x = frame.width * ChargeGlowScale,
                              .y = frame.height * ChargeGlowScale};
@@ -455,7 +654,7 @@ void tileCrackSystem(engine::Registry &registry, engine::Duration /*dt*/)
 }
 
 bool spawnExplosion(engine::Registry &registry, engine::Entity entity,
-                    const SpriteSheets &sheets)
+                    const SpriteSheets &sheets, bool drawn)
 {
     const auto *type = registry.tryGet<rtype::EntityType>(entity);
     const auto *transform = registry.tryGet<rtype::Transform>(entity);
@@ -470,6 +669,9 @@ bool spawnExplosion(engine::Registry &registry, engine::Entity entity,
     if (position.x < 0.0F || position.x > rtype::PlayfieldWidth ||
         position.y < 0.0F || position.y > rtype::PlayfieldHeight) {
         return false;
+    }
+    if (!drawn) {
+        return true;
     }
     const Look look{.sheet = Sheet::Explosion,
                     .frames = ExplosionFrames,

@@ -64,8 +64,16 @@ Each key of `enemies` is the name of a kind, used by the level files:
 | `large` | Slow and tough, shoots, drops a power-up. | 500 health, speed 70, 500 points |
 | `warship` | **Boss**: comes in, stops, moves up and down, three attack phases. | 2500 health, 5000 points |
 | `hive` | **Boss**: larger and slower, sits on the ground and never moves once in place, same three phases. | 2500 health, 5000 points |
+| `spinner` | Level 3. A spinning ring that follows a sine wave and shoots. | 120 health, speed 160, a shot every 1.6 s, 180 points |
+| `bubble` | Level 3. Fast, follows a wide sine wave. | 60 health, speed 300, 80 points |
+| `spore` | Level 4. Slow and tough, follows a zigzag, drops a power-up. | 260 health, speed 110, 250 points |
+| `jelly` | Level 4. Waits, then rushes at the nearest player. | 90 health, speed 220, 120 points |
+| `crab` | Level 4. Flies straight and shoots, drops a power-up. | 180 health, speed 130, a shot every 1.2 s, 260 points |
+| `walker` | **Boss** of level 3: walks on the ground ([LEVELS.md](LEVELS.md#bosses)). | 3000 health, 7000 points |
+| `twin` | **Boss** of level 4: a half on the ground and one on the ceiling. | 3600 health, 8000 points |
+| `behemoth` | **Boss** of level 5: body, head (3 times the damage) and tail. | 4500 health, 10000 points |
 
-A kind based on `warship` or `hive` is a boss: it can only be the `boss` of a
+A kind based on `warship`, `hive`, `walker`, `twin` or `behemoth` is a boss: it can only be the `boss` of a
 level, and the other kinds only come in waves.
 
 ### Keys
@@ -97,6 +105,14 @@ Sizes of the looks, to copy into `width` and `height`:
 | `large` | 126 × 96 |
 | `warship` | 380 × 230 |
 | `hive` | 400 × 230 |
+| `spinner` | 76 × 70 |
+| `bubble` | 76 × 66 |
+| `spore` | 90 × 84 |
+| `jelly` | 76 × 76 |
+| `crab` | 90 × 80 |
+| `walker` | 180 × 200 |
+| `twin` | 200 × 210 (each half) |
+| `behemoth` | 220 × 400 (the body, without its head and tail) |
 
 ## Add an enemy without writing C++
 

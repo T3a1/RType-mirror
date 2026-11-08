@@ -16,6 +16,7 @@ set(SOURCE_FILES
     src/level_test.cpp
     src/obstacle_test.cpp
     src/enemy_catalog_test.cpp
+    src/boss_parts_test.cpp
     src/boss_test.cpp
     src/weapons_test.cpp
     src/player_control_system_test.cpp

@@ -71,7 +71,7 @@ crashes the server.
 |-----|:--------:|-------|
 | `name` | yes | The name of the level, 1 to 64 characters. |
 | `waves` | yes | The list of its waves, 1 to 1000. Their order in the file does not matter: they are sorted by `time`. |
-| `boss` | no | The boss that comes after the waves: `warship`, `hive`, or a boss of [`enemies.json`](ENEMIES.md) such as `dreadnought`. Without it, the level ends with its last wave. The game settings can replace it with another boss. |
+| `boss` | no | The boss that comes after the waves: `warship`, `hive`, `walker`, `twin`, `behemoth`, or a boss of [`enemies.json`](ENEMIES.md) such as `dreadnought`. Without it, the level ends with its last wave. The game settings can replace it with another boss. |
 | `obstacles` | no | The list of its groups of walls and tiles, at most 1000, see [Obstacles](#obstacles). Their order does not matter: they are sorted by `time`. |
 
 ### Bosses
@@ -80,6 +80,9 @@ crashes the server.
 |------|--------------|
 | `warship` | Comes in from the right, stops, then moves up and down. 2500 health points, shown in a bar at the bottom of the screen. Three phases as it is damaged: aimed shots, then a spread of 3 shots plus an aimed one, then a faster fan of 5 shots while moving faster. |
 | `hive` | A larger, slower organic boss that sits on the ground and never moves once in place, with the same three attack phases. |
+| `walker` | Level 3. A robot on the ground that walks left and right, faster in each phase, and fires fireballs: an aimed fan and an arc over itself in turns, then a stream sweeping the sky, then two streams and wide arcs. 3000 health points. |
+| `twin` | Level 4. Two halves that never move once in place, one on the ground and one hanging from the ceiling; both take damage for the same health bar. Aimed fans from each half in turns, then two streams crossing like scissors, then shifting walls of shots. 3600 health points. |
+| `behemoth` | Level 5. A huge creature that moves up and down slowly, with a head coming out of its belly and a waving tail. A shot on its **head takes 3 times its damage**, a shot on its armored tail half. Bursts of aimed shots from its head, then rings from the tip of its tail, then a spiral. 4500 health points. |
 
 ## Game settings
 

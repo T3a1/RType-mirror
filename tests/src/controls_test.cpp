@@ -124,7 +124,7 @@ TEST(Controls, WritesTheNamesOfTheFile)
     client::writeControls(out, PlayerControls{});
 
     EXPECT_NE(out.str().find("fire = Space RightCtrl\n"), std::string::npos);
-    EXPECT_NE(out.str().find("autofire = F RightShift\n"), std::string::npos);
+    EXPECT_NE(out.str().find("chat = T\n"), std::string::npos);
     EXPECT_NE(out.str().find("pad_fire = PadA PadRT\n"), std::string::npos);
     EXPECT_EQ(out.str().find("pad_chat"), std::string::npos);
 }
@@ -137,7 +137,8 @@ TEST(Controls, SkipsAControlWithoutKeysWhenWriting)
 
     client::writeControls(out, controls);
 
-    EXPECT_EQ(out.str().find("fire ="), out.str().find("autofire =") + 4);
+    EXPECT_EQ(out.str().find("\nfire ="), std::string::npos);
+    EXPECT_NE(out.str().find("\nchat ="), std::string::npos);
 }
 
 TEST(Controls, SavesAFileItCanRead)
@@ -260,8 +261,8 @@ TEST(Controls, FindsAnotherControlWithAKey)
 {
     const Controls controls = client::defaultControls();
 
-    EXPECT_EQ(client::otherControlWith(controls, Control::Fire, Key::F),
-              Control::AutoFire);
+    EXPECT_EQ(client::otherControlWith(controls, Control::Fire, Key::T),
+              Control::Chat);
     EXPECT_FALSE(client::otherControlWith(controls, Control::Fire, Key::Space)
                      .has_value());
     EXPECT_FALSE(
@@ -276,7 +277,6 @@ TEST(Controls, GamepadMovesWithTheDPadOrTheStick)
               (std::vector<Key>{Key::PadUp, Key::PadStickUp}));
     EXPECT_EQ(keysOf(pad, Control::Fire),
               (std::vector<Key>{Key::PadA, Key::PadRT}));
-    EXPECT_EQ(keysOf(pad, Control::AutoFire), (std::vector<Key>{Key::PadRB}));
     EXPECT_TRUE(keysOf(pad, Control::Chat).empty());
 }
 

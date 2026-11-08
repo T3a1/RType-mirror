@@ -23,12 +23,19 @@ namespace server {
  * moves up and down and attacks.
  * @param direction Its vertical direction once arrived: 1 down, -1 up.
  * @param cooldown The time left before its next attack.
+ * @param walk Its horizontal direction once arrived, for a boss that walks:
+ * 1 right, -1 left.
+ * @param spin The angle of its rotating attacks, in radians.
+ * @param volleys The number of attacks it made, to alternate them.
  **/
 struct Boss {
     std::uint8_t phase = 1;
     bool arrived = false;
     float direction = 1.0F;
     engine::Duration cooldown{1.0F};
+    float walk = -1.0F;
+    float spin = 0.0F;
+    std::uint32_t volleys = 0;
 };
 
 } // namespace server

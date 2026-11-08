@@ -182,9 +182,8 @@ par image affichée, soit 4 ko/s à 240 images par seconde, et environ 11 ko/s a
 paquets. Il en envoie maintenant une quand les actions changent, et sinon toutes les 30 ms. Les
 touches atteignent toujours le serveur dès qu'elles changent, et le débit montant est divisé par 8.
 L'interpolation et la prédiction n'ajoutent aucun paquet : le trafic reçu ne dépend pas du mode.
-Le banc de test n'utilise pas le tir automatique, actif par défaut dans le jeu : il change la touche
-de tir 20 fois par seconde, ce qui devrait donner environ 40 entrées par seconde au lieu de 33
-(valeur calculée, non mesurée).
+Le tir automatique, toujours actif dans le jeu, ne fait que maintenir l'action de tir : il
+n'ajoute aucune entrée.
 
 **Duplication et perte : aucun effet au-delà des données perdues.** Avec 2 % de duplication, les
 chiffres sont les mêmes que sans. Avec 50 % de duplication, lors d'un essai séparé de 20 s, le

@@ -7,6 +7,9 @@
 
 #include "systems/DamageSystem.hpp"
 
+#include <algorithm>
+#include <cmath>
+
 namespace server {
 
 namespace {
@@ -49,6 +52,15 @@ void hit(engine::Registry &registry, engine::Entity attacker,
          engine::Entity target, std::vector<engine::Entity> &alreadyHit,
          Outbound &outbound, bool invinciblePlayers)
 {
+    // A part of a boss passes the damage on to its boss.
+    float factor = 1.0F;
+    if (const auto *part = registry.tryGet<BossPart>(target)) {
+        if (!registry.alive(part->owner)) {
+            return;
+        }
+        factor = part->damageFactor;
+        target = part->owner;
+    }
     const auto *damage = registry.tryGet<rtype::Damage>(attacker);
     auto *health = registry.tryGet<rtype::Health>(target);
     auto *piercing = registry.tryGet<Piercing>(attacker);
@@ -75,7 +87,9 @@ void hit(engine::Registry &registry, engine::Entity attacker,
         piercing->hit.push_back(target);
     }
     if (!invinciblePlayers || !registry.has<rtype::Player>(target)) {
-        health->current -= damage->points;
+        health->current -=
+            std::max(1, static_cast<int>(std::lround(
+                            static_cast<float>(damage->points) * factor)));
     }
     BB_DEBUG("Entity " << target.id << " hit - Health " << health->current);
     if (health->current <= 0) {
@@ -88,6 +102,18 @@ void hit(engine::Registry &registry, engine::Entity attacker,
     }
 }
 
+/**
+ * @brief Tells whether an entity is a weak point of a boss.
+ * @param registry The registry holding it.
+ * @param entity The entity.
+ * @return `true` for a BossPart that takes more than the damage of a shot.
+ **/
+bool weakPoint(engine::Registry &registry, engine::Entity entity)
+{
+    const auto *part = registry.tryGet<BossPart>(entity);
+    return part != nullptr && part->damageFactor > 1.0F;
+}
+
 } // namespace
 
 void damageSystem(engine::Registry &registry,
@@ -95,8 +121,15 @@ void damageSystem(engine::Registry &registry,
                   bool invinciblePlayers)
 {
     std::vector<engine::Entity> alreadyHit;
+    // A shot that touches a weak point and the body around it hits the weak
+    // point.
+    std::vector<Collision> ordered = collisions;
+    std::ranges::stable_partition(ordered, [&](const Collision &collision) {
+        return weakPoint(registry, collision.a) ||
+               weakPoint(registry, collision.b);
+    });
 
-    for (const Collision &collision : collisions) {
+    for (const Collision &collision : ordered) {
         hit(registry, collision.a, collision.b, alreadyHit, outbound,
             invinciblePlayers);
         hit(registry, collision.b, collision.a, alreadyHit, outbound,

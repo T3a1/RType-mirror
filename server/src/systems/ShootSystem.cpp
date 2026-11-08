@@ -70,20 +70,18 @@ void shootSystem(engine::Registry &registry, SpawnCommands &commands,
                 return;
             }
             weapon.fired = false;
-            if (!weapon.triggered) {
-                // Released: a charged shot if the key was held long enough.
-                if (weapon.charge >= stats.chargeTime) {
-                    commands.emplace_back(
-                        chargedShot(entity, transform, stats));
-                }
-                weapon.charge = engine::Duration{0.0F};
+            if (weapon.charging) {
+                // Charging: no normal shot until it is released.
+                weapon.charge += dt;
                 return;
             }
-            // Pressed: one shot, made by the shot style's system. Held: only
-            // charges, no more shots.
-            const bool pressed = weapon.charge.count() == 0.0F;
-            weapon.charge += dt;
-            weapon.fired = pressed && weapon.cooldown.count() <= 0.0F;
+            if (weapon.charge >= stats.chargeTime) {
+                commands.emplace_back(chargedShot(entity, transform, stats));
+            }
+            weapon.charge = engine::Duration{0.0F};
+            // Fire held: one shot per interval, made by the shot style's
+            // system.
+            weapon.fired = weapon.triggered && weapon.cooldown.count() <= 0.0F;
             if (weapon.fired) {
                 weapon.cooldown = stats.fireInterval;
             }

@@ -1,0 +1,31 @@
+{
+    "name": "The behemoth",
+    "boss": "behemoth",
+    "waves": [
+        { "time": 2, "enemy": "spinner", "count": 4, "spacing": 0.4, "stepY": 120, "y": 540 },
+        { "time": 5, "enemy": "jelly", "count": 6, "spacing": 0.3, "y": 300 },
+        { "time": 7, "enemy": "jelly", "count": 6, "spacing": 0.3, "y": 780 },
+        { "time": 10, "enemy": "crab", "count": 3, "stepY": 300, "y": 540 },
+        { "time": 13, "enemy": "bubble", "count": 10, "spacing": 0.15, "y": 540 },
+        { "time": 16, "enemy": "spore", "count": 5, "stepY": 200, "y": 540 },
+        { "time": 19, "enemy": "kamikaze", "count": 6, "spacing": 0.3, "stepY": 120, "y": 540 },
+        { "time": 22, "enemy": "gunship", "count": 2, "stepY": 500, "y": 540 },
+        { "time": 25, "enemy": "spinner", "count": 6, "stepY": 160, "y": 540 },
+        { "time": 28, "enemy": "medium", "count": 3, "stepY": 300, "y": 540 },
+        { "time": 30, "enemy": "jelly", "count": 8, "spacing": 0.2, "stepY": 90, "fromCenter": true, "y": 540 },
+        { "time": 34, "enemy": "crab", "count": 4, "spacing": 0.4, "stepY": 220, "y": 540 },
+        { "time": 37, "enemy": "bubble", "count": 8, "spacing": 0.2, "y": 250 },
+        { "time": 38, "enemy": "bubble", "count": 8, "spacing": 0.2, "y": 830 },
+        { "time": 42, "enemy": "large", "count": 2, "stepY": 500, "y": 540 },
+        { "time": 45, "enemy": "spore", "count": 6, "spacing": 0.4, "stepY": 150, "y": 540 },
+        { "time": 49, "enemy": "spinner", "count": 8, "spacing": 0.3, "stepY": 110, "y": 540 },
+        { "time": 53, "enemy": "crab", "count": 5, "stepY": 200, "y": 540 }
+    ],
+    "obstacles": [
+        { "time": 8, "kind": "tile", "y": 32, "rows": 4, "columns": 3 },
+        { "time": 18, "kind": "wall", "y": 856, "rows": 4, "columns": 5 },
+        { "time": 27, "kind": "tile", "y": 412, "rows": 4, "columns": 3 },
+        { "time": 40, "kind": "wall", "y": 32, "rows": 3, "columns": 6 },
+        { "time": 47, "kind": "tile", "y": 920, "rows": 3, "columns": 3 }
+    ]
+}

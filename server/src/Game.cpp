@@ -138,6 +138,12 @@ void Game::registerSystems()
     m_scheduler.add(Stage::Simulation, "movement", rtype::movementSystem,
                     playing);
     m_scheduler.add(
+        Stage::Simulation, "bossParts",
+        [this](Registry &r, Duration dt) {
+            server::bossPartSystem(r, m_outbound, dt);
+        },
+        playing);
+    m_scheduler.add(
         Stage::Simulation, "collision",
         [this](Registry &r, Duration) {
             m_collisions = server::collisionSystem(r);

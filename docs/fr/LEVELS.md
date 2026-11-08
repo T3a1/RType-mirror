@@ -72,7 +72,7 @@ serveur.
 |-----|:-----------:|--------|
 | `name` | oui | Le nom du niveau, de 1 à 64 caractères. |
 | `waves` | oui | La liste de ses vagues, de 1 à 1000. Leur ordre dans le fichier n'a pas d'importance : elles sont triées par `time`. |
-| `boss` | non | Le boss qui arrive après les vagues : `warship`, `hive`, ou un boss de [`enemies.json`](ENEMIES.md) comme `dreadnought`. Sans lui, le niveau se termine avec sa dernière vague. Les réglages de partie peuvent le remplacer par un autre boss. |
+| `boss` | non | Le boss qui arrive après les vagues : `warship`, `hive`, `walker`, `twin`, `behemoth`, ou un boss de [`enemies.json`](ENEMIES.md) comme `dreadnought`. Sans lui, le niveau se termine avec sa dernière vague. Les réglages de partie peuvent le remplacer par un autre boss. |
 | `obstacles` | non | La liste de ses groupes de murs et de blocs, 1000 au maximum, voir [Obstacles](#obstacles). Leur ordre n'a pas d'importance : ils sont triés par `time`. |
 
 ### Boss
@@ -81,6 +81,9 @@ serveur.
 |-----|---------------|
 | `warship` | Arrive par la droite, s'arrête, puis monte et descend. 2500 points de vie, affichés dans une barre en bas de l'écran. Trois phases selon ses dégâts : des tirs visés, puis un éventail de 3 tirs plus un tir visé, puis un éventail plus rapide de 5 tirs en bougeant plus vite. |
 | `hive` | Un boss organique plus grand et plus lent, posé au sol et immobile une fois en place, avec les mêmes trois phases d'attaque. |
+| `walker` | Niveau 3. Un robot au sol qui marche de gauche à droite, plus vite à chaque phase, et tire des boules de feu : un éventail visé et un arc au-dessus de lui à tour de rôle, puis un jet qui balaie le ciel, puis deux jets et de larges arcs. 3000 points de vie. |
+| `twin` | Niveau 4. Deux moitiés immobiles une fois en place, l'une au sol et l'autre accrochée au plafond ; toutes deux font baisser la même barre de vie. Des éventails visés depuis chaque moitié à tour de rôle, puis deux jets qui se croisent comme des ciseaux, puis des murs de tirs qui se décalent. 3600 points de vie. |
+| `behemoth` | Niveau 5. Une créature géante qui monte et descend lentement, avec une tête qui sort de son ventre et une queue qui ondule. Un tir sur sa **tête lui inflige 3 fois ses dégâts**, un tir sur sa queue blindée la moitié. Des rafales de tirs visés depuis sa tête, puis des anneaux depuis le bout de sa queue, puis une spirale. 4500 points de vie. |
 
 ## Réglages de partie
 

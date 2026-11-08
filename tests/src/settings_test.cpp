@@ -48,16 +48,33 @@ TEST(Settings, ReadsNothingFromAnEmptyFile)
     const Settings defaults;
     EXPECT_FLOAT_EQ(settings.musicVolume, defaults.musicVolume);
     EXPECT_FLOAT_EQ(settings.soundVolume, defaults.soundVolume);
-    EXPECT_EQ(settings.autoFire, defaults.autoFire);
     EXPECT_EQ(settings.playerLabels, defaults.playerLabels);
+    EXPECT_EQ(settings.background, defaults.background);
 }
 
-TEST(Settings, ShowsThePlayerLabelsAndAutoFiresByDefault)
+TEST(Settings, ShowsThePlayerLabelsByDefault)
 {
     const Settings settings;
 
     EXPECT_TRUE(settings.playerLabels);
-    EXPECT_TRUE(settings.autoFire);
+}
+
+TEST(Settings, ShowsTheBackgroundByDefaultAndCanHideIt)
+{
+    Settings settings;
+    EXPECT_TRUE(settings.background);
+
+    EXPECT_TRUE(read("background = off\n", settings).empty());
+    EXPECT_FALSE(settings.background);
+}
+
+TEST(Settings, KeepsTheFlashingEffectsByDefaultAndCanReduceThem)
+{
+    Settings settings;
+    EXPECT_FALSE(settings.reduceFlashing);
+
+    EXPECT_TRUE(read("reduce_flashing = on\n", settings).empty());
+    EXPECT_TRUE(settings.reduceFlashing);
 }
 
 TEST(Settings, ReadsEverySetting)
@@ -66,14 +83,12 @@ TEST(Settings, ReadsEverySetting)
 
     const auto errors = read("music_volume = 0.25\n"
                              "sound_volume = 0.75\n"
-                             "auto_fire = on\n"
                              "player_labels = off\n",
                              settings);
 
     EXPECT_TRUE(errors.empty());
     EXPECT_FLOAT_EQ(settings.musicVolume, 0.25F);
     EXPECT_FLOAT_EQ(settings.soundVolume, 0.75F);
-    EXPECT_TRUE(settings.autoFire);
     EXPECT_FALSE(settings.playerLabels);
 }
 
@@ -134,12 +149,12 @@ TEST(Settings, AcceptsTheBoundsOfAVolume)
 TEST(Settings, RefusesABadToggle)
 {
     Settings settings;
-    settings.autoFire = true;
+    settings.playerLabels = true;
 
-    const auto errors = read("auto_fire = maybe", settings);
+    const auto errors = read("player_labels = maybe", settings);
 
     EXPECT_EQ(errors.size(), 1U);
-    EXPECT_TRUE(settings.autoFire);
+    EXPECT_TRUE(settings.playerLabels);
 }
 
 TEST(Settings, ReadsBackWhatItWrites)
@@ -147,7 +162,6 @@ TEST(Settings, ReadsBackWhatItWrites)
     Settings written;
     written.musicVolume = 0.45F;
     written.soundVolume = 0.05F;
-    written.autoFire = true;
     written.playerLabels = false;
     std::ostringstream out;
     writeSettings(out, written);
@@ -157,7 +171,6 @@ TEST(Settings, ReadsBackWhatItWrites)
 
     EXPECT_FLOAT_EQ(settings.musicVolume, written.musicVolume);
     EXPECT_FLOAT_EQ(settings.soundVolume, written.soundVolume);
-    EXPECT_EQ(settings.autoFire, written.autoFire);
     EXPECT_EQ(settings.playerLabels, written.playerLabels);
 }
 
@@ -189,14 +202,12 @@ TEST(Settings, LoadsWhatItSaves)
         std::filesystem::temp_directory_path() / "rtype_settings_test.cfg";
     Settings written;
     written.musicVolume = 0.15F;
-    written.autoFire = true;
 
     EXPECT_TRUE(client::saveSettingsFile(path.string(), written));
     const Settings settings = client::loadSettingsFile(path.string());
     std::filesystem::remove(path);
 
     EXPECT_FLOAT_EQ(settings.musicVolume, written.musicVolume);
-    EXPECT_TRUE(settings.autoFire);
 }
 
 TEST(Settings, ReportsAFileItCannotWrite)
