@@ -1,0 +1,28 @@
+{
+    "name": "First contact",
+    "boss": "warship",
+    "waves": [
+        { "time": 2, "enemy": "basic", "count": 3, "spacing": 0.6, "y": 300 },
+        { "time": 6, "enemy": "basic", "count": 3, "spacing": 0.6, "y": 780 },
+        { "time": 10, "enemy": "small", "count": 6, "spacing": 0.22 },
+        { "time": 15, "enemy": "basic", "count": 5, "spacing": 0.3, "stepY": 90, "fromCenter": true, "y": 540 },
+        { "time": 20, "enemy": "wave", "count": 4, "spacing": 0.35, "y": 270 },
+        { "time": 22, "enemy": "wave", "count": 4, "spacing": 0.35, "y": 810 },
+        { "time": 28, "enemy": "shooter", "count": 2, "stepY": 300, "y": 540 },
+        { "time": 34, "enemy": "small", "count": 6, "spacing": 0.22, "y": 250 },
+        { "time": 35, "enemy": "small", "count": 6, "spacing": 0.22, "y": 830 },
+        {
+            "time": 40, "enemy": "basic", "count": 3, "spacing": 0.5, "stepY": 140,
+            "pattern": { "kind": "dive", "diveDelay": 2, "diveSpeed": 650 }
+        },
+        { "time": 46, "enemy": "medium", "count": 2, "stepY": 330, "y": 540 }
+    ],
+    "obstacles": [
+        { "time": 8, "kind": "tile", "y": 96, "rows": 3, "columns": 2 },
+        { "time": 12, "kind": "wall", "y": 952, "rows": 2, "columns": 4 },
+        { "time": 24, "kind": "tile", "y": 476, "rows": 3 },
+        { "time": 30, "kind": "wall", "y": 32, "rows": 4, "columns": 3 },
+        { "time": 30, "kind": "wall", "y": 856, "rows": 4, "columns": 3 },
+        { "time": 42, "kind": "tile", "y": 412, "rows": 5, "columns": 2 }
+    ]
+}

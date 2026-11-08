@@ -12,8 +12,28 @@
 
 namespace rtype {
 
-// What an entity is, as far as drawing it goes. Sent in snapshots: the
-// client picks the sprite from it. New values go at the end.
+/**
+ * @enum EntityType
+ * @brief What an entity is, as far as drawing it goes. Sent in snapshots: the
+ * client picks the sprite from it. New values go at the end.
+ * @param PlayerShip The ship of a player.
+ * @param PlayerMissile A normal shot of a player.
+ * @param EnemyBasic An EnemyType::Basic.
+ * @param EnemyWave An EnemyType::Wave.
+ * @param EnemyShooter An EnemyType::Shooter.
+ * @param EnemyMissile A shot of an enemy.
+ * @param EnemySmall An EnemyType::Small.
+ * @param EnemyMedium An EnemyType::Medium.
+ * @param EnemyLarge An EnemyType::Large.
+ * @param Boss An EnemyType::Boss.
+ * @param ChargedShot The piercing shot of a player who held the fire key.
+ * @param PowerUp A pickup that raises the weapon level of a player.
+ * @param BossHive An EnemyType::Hive, the second end-level boss.
+ * @param Obstacle A wall of the level: it stops every shot and destroys the
+ * ships that touch it.
+ * @param DestroyableTile A block of the level that stops shots like a wall
+ * but breaks after a few hits.
+ **/
 enum class EntityType : std::uint8_t {
     PlayerShip,
     PlayerMissile,
@@ -21,7 +41,36 @@ enum class EntityType : std::uint8_t {
     EnemyWave,
     EnemyShooter,
     EnemyMissile,
+    EnemySmall,
+    EnemyMedium,
+    EnemyLarge,
+    Boss,
+    ChargedShot,
+    PowerUp,
+    BossHive,
+    Obstacle,
+    DestroyableTile,
 };
+
+/**
+ * @brief Tells whether an entity type is an end-level boss.
+ * @param type The entity type.
+ * @return `true` for a boss.
+ **/
+constexpr bool isBossEntity(EntityType type)
+{
+    return type == EntityType::Boss || type == EntityType::BossHive;
+}
+
+/**
+ * @brief Tells whether an entity type is a part of the level.
+ * @param type The entity type.
+ * @return `true` for a wall or a tile.
+ **/
+constexpr bool isObstacleEntity(EntityType type)
+{
+    return type == EntityType::Obstacle || type == EntityType::DestroyableTile;
+}
 
 } // namespace rtype
 

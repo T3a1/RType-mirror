@@ -22,6 +22,12 @@
 
 namespace server {
 
+/**
+ * @brief Applies the playfield edges: destroys the DestroyOffScreen entities
+ *that left it, and clamps the KeepInPlayfield ones inside it.
+ * @param registry The registry to update.
+ * @param outbound Where the destructions are announced to the clients.
+ **/
 void boundarySystem(engine::Registry &registry, Outbound &outbound);
 
 } // namespace server

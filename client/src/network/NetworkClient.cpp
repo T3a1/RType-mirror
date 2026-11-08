@@ -6,14 +6,12 @@
 */
 
 #include "network/NetworkClient.hpp"
+#include "common/network/UdpSocket.hpp"
 #include "common/protocol/ByteWriter.hpp"
 #include "common/protocol/Connection.hpp"
-#include "common/protocol/ReliableChannel.hpp"
 #include "engine/Logger.hpp"
 
-#include <asio.hpp>
-
-#include <array>
+#include <utility>
 
 namespace client {
 
@@ -21,38 +19,28 @@ namespace {
 
 using namespace rtype::protocol;
 
+/** @brief How long an ack may wait for another packet to carry it. */
 constexpr std::chrono::milliseconds AckDelay{50};
+
+/**
+ * @brief How long the same actions are not sent again: about 30 Input packets
+ *per second at any frame rate, so that a fast client does not fill a slow link.
+ **/
+constexpr std::chrono::milliseconds InputInterval{30};
 
 } // namespace
 
-/**
- * @struct NetworkClient::Impl
- * @brief The Asio objects of the client, kept out of the header.
- * @param io The context the socket belongs to; never run.
- * @param socket The non-blocking UDP socket.
- * @param server The server's address; datagrams from elsewhere are dropped.
- * @param channel The reliability state of the connection.
- * @param buffer Receives one datagram at a time.
- **/
-struct NetworkClient::Impl {
-    asio::io_context io;
-    asio::ip::udp::socket socket{io};
-    asio::ip::udp::endpoint server;
-    ReliableChannel channel;
-    std::array<std::uint8_t, MaxPacketSize> buffer{};
-};
-
 NetworkClient::NetworkClient(const std::string &host, std::uint16_t port)
-    : m_impl(std::make_unique<Impl>())
+    : NetworkClient(rtype::network::openUdpSocket(),
+                    rtype::network::resolve(host, port))
 {
-    asio::ip::udp::resolver resolver(m_impl->io);
-    m_impl->server =
-        *resolver.resolve(asio::ip::udp::v4(), host, std::to_string(port))
-             .begin();
-    m_impl->socket.open(asio::ip::udp::v4());
-    m_impl->socket.non_blocking(true);
-    BB_INFO("Connecting to " << m_impl->server.address() << ":"
-                             << m_impl->server.port());
+}
+
+NetworkClient::NetworkClient(std::unique_ptr<engine::net::IUdpSocket> socket,
+                             const engine::net::Endpoint &server)
+    : m_socket(std::move(socket)), m_server(server)
+{
+    BB_INFO("Connecting to " << m_server.toString());
 }
 
 NetworkClient::~NetworkClient()
@@ -80,40 +68,73 @@ std::vector<Payload> NetworkClient::update(TimePoint now)
             m_state = State::Lost;
             return received;
         }
-        if (m_impl->channel.needsAck() && now - m_lastSent >= AckDelay) {
+        for (const Packet &packet : m_channel.resendsDue(now)) {
+            sendPacket(packet, now);
+        }
+        if (m_channel.needsAck() && now - m_lastSent >= AckDelay) {
             send(Ack{}, now);
         }
     }
     return received;
 }
 
-void NetworkClient::sendInput(std::uint8_t actions, TimePoint now)
+std::uint32_t NetworkClient::sendInput(std::uint8_t actions, TimePoint now)
 {
     if (m_state != State::Connected) {
-        return;
+        return 0;
+    }
+    if (actions == m_lastActions && now < m_nextInput) {
+        return m_inputSequence + 1;
     }
     send(Input{.sequence = ++m_inputSequence, .actions = actions}, now);
+    m_lastActions = actions;
+    m_nextInput = now + InputInterval;
+    return m_inputSequence;
+}
+
+void NetworkClient::joinRoom(std::uint32_t room, TimePoint now)
+{
+    if (m_state == State::Connected) {
+        send(JoinRoom{.room = room}, now);
+    }
+}
+
+void NetworkClient::leaveRoom(TimePoint now)
+{
+    if (m_state == State::Connected) {
+        send(LeaveRoom{}, now);
+    }
+}
+
+void NetworkClient::startGame(const StartGame &settings, TimePoint now)
+{
+    if (m_state == State::Connected) {
+        send(settings, now);
+    }
+}
+
+void NetworkClient::sendChat(const std::string &text, TimePoint now)
+{
+    if (m_state == State::Connected) {
+        send(rtype::protocol::ChatSend{.text = text}, now);
+    }
 }
 
 void NetworkClient::receivePending(TimePoint now,
                                    std::vector<Payload> &received)
 {
-    asio::ip::udp::endpoint sender;
-    asio::error_code error;
-    while (true) {
-        const std::size_t size = m_impl->socket.receive_from(
-            asio::buffer(m_impl->buffer), sender, 0, error);
-        if (error == asio::error::would_block) {
-            return;
-        }
-        if (error || sender != m_impl->server) {
+    while (const auto datagram =
+               m_socket->receive(m_buffer, std::chrono::milliseconds::zero())) {
+        if (datagram->sender != m_server) {
             continue;
         }
+        m_bytesReceived += datagram->size;
         const auto result =
-            decodePacket({m_impl->buffer.data(), size}, Side::Server);
+            decodePacket({m_buffer.data(), datagram->size}, Side::Server);
         if (const auto *decodeError = std::get_if<DecodeError>(&result)) {
             if (*decodeError == DecodeError::BadVersion) {
                 BB_ERROR("The server runs another protocol version");
+                m_rejectReason = RejectReason::VersionMismatch;
                 m_state = State::Rejected;
                 return;
             }
@@ -121,7 +142,7 @@ void NetworkClient::receivePending(TimePoint now,
         }
         const auto &packet = std::get<Packet>(result);
         m_lastHeard = now;
-        if (!m_impl->channel.receive(packet.header)) {
+        if (!m_channel.receive(packet.header)) {
             continue;
         }
         handlePacket(packet, received);
@@ -138,14 +159,13 @@ void NetworkClient::handlePacket(const Packet &packet,
         BB_INFO("Connected to the server");
         m_state = State::Connected;
     } else if (const auto *reject = std::get_if<Reject>(&packet.payload)) {
-        BB_ERROR("Rejected by the server ("
-                 << (reject->reason == RejectReason::ServerFull
-                         ? "server full"
-                         : "version mismatch")
-                 << ")");
+        BB_ERROR("Rejected by the server, reason "
+                 << static_cast<int>(reject->reason));
+        m_rejectReason = reject->reason;
         m_state = State::Rejected;
-    } else if (std::holds_alternative<Disconnect>(packet.payload)) {
+    } else if (const auto *closed = std::get_if<Disconnect>(&packet.payload)) {
         BB_INFO("Disconnected by the server");
+        m_disconnectReason = closed->reason;
         m_state = State::Closed;
     } else if (!std::holds_alternative<Ack>(packet.payload)) {
         received.push_back(packet.payload);
@@ -155,18 +175,23 @@ void NetworkClient::handlePacket(const Packet &packet,
 void NetworkClient::send(const Payload &payload, TimePoint now)
 {
     Packet packet{.payload = payload};
-    if (!m_impl->channel.prepare(packet, now)) {
-        return;
+    if (m_channel.prepare(packet, now)) {
+        sendPacket(packet, now);
     }
+}
+
+void NetworkClient::sendPacket(const Packet &packet, TimePoint now)
+{
     ByteWriter writer;
     if (!encodePacket(packet, writer)) {
         return;
     }
-    asio::error_code error;
-    m_impl->socket.send_to(asio::buffer(writer.data().data(), writer.size()),
-                           m_impl->server, 0, error);
+    const std::error_code error =
+        m_socket->sendTo(m_server, {writer.data().data(), writer.size()});
     if (error) {
         BB_DEBUG("Send failed: " << error.message());
+    } else {
+        m_bytesSent += writer.size();
     }
     m_lastSent = now;
 }

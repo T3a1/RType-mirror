@@ -48,6 +48,89 @@ void encode(const Connect & /*message*/, ByteWriter & /*out*/) {}
 
 void encode(const Accept & /*message*/, ByteWriter & /*out*/) {}
 
+void encode(const RoomList &message, ByteWriter &out)
+{
+    out.u8(static_cast<std::uint8_t>(message.rooms.size()));
+    for (const RoomInfo &room : message.rooms) {
+        out.u32(room.room);
+        out.u8(room.players);
+        out.u8(static_cast<std::uint8_t>(room.status));
+    }
+}
+
+void encode(const JoinRoom &message, ByteWriter &out) { out.u32(message.room); }
+
+void encode(const LeaveRoom & /*message*/, ByteWriter & /*out*/) {}
+
+void encode(const StartGame &message, ByteWriter &out)
+{
+    out.u8(static_cast<std::uint8_t>(message.difficulty));
+    out.u8(message.level);
+    out.u8(static_cast<std::uint8_t>(message.boss));
+}
+
+void encode(const RoomJoined &message, ByteWriter &out)
+{
+    out.u32(message.room);
+    out.u8(message.levels);
+}
+
+namespace {
+
+/**
+ * @brief Writes the text of a line of chat: its size, then its characters.
+ * @param text The text, from 1 to MaxChatLength chat characters.
+ * @param out Where to write.
+ **/
+void encodeChatText(const std::string &text, ByteWriter &out)
+{
+    out.u8(static_cast<std::uint8_t>(text.size()));
+    for (const char character : text) {
+        out.u8(static_cast<std::uint8_t>(character));
+    }
+}
+
+/**
+ * @brief Reads and validates the text of a line of chat. The size is checked
+ * first, so that a hostile packet allocates nothing.
+ * @param in The reader.
+ * @param text Filled with the text.
+ * @return `true` if it is valid.
+ **/
+bool decodeChatText(ByteReader &in, std::string &text)
+{
+    const std::size_t size = in.u8();
+    if (size == 0 || size > MaxChatLength || size > in.remaining()) {
+        return false;
+    }
+    text.reserve(size);
+    for (std::size_t i = 0; i < size; ++i) {
+        const char character = static_cast<char>(in.u8());
+        if (!isChatCharacter(character)) {
+            return false;
+        }
+        text.push_back(character);
+    }
+    return true;
+}
+
+} // namespace
+
+void encode(const ChatSend &message, ByteWriter &out)
+{
+    encodeChatText(message.text, out);
+}
+
+void encode(const ChatMessage &message, ByteWriter &out)
+{
+    out.u8(message.slot);
+    encodeChatText(message.text, out);
+}
+
+void encode(const RoomRefused & /*message*/, ByteWriter & /*out*/) {}
+
+void encode(const RoomClosed & /*message*/, ByteWriter & /*out*/) {}
+
 void encode(const Reject &message, ByteWriter &out)
 {
     out.u8(static_cast<std::uint8_t>(message.reason));
@@ -84,6 +167,11 @@ void encode(const SnapshotPart &message, ByteWriter &out)
         for (const PlayerInfo &player : message.players) {
             out.u8(player.slot);
             out.u32(player.score);
+            out.u32(player.lastInput);
+            out.u32(player.shipId);
+            for (const std::uint8_t seconds : player.boosts) {
+                out.u8(seconds);
+            }
         }
     }
     for (const EntityState &entity : message.entities) {
@@ -108,7 +196,11 @@ void encode(const GameEvent &message, ByteWriter &out)
     case GameEventKind::PlayerHit:
         out.u8(message.slot);
         break;
+    case GameEventKind::LevelStarted:
+        out.u8(message.level);
+        break;
     case GameEventKind::GameOver:
+    case GameEventKind::GameStarted:
         break;
     }
 }
@@ -117,9 +209,67 @@ bool decode(ByteReader & /*in*/, Connect & /*message*/) { return true; }
 
 bool decode(ByteReader & /*in*/, Accept & /*message*/) { return true; }
 
+bool decode(ByteReader &in, RoomList &message)
+{
+    const std::uint8_t count = in.u8();
+    if (count > MaxRooms) {
+        return false;
+    }
+    for (std::uint8_t i = 0; i < count; ++i) {
+        RoomInfo room;
+        room.room = in.u32();
+        room.players = in.u8();
+        if (!readEnum(in, RoomStatus::Over, room.status) || room.room == 0 ||
+            room.players > MaxPlayers) {
+            return false;
+        }
+        message.rooms.push_back(room);
+    }
+    return true;
+}
+
+bool decode(ByteReader &in, JoinRoom &message)
+{
+    message.room = in.u32();
+    return true;
+}
+
+bool decode(ByteReader & /*in*/, LeaveRoom & /*message*/) { return true; }
+
+bool decode(ByteReader &in, StartGame &message)
+{
+    if (!readEnum(in, Difficulty::Hard, message.difficulty)) {
+        return false;
+    }
+    message.level = in.u8();
+    return readEnum(in, BossChoice::Hive, message.boss);
+}
+
+bool decode(ByteReader &in, RoomJoined &message)
+{
+    message.room = in.u32();
+    message.levels = in.u8();
+    return message.room != 0;
+}
+
+bool decode(ByteReader &in, ChatSend &message)
+{
+    return decodeChatText(in, message.text);
+}
+
+bool decode(ByteReader &in, ChatMessage &message)
+{
+    message.slot = in.u8();
+    return isValidSlot(message.slot) && decodeChatText(in, message.text);
+}
+
+bool decode(ByteReader & /*in*/, RoomRefused & /*message*/) { return true; }
+
+bool decode(ByteReader & /*in*/, RoomClosed & /*message*/) { return true; }
+
 bool decode(ByteReader &in, Reject &message)
 {
-    return readEnum(in, RejectReason::VersionMismatch, message.reason);
+    return readEnum(in, RejectReason::NotWhitelisted, message.reason);
 }
 
 bool decode(ByteReader &in, Disconnect &message)
@@ -162,6 +312,11 @@ bool decode(ByteReader &in, SnapshotPart &message)
             PlayerInfo player;
             player.slot = in.u8();
             player.score = in.u32();
+            player.lastInput = in.u32();
+            player.shipId = in.u32();
+            for (std::uint8_t &seconds : player.boosts) {
+                seconds = in.u8();
+            }
             if (!isValidSlot(player.slot)) {
                 return false;
             }
@@ -177,7 +332,7 @@ bool decode(ByteReader &in, SnapshotPart &message)
     for (std::uint16_t i = 0; i < entityCount; ++i) {
         EntityState entity;
         entity.networkId = in.u32();
-        if (!readEnum(in, EntityType::EnemyMissile, entity.type)) {
+        if (!readEnum(in, EntityType::DestroyableTile, entity.type)) {
             return false;
         }
         entity.flags = in.u8();
@@ -185,6 +340,8 @@ bool decode(ByteReader &in, SnapshotPart &message)
         entity.x = in.f32();
         entity.y = in.f32();
         if ((entity.flags & EntityFlag::All) != entity.flags ||
+            EntityFlag::ownerOf(entity.flags) > MaxPlayers ||
+            EntityFlag::boostOf(entity.flags) >= PowerUpKind::Count ||
             !std::isfinite(entity.x) || !std::isfinite(entity.y)) {
             return false;
         }
@@ -195,7 +352,7 @@ bool decode(ByteReader &in, SnapshotPart &message)
 
 bool decode(ByteReader &in, GameEvent &message)
 {
-    if (!readEnum(in, GameEventKind::GameOver, message.kind)) {
+    if (!readEnum(in, GameEventKind::LevelStarted, message.kind)) {
         return false;
     }
     switch (message.kind) {
@@ -207,7 +364,11 @@ bool decode(ByteReader &in, GameEvent &message)
     case GameEventKind::PlayerHit:
         message.slot = in.u8();
         return isValidSlot(message.slot);
+    case GameEventKind::LevelStarted:
+        message.level = in.u8();
+        return true;
     case GameEventKind::GameOver:
+    case GameEventKind::GameStarted:
         return true;
     }
     return false;

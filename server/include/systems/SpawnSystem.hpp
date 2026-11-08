@@ -9,10 +9,11 @@
 #define SERVER_SYSTEMS_SPAWNSYSTEM_HPP
 
 #include "EnemyDefs.hpp"
-#include "EntityFactory.hpp"
+#include "Formations.hpp"
 #include "SpawnRequests.hpp"
 #include "common/components/Enemy.hpp"
 #include "common/components/Spawner.hpp"
+#include "components/SpawnQueue.hpp"
 #include "engine/Clock.hpp"
 #include "engine/Entity.hpp"
 #include "engine/Registry.hpp"
@@ -25,16 +26,18 @@
 namespace server {
 
 /**
- * @brief Spawns enemies of random types at random heights on the right of
- * the playfield, after a random delay.
+ * @brief Starts random formations at random heights on the right of the
+ * playfield, after a random delay, unless levels are being played (the
+ * spawner has a LevelProgress), and requests the enemies of the queue when
+ * they are due.
  *
- * Reads and writes each Spawner's countdown, then creates the enemies with
- * the factory after the loop.
+ * Reads and writes the countdowns of each entity with a Spawner and a
+ * SpawnQueue.
  * @param registry The registry holding the spawners.
- * @param factory The factory that creates the enemies.
+ * @param commands Where the enemies that are due are requested.
  * @param dt The time elapsed since the last tick, in seconds.
  **/
-void spawnSystem(engine::Registry &registry, EntityFactory &factory,
+void spawnSystem(engine::Registry &registry, SpawnCommands &commands,
                  engine::Duration dt);
 
 } // namespace server

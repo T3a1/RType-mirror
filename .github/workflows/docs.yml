@@ -1,0 +1,77 @@
+name: Documentation
+
+# Every push checks the pages and their links. dev and main also publish the
+# website on GitHub Pages. Skipped on the Epitech repo, which gets this file
+# through the forward job of the CI.
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build the documentation
+    timeout-minutes: 20
+    if: github.repository == 'T3a1/RType-mirror'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Graphviz
+        run: sudo apt-get install --yes --no-install-recommends graphviz
+      # Ubuntu's package is too old to draw the Mermaid diagrams of the pages.
+      # A download can fail for minutes (GitHub answers 504): Doxygen is kept in
+      # the cache, and otherwise taken from the first source that answers, then
+      # checked against the checksum of the release.
+      - name: Restore Doxygen
+        id: doxygen-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/doxygen-1.18.0
+          key: doxygen-1.18.0-linux
+      - name: Install Doxygen
+        if: steps.doxygen-cache.outputs.cache-hit != 'true'
+        run: |
+          archive="$RUNNER_TEMP/doxygen.tar.gz"
+          for url in \
+            "https://www.doxygen.nl/files/doxygen-1.18.0.linux.bin.tar.gz" \
+            "https://github.com/doxygen/doxygen/releases/download/Release_1_18_0/doxygen-1.18.0.linux.bin.tar.gz" \
+            "https://downloads.sourceforge.net/project/doxygen/rel-1.18.0/doxygen-1.18.0.linux.bin.tar.gz"; do
+            if curl --fail --silent --show-error --location --retry 3 --retry-delay 5 --retry-all-errors --output "$archive" "$url"; then
+              break
+            fi
+            rm -f "$archive"
+          done
+          echo "14fa81bdc34171edb5f1f02b1d60e74802f0439b77fa44e592565d517d72df90  $archive" | sha256sum --check
+          tar --extract --gzip --file "$archive" --directory "$HOME"
+      - name: Use Doxygen
+        run: echo "$HOME/doxygen-1.18.0/bin" >> "$GITHUB_PATH"
+      - name: Build the website
+        run: python3 rtype.py --docs
+      - name: Keep the website for the deployment
+        if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/docs/html
+
+  deploy:
+    name: Publish the documentation
+    timeout-minutes: 10
+    needs: build
+    if: github.repository == 'T3a1/RType-mirror' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

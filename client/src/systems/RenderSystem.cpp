@@ -10,8 +10,6 @@
 #include "components/Sprite.hpp"
 #include "engine/Entity.hpp"
 
-#include <raylib.h>
-
 #include <algorithm>
 #include <vector>
 
@@ -19,6 +17,12 @@ namespace client {
 
 namespace {
 
+/**
+ * @struct DrawCommand
+ * @brief An entity to draw, kept to sort the entities by layer.
+ * @param transform Its position.
+ * @param sprite Its sprite.
+ **/
 struct DrawCommand {
     const rtype::Transform *transform;
     const Sprite *sprite;
@@ -26,7 +30,7 @@ struct DrawCommand {
 
 } // namespace
 
-void renderSystem(engine::Registry &registry)
+void renderSystem(engine::Registry &registry, gfx::IGraphics &graphics)
 {
     std::vector<DrawCommand> commands;
     registry.each<rtype::Transform, Sprite>(
@@ -40,12 +44,19 @@ void renderSystem(engine::Registry &registry)
     });
 
     for (const DrawCommand &command : commands) {
+        const Sprite &sprite = *command.sprite;
         const engine::Vec2f topLeft =
-            command.transform->position - command.sprite->size * 0.5;
-        DrawRectangleV(
-            Vector2{.x = topLeft.x, .y = topLeft.y},
-            Vector2{.x = command.sprite->size.x, .y = command.sprite->size.y},
-            command.sprite->tint);
+            command.transform->position - sprite.size * 0.5;
+        const gfx::Rect dest{.x = topLeft.x,
+                             .y = topLeft.y,
+                             .width = sprite.size.x,
+                             .height = sprite.size.y};
+        if (sprite.texture.id != 0) {
+            graphics.drawTexture(sprite.texture, sprite.source, dest,
+                                 sprite.tint);
+        } else {
+            graphics.drawRectangle(dest, sprite.tint);
+        }
     }
 }
 

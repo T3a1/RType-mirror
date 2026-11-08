@@ -8,26 +8,39 @@
 #ifndef SERVER_SPAWNREQUESTS_HPP
 #define SERVER_SPAWNREQUESTS_HPP
 
+#include "EnemyCatalog.hpp"
 #include "common/components/Enemy.hpp"
+#include "common/components/MovementPattern.hpp"
+#include "common/components/PowerUpKind.hpp"
 #include "engine/Entity.hpp"
 #include "engine/Vec2.hpp"
 
 #include <cstdint>
+#include <optional>
+#include <variant>
+#include <vector>
 
 namespace server {
 
 /**
- * A request to spawn an enemy.
+ * @struct SpawnEnemy
+ * @brief A request to spawn an enemy.
  * @param type The type of the enemy to spawn.
  * @param position The position to spawn the enemy at.
+ * @param pattern The path it follows, or nothing for the one of its type.
+ * @param kind Its kind in the enemy catalog, which then replaces type; or
+ * nothing for the built-in kind of type.
  **/
 struct SpawnEnemy {
     rtype::EnemyType type = rtype::EnemyType::Basic;
     engine::Vec2f position{};
+    std::optional<rtype::MovementPattern> pattern;
+    std::optional<EnemyKindId> kind;
 };
 
 /**
- * A request to spawn a player.
+ * @struct SpawnPlayer
+ * @brief A request to spawn a player.
  * @param slot The slot of the player to spawn.
  * @param position The position to spawn the player at.
  **/
@@ -37,18 +50,57 @@ struct SpawnPlayer {
 };
 
 /**
- * A request to spawn a projectile.
+ * @struct SpawnProjectile
+ * @brief A request to spawn a projectile.
  * @param owner The entity that owns the projectile.
  * @param position The position to spawn the projectile at.
  * @param velocity The velocity of the projectile.
  * @param fromPlayer Whether the projectile was fired by a player or an enemy.
+ * @param damage The damage it deals.
+ * @param charged Whether it is a player's charged shot: larger, and it goes
+ * through the enemies it hits.
  **/
 struct SpawnProjectile {
     engine::Entity owner{};
     engine::Vec2f position{};
     engine::Vec2f velocity{};
     bool fromPlayer = true;
+    int damage = 50;
+    bool charged = false;
 };
+
+/**
+ * @struct SpawnPowerUp
+ * @brief A request to spawn a power-up, dropped by a destroyed enemy.
+ * @param position Where it appears.
+ * @param kind The boost it gives.
+ **/
+struct SpawnPowerUp {
+    engine::Vec2f position{};
+    rtype::PowerUpKind kind = rtype::PowerUpKind::Spread;
+};
+
+/**
+ * @struct SpawnObstacle
+ * @brief A request to spawn one block of the level.
+ * @param position The center of the block.
+ * @param destroyable Whether it is a destroyable tile instead of a wall.
+ **/
+struct SpawnObstacle {
+    engine::Vec2f position{};
+    bool destroyable = false;
+};
+
+/** @brief A deferred entity creation. */
+using SpawnCommand =
+    std::variant<SpawnEnemy, SpawnProjectile, SpawnPowerUp, SpawnObstacle>;
+
+/** @brief The creations requested during a tick, applied in the Cleanup stage.
+ */
+using SpawnCommands = std::vector<SpawnCommand>;
+
+/** @brief Distance between the center of a ship and the start of its shots. */
+inline constexpr float MuzzleOffset = 40.0F;
 
 } // namespace server
 

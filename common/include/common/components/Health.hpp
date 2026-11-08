@@ -9,6 +9,12 @@
 #define COMMON_COMPONENTS_HEALTH_HPP
 
 namespace rtype {
+/**
+ * @struct Health
+ * @brief The health points of an entity, which dies at 0.
+ * @param current The points left.
+ * @param max The points it starts with.
+ **/
 struct Health {
     int current = 100;
     int max = 100;

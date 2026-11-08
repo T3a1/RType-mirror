@@ -22,6 +22,11 @@ namespace engine {
 
 namespace {
 
+/**
+ * @brief Tells whether a stream is a terminal that can show colors.
+ * @param console The stream.
+ * @return `true` for the standard streams connected to a terminal on Unix.
+ **/
 bool supportsColors(const std::ostream &console)
 {
 #if defined(__unix__) || defined(__APPLE__)
@@ -36,6 +41,11 @@ bool supportsColors(const std::ostream &console)
     return false;
 }
 
+/**
+ * @brief Returns the color of a level in the console.
+ * @param level The level.
+ * @return The ANSI escape sequence of its color.
+ **/
 std::string_view colorFor(LogLevel level)
 {
     switch (level) {
@@ -55,8 +65,14 @@ std::string_view colorFor(LogLevel level)
     return "";
 }
 
+/** @brief The ANSI escape sequence that restores the default color. */
 constexpr std::string_view resetColor = "\033[0m";
 
+/**
+ * @brief Removes the directories from a path.
+ * @param path The path, with `/` or `\\` separators.
+ * @return What follows the last separator.
+ **/
 std::string_view fileName(std::string_view path)
 {
     const std::size_t slash = path.find_last_of("/\\");
@@ -161,9 +177,11 @@ void Logger::log(LogLevel level, const char *file, int line,
     };
 
     if (m_running && level != LogLevel::Fatal) {
+        ++m_queued;
         if (m_queue.push(std::move(entry))) {
             return;
         }
+        --m_queued;
         if (!m_queue.closed()) {
             ++m_dropped;
             return;
@@ -173,10 +191,32 @@ void Logger::log(LogLevel level, const char *file, int line,
     const std::scoped_lock lock(m_writeMutex);
     // NOLINTNEXTLINE(bugprone-use-after-move)
     write(entry);
+    *m_console << m_frameAfter;
     m_console->flush();
     if (m_file.is_open()) {
         m_file.flush();
     }
+}
+
+void Logger::flush()
+{
+    while (m_running && m_written < m_queued) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+}
+
+void Logger::setConsoleFrame(std::string before, std::string after)
+{
+    const std::scoped_lock lock(m_writeMutex);
+    m_frameBefore = std::move(before);
+    m_frameAfter = std::move(after);
+}
+
+void Logger::print(std::string_view text)
+{
+    const std::scoped_lock lock(m_writeMutex);
+    *m_console << text;
+    m_console->flush();
 }
 
 void Logger::run()
@@ -189,10 +229,12 @@ void Logger::run()
             write(entry);
         }
         reportDropped();
+        *m_console << m_frameAfter;
         m_console->flush();
         if (m_file.is_open()) {
             m_file.flush();
         }
+        m_written += 1 + rest.size();
     }
 }
 
@@ -212,6 +254,7 @@ void Logger::write(const Entry &entry)
            << entry.line << "] " << entry.message;
     const std::string text = std::move(stream).str();
 
+    *m_console << m_frameBefore;
     if (m_colors) {
         *m_console << colorFor(entry.level) << text << resetColor << '\n';
     } else {

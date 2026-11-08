@@ -11,6 +11,7 @@ namespace server {
 
 namespace {
 
+/** @brief How far out of the playfield an entity may go, in playfield units. */
 constexpr float OFFSCREEN_MARGIN = 200.0F;
 
 /** @brief Checks if a position is offscreen.
@@ -27,12 +28,6 @@ bool isOffScreen(const engine::Vec2f &position)
 
 } // namespace
 
-/**
- * Applies the playfield edges: destroys the DestroyOffScreen entities that
- * left it, and clamps the KeepInPlayfield ones inside it.
- * @param registry The registry to update.
- * @param outbound Where the destructions are announced to the clients.
- **/
 void boundarySystem(engine::Registry &registry, Outbound &outbound)
 {
     registry.each<DestroyOffScreen, rtype::Transform>(
@@ -47,15 +42,8 @@ void boundarySystem(engine::Registry &registry, Outbound &outbound)
     registry.each<KeepInPlayfield, rtype::Transform, rtype::Collider>(
         [](engine::Entity, const KeepInPlayfield &, rtype::Transform &transform,
            const rtype::Collider &collider) {
-            const float halfWidth = collider.size.x / 2.0F;
-            const float halfHeight = collider.size.y / 2.0F;
-
-            transform.position.x =
-                std::clamp(transform.position.x, halfWidth,
-                           rtype::PlayfieldWidth - halfWidth);
-            transform.position.y =
-                std::clamp(transform.position.y, halfHeight,
-                           rtype::PlayfieldHeight - halfHeight);
+            transform.position =
+                rtype::keepInPlayfield(transform.position, collider.size);
         });
 }
 

@@ -17,7 +17,14 @@ namespace rtype {
 
 namespace {
 
-// -1, 0 or 1 along one axis. Both keys held cancel each other out.
+/**
+ * @brief Returns the direction along one axis. Both keys held cancel each other
+ * out.
+ * @param actions The held actions, as Action bits.
+ * @param negative The action moving towards the negative side.
+ * @param positive The action moving towards the positive side.
+ * @return -1, 0 or 1.
+ **/
 float axis(std::uint8_t actions, std::uint8_t negative, std::uint8_t positive)
 {
     float value = 0.0F;
@@ -32,26 +39,28 @@ float axis(std::uint8_t actions, std::uint8_t negative, std::uint8_t positive)
 
 } // namespace
 
+engine::Vec2f shipVelocity(std::uint8_t actions)
+{
+    engine::Vec2f direction{
+        .x = axis(actions, Action::Left, Action::Right),
+        .y = axis(actions, Action::Up, Action::Down),
+    };
+    // A diagonal (1, 1) is sqrt(2) long: shrink it back to 1 so the ship is
+    // not faster diagonally.
+    if (direction.x != 0.0F && direction.y != 0.0F) {
+        direction *= 1.0F / std::numbers::sqrt2_v<float>;
+    }
+    return direction * playerSpeed;
+}
+
 void playerControlSystem(engine::Registry &registry)
 {
     registry.each<InputState, Velocity>(
         [](engine::Entity, const InputState &input, Velocity &velocity) {
-            engine::Vec2f direction{
-                .x = axis(input.actions, Action::Left, Action::Right),
-                .y = axis(input.actions, Action::Up, Action::Down),
-            };
-            // A diagonal (1, 1) is sqrt(2) long: shrink it back to 1 so
-            // the ship is not faster diagonally.
-            if (direction.x != 0.0F && direction.y != 0.0F) {
-                direction *= 1.0F / std::numbers::sqrt2_v<float>;
-            }
-            velocity.value = direction * playerSpeed;
+            velocity.value = shipVelocity(input.actions);
         });
 }
 
-/**
- * Arms the weapon of each player holding the Fire action.
- **/
 void playerFireSystem(engine::Registry &registry)
 {
     registry.each<Weapon, rtype::InputState>(

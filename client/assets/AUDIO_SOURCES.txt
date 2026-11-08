@@ -1,0 +1,4 @@
+Sound effects (sounds/) and musics (music/).
+Synthesized and composed for this project by tools/generate_sounds.py, which
+contains everything needed to generate them again. They contain no third-party
+content.

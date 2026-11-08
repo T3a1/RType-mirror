@@ -6,17 +6,14 @@
 */
 
 #include "systems/SpawnSystem.hpp"
+#include "components/LevelProgress.hpp"
 
 namespace server {
 
 namespace {
 
-constexpr float SPAWN_X = 1980.0F;
-constexpr float MIN_Y = 60.0F;
-constexpr float MAX_Y = 1020.0F;
-
 /**
- * @brief Draws the delay before the next spawn, between the spawner's
+ * @brief Draws the delay before the next formation, between the spawner's
  * minimum and maximum delays.
  * @param spawner The spawner to draw the delay for.
  * @return The delay, in seconds.
@@ -30,39 +27,47 @@ engine::Duration randomDelay(rtype::Spawner &spawner)
 }
 
 /**
- * @brief Draws an enemy of a random type at a random height, just right of
+ * @brief Draws a random formation at a random height that keeps it inside
  * the playfield.
  * @param spawner The spawner whose random generator is used.
- * @return The spawn request.
+ * @return The enemies of the formation.
  **/
-SpawnEnemy randomRequest(rtype::Spawner &spawner)
+std::vector<PendingSpawn> randomFormation(rtype::Spawner &spawner)
 {
-    std::uniform_real_distribution<float> y(MIN_Y, MAX_Y);
-    std::uniform_int_distribution<std::size_t> type(0, ENEMY_DEFS.size() - 1);
+    std::uniform_int_distribution<std::size_t> index(0, FORMATIONS.size() - 1);
+    const Formation &formation = FORMATIONS.at(index(spawner.randomGenerator));
 
-    return {
-        .type = static_cast<rtype::EnemyType>(type(spawner.randomGenerator)),
-        .position = {.x = SPAWN_X, .y = y(spawner.randomGenerator)},
-    };
+    return formationSpawns(formation, randomCenterY(formation, spawner));
 }
 
 } // namespace
 
-void spawnSystem(engine::Registry &registry, EntityFactory &factory,
+void spawnSystem(engine::Registry &registry, SpawnCommands &commands,
                  engine::Duration dt)
 {
-    std::vector<SpawnEnemy> spawnRequests;
-
-    registry.each<rtype::Spawner>([&](engine::Entity, rtype::Spawner &spawner) {
-        spawner.timeUntilNextSpawn -= dt;
-        while (spawner.timeUntilNextSpawn.count() <= 0.0F) {
-            spawnRequests.push_back(randomRequest(spawner));
-            spawner.timeUntilNextSpawn += randomDelay(spawner);
-        }
-    });
-    for (const SpawnEnemy &request : spawnRequests) {
-        factory.create(registry, request);
-    }
+    registry.each<rtype::Spawner, SpawnQueue>(
+        [&](engine::Entity entity, rtype::Spawner &spawner, SpawnQueue &queue) {
+            // While levels are played, levelSystem() fills the queue.
+            if (!registry.has<LevelProgress>(entity)) {
+                spawner.timeUntilNextSpawn -= dt;
+                while (spawner.timeUntilNextSpawn.count() <= 0.0F) {
+                    const std::vector<PendingSpawn> spawns =
+                        randomFormation(spawner);
+                    queue.pending.insert(queue.pending.end(), spawns.begin(),
+                                         spawns.end());
+                    spawner.timeUntilNextSpawn += randomDelay(spawner);
+                }
+            }
+            for (PendingSpawn &spawn : queue.pending) {
+                spawn.delay -= dt;
+                if (spawn.delay.count() <= 0.0F) {
+                    commands.emplace_back(spawn.request);
+                }
+            }
+            std::erase_if(queue.pending, [](const PendingSpawn &spawn) {
+                return spawn.delay.count() <= 0.0F;
+            });
+        });
 }
 
 } // namespace server

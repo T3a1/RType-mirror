@@ -1,0 +1,161 @@
+/*
+** EPITECH PROJECT, 2026
+** r-type_server
+** File description:
+** LevelSystem
+*/
+
+#include "systems/LevelSystem.hpp"
+#include "EnemyCatalog.hpp"
+#include "EnemyDefs.hpp"
+#include "Formations.hpp"
+#include "common/Playfield.hpp"
+#include "common/components/Enemy.hpp"
+#include "common/components/Spawner.hpp"
+#include "components/LevelProgress.hpp"
+#include "components/SpawnQueue.hpp"
+#include "engine/Entity.hpp"
+#include "engine/Logger.hpp"
+
+#include <algorithm>
+#include <limits>
+#include <vector>
+
+namespace server {
+
+namespace {
+
+/**
+ * @brief Tells whether an enemy is still alive.
+ * @param registry The registry holding the enemies.
+ * @return `true` if at least one entity is an Enemy.
+ **/
+bool anyEnemy(engine::Registry &registry)
+{
+    bool found = false;
+    registry.each<rtype::Enemy>(
+        [&found](engine::Entity, const rtype::Enemy &) { found = true; });
+    return found;
+}
+
+/**
+ * @brief Queues the waves of the current level whose time has come.
+ * @param progress The level progress.
+ * @param spawner The spawner, for the random heights.
+ * @param queue The queue the enemies go to.
+ **/
+void queueDueWaves(LevelProgress &progress, rtype::Spawner &spawner,
+                   SpawnQueue &queue)
+{
+    const Level &level = progress.levels->at(progress.level);
+    while (progress.nextWave < level.waves.size() &&
+           level.waves.at(progress.nextWave).time <= progress.elapsed) {
+        const Wave &wave = level.waves.at(progress.nextWave);
+        const float centerY =
+            wave.centerY.value_or(randomCenterY(wave.formation, spawner));
+        const std::vector<PendingSpawn> spawns =
+            formationSpawns(wave.formation, centerY);
+        queue.pending.insert(queue.pending.end(), spawns.begin(), spawns.end());
+        ++progress.nextWave;
+    }
+}
+
+/**
+ * @brief Queues a boss in the middle of the right edge.
+ * @param id The kind of the boss in the enemy catalog.
+ * @param queue The queue it goes to.
+ **/
+void queueBoss(EnemyKindId id, SpawnQueue &queue)
+{
+    const EnemyKind &kind = enemyCatalog().at(id);
+    queue.pending.push_back({
+        .request =
+            {
+                .type = kind.behavior,
+                .position = {.x = rtype::PlayfieldWidth +
+                                  (kind.def.size.x / 2.0F),
+                             .y = rtype::PlayfieldHeight / 2.0F},
+                .kind = id,
+            },
+    });
+}
+
+/**
+ * @brief Returns the level number sent to the clients.
+ * @param index The position of the level in the list, from 0.
+ * @return The number, from 1, capped at 255.
+ **/
+std::uint8_t levelNumber(std::size_t index)
+{
+    return static_cast<std::uint8_t>(std::min<std::size_t>(
+        index + 1, std::numeric_limits<std::uint8_t>::max()));
+}
+
+} // namespace
+
+std::optional<std::uint8_t> levelSystem(engine::Registry &registry,
+                                        engine::Duration dt)
+{
+    const bool enemiesLeft = anyEnemy(registry);
+    std::vector<engine::Entity> finished;
+    std::optional<std::uint8_t> announced;
+
+    registry.each<LevelProgress, rtype::Spawner, SpawnQueue>(
+        [&](engine::Entity entity, LevelProgress &progress,
+            rtype::Spawner &spawner, SpawnQueue &queue) {
+            if (!progress.levels || progress.level >= progress.levels->size()) {
+                finished.push_back(entity);
+                return;
+            }
+            if (progress.pause.count() > 0.0F) {
+                progress.pause -= dt;
+                if (progress.pause.count() <= 0.0F) {
+                    BB_INFO("Level "
+                            << progress.level + 1 << ": "
+                            << progress.levels->at(progress.level).name);
+                }
+                return;
+            }
+            if (progress.elapsed.count() == 0.0F && progress.nextWave == 0 &&
+                progress.level == 0) {
+                BB_INFO("Level 1: " << progress.levels->front().name);
+                announced = levelNumber(0);
+            }
+            progress.elapsed += dt;
+            queueDueWaves(progress, spawner, queue);
+            const Level &level = progress.levels->at(progress.level);
+            if (progress.nextWave < level.waves.size() ||
+                !queue.pending.empty() || enemiesLeft) {
+                return;
+            }
+            if (level.boss && !progress.bossSpawned) {
+                // The boss of the game settings replaces the one of the file.
+                queueBoss(progress.boss ? builtinKind(*progress.boss)
+                                        : level.bossKind.value_or(
+                                              builtinKind(*level.boss)),
+                          queue);
+                progress.bossSpawned = true;
+                BB_INFO("Boss of level " << progress.level + 1);
+                return;
+            }
+            ++progress.level;
+            progress.bossSpawned = false;
+            progress.nextWave = 0;
+            progress.nextObstacle = 0;
+            progress.elapsed = engine::Duration{0.0F};
+            progress.pause = LevelPause;
+            if (progress.level >= progress.levels->size()) {
+                BB_INFO("Every level cleared: endless mode");
+                finished.push_back(entity);
+                announced = 0;
+            } else {
+                announced = levelNumber(progress.level);
+            }
+        });
+    for (const engine::Entity entity : finished) {
+        registry.remove<LevelProgress>(entity);
+    }
+    return announced;
+}
+
+} // namespace server

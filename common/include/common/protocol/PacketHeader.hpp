@@ -20,14 +20,24 @@
 
 namespace rtype::protocol {
 
+/** @brief The first two bytes of every packet. */
 inline constexpr std::array<std::uint8_t, 2> Magic{'R', 'T'};
-inline constexpr std::uint8_t ProtocolVersion = 1;
+/** @brief The version of the protocol: peers of different versions do not
+ * talk to each other. */
+inline constexpr std::uint8_t ProtocolVersion = 13;
+/** @brief The size of the header, in bytes. */
 inline constexpr std::size_t HeaderSize = 12;
+/** @brief The largest payload that fits in a packet, in bytes. */
 inline constexpr std::size_t MaxPayloadSize = MaxPacketSize - HeaderSize;
+/** @brief The position of the payloadSize field in the header, in bytes. */
 inline constexpr std::size_t PayloadSizeOffset = 10;
 
+/** @brief The bits of PacketHeader::flags. */
 namespace PacketFlag {
+/** @brief The packet is numbered, acknowledged and resent until acknowledged.
+ */
 inline constexpr std::uint8_t Reliable = 1U << 0U;
+/** @brief Every known bit. */
 inline constexpr std::uint8_t All = Reliable;
 } // namespace PacketFlag
 

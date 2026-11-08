@@ -73,7 +73,11 @@ SnapshotPart sampleSnapshot()
     SnapshotPart snapshot;
     snapshot.tick = 300;
     snapshot.players = {
-        {.slot = 1, .score = 1500},
+        {.slot = 1,
+         .score = 1500,
+         .lastInput = 1000,
+         .shipId = 7,
+         .boosts = {12, 0, 255}},
         {.slot = 2, .score = 0},
     };
     snapshot.entities = {
@@ -91,6 +95,13 @@ SnapshotPart sampleSnapshot()
             .health = 20,
             .x = 1950.5F,
             .y = 120.25F,
+        },
+        {
+            .networkId = 43,
+            .type = EntityType::PowerUp,
+            .flags = EntityFlag::boost(rtype::PowerUpKind::Burst),
+            .x = 900.0F,
+            .y = 300.0F,
         },
     };
     return snapshot;
@@ -136,7 +147,7 @@ TEST(Packet, MatchesTheDocumentedLayout)
     }));
     const std::vector<std::uint8_t> expected{
         0x52, 0x54,             // magic "RT"
-        0x01,                   // version
+        0x0D,                   // version
         0x10,                   // type Input
         0x00,                   // flags
         0x00,                   // reserved
@@ -155,6 +166,8 @@ TEST(Packet, RoundTripsEveryPayload)
     laterPart.part = 1;
     laterPart.partCount = 2;
     laterPart.players.clear();
+    laterPart.entities[1].type = EntityType::PlayerMissile;
+    laterPart.entities[1].flags = EntityFlag::owner(MaxPlayers);
     const std::vector<Payload> payloads{
         Connect{},
         Accept{},
@@ -168,6 +181,27 @@ TEST(Packet, RoundTripsEveryPayload)
         GameEvent{.kind = GameEventKind::EntityDestroyed, .networkId = 42},
         GameEvent{.kind = GameEventKind::PlayerLeft, .slot = 3},
         GameEvent{.kind = GameEventKind::GameOver},
+        GameEvent{.kind = GameEventKind::GameStarted},
+        GameEvent{.kind = GameEventKind::LevelStarted, .level = 2},
+        RoomList{},
+        RoomList{.rooms = {{.room = 3,
+                            .players = 2,
+                            .status = RoomStatus::Playing}}},
+        JoinRoom{.room = NewRoom},
+        LeaveRoom{},
+        StartGame{},
+        StartGame{.difficulty = Difficulty::Hard,
+                  .level = EndlessLevel,
+                  .boss = BossChoice::Hive},
+        RoomJoined{.room = 7},
+        RoomJoined{.room = 7, .levels = 3},
+        RoomRefused{},
+        RoomClosed{},
+        ChatSend{.text = "Hello, room 1!"},
+        ChatSend{.text = std::string(MaxChatLength, '~')},
+        ChatMessage{.slot = MaxPlayers, .text = "a"},
+        Reject{.reason = RejectReason::Banned},
+        Reject{.reason = RejectReason::NotWhitelisted},
     };
     for (const Payload &payload : payloads) {
         SCOPED_TRACE(payload.index());
@@ -217,7 +251,11 @@ TEST(Packet, RejectsBadHeaders)
     const std::array cases{
         BadByte{.offset = 0, .value = 'X', .error = DecodeError::BadMagic},
         BadByte{.offset = 1, .value = 'X', .error = DecodeError::BadMagic},
-        BadByte{.offset = 2, .value = 2, .error = DecodeError::BadVersion},
+        BadByte{
+            .offset = 2,
+            .value = ProtocolVersion + 1,
+            .error = DecodeError::BadVersion,
+        },
         BadByte{.offset = 3, .value = 0x7F, .error = DecodeError::UnknownType},
         BadByte{.offset = 4, .value = 0x80, .error = DecodeError::BadFlags},
         BadByte{.offset = 5, .value = 1, .error = DecodeError::BadReserved},
@@ -235,7 +273,7 @@ TEST(Packet, MarksReliableTypesReliable)
     const auto bytes =
         encodeBytes(packetOf(Welcome{.slot = 2, .shipId = 58, .tick = 1200}));
     const std::vector<std::uint8_t> expected{
-        0x52, 0x54, 0x01, 0x21, // magic, version, type Welcome
+        0x52, 0x54, 0x0D, 0x21, // magic, version, type Welcome
         0x01, 0x00,             // flags Reliable, reserved
         0x2A, 0x01, 0x11, 0x00, // sequence 298, ack 17
         0x09, 0x00,             // payload size 9
@@ -320,8 +358,8 @@ TEST(Packet, RejectsUnknownEnumValues)
     expectBadByte(reject, HeaderSize, 9);
     expectBadByte(disconnect, HeaderSize, 9);
     expectBadByte(event, HeaderSize, 9);
-    // Snapshot header (8) + 2 players (1 + 2 * 5) + networkId (4).
-    expectBadByte(sampleSnapshot(), HeaderSize + 23, 200);
+    // Snapshot header (8) + 2 players (1 + 2 * 16) + networkId (4).
+    expectBadByte(sampleSnapshot(), HeaderSize + 45, 200);
 }
 
 TEST(Packet, RejectsInvalidSnapshots)
@@ -336,6 +374,14 @@ TEST(Packet, RejectsInvalidSnapshots)
 
     snapshot = sampleSnapshot();
     snapshot.entities[0].flags = 0x80;
+    expectBadPayload(snapshot);
+
+    snapshot = sampleSnapshot();
+    snapshot.entities[0].flags = EntityFlag::owner(MaxPlayers + 1);
+    expectBadPayload(snapshot);
+
+    snapshot = sampleSnapshot();
+    snapshot.entities[2].flags = EntityFlag::Boost;
     expectBadPayload(snapshot);
 
     snapshot = sampleSnapshot();
@@ -354,6 +400,44 @@ TEST(Packet, RejectsInvalidSnapshots)
     snapshot = sampleSnapshot();
     snapshot.players[0].slot = 0;
     expectBadPayload(snapshot);
+}
+
+TEST(Packet, RejectsInvalidRoomMessages)
+{
+    RoomList tooMany;
+    tooMany.rooms.resize(std::size_t{MaxRooms} + 1, {.room = 1});
+    expectBadPayload(tooMany);
+
+    expectBadPayload(RoomList{.rooms = {{.room = 0}}});
+    expectBadPayload(
+        RoomList{.rooms = {{.room = 1, .players = MaxPlayers + 1}}});
+    expectBadPayload(RoomJoined{.room = 0});
+    // Count (1) + room (4) + players (1): the status comes next.
+    expectBadByte(RoomList{.rooms = {{.room = 1}}}, HeaderSize + 6, 9);
+}
+
+TEST(Packet, RejectsInvalidChatLines)
+{
+    expectBadPayload(ChatSend{});
+    expectBadPayload(ChatSend{.text = std::string(MaxChatLength + 1, 'a')});
+    expectBadPayload(ChatSend{.text = "two\nlines"});
+    expectBadPayload(ChatSend{.text = "caf\xC3\xA9"});
+    expectBadPayload(ChatMessage{.slot = 0, .text = "a"});
+    expectBadPayload(ChatMessage{.slot = MaxPlayers + 1, .text = "a"});
+    expectBadPayload(ChatMessage{.slot = 1});
+    // The size must match the characters of the packet, in both directions.
+    expectBadByte(ChatSend{.text = "abc"}, HeaderSize, 2);
+    expectBadByte(ChatSend{.text = "abc"}, HeaderSize, 4);
+}
+
+TEST(Packet, ChatOnlyGoesInOneDirection)
+{
+    EXPECT_EQ(
+        decodeError(encodeBytes(packetOf(ChatSend{.text = "a"})), Side::Server),
+        DecodeError::WrongSender);
+    EXPECT_EQ(decodeError(encodeBytes(packetOf(ChatMessage{.text = "a"})),
+                          Side::Client),
+              DecodeError::WrongSender);
 }
 
 TEST(Packet, RefusesToEncodeMoreThanMaxPacketSize)
@@ -389,9 +473,9 @@ TEST(SplitSnapshot, EveryPartFitsInADatagram)
     }
     const auto parts = splitSnapshot(300, players, entities);
     ASSERT_EQ(parts.size(), 3U);
-    EXPECT_EQ(parts[0].entities.size(), 72U);
+    EXPECT_EQ(parts[0].entities.size(), 69U);
     EXPECT_EQ(parts[1].entities.size(), 73U);
-    EXPECT_EQ(parts[2].entities.size(), 55U);
+    EXPECT_EQ(parts[2].entities.size(), 58U);
     std::vector<EntityState> received;
     for (const SnapshotPart &part : parts) {
         expectSendablePart(part, 3);

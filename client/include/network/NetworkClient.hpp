@@ -9,7 +9,11 @@
 #define CLIENT_NETWORK_NETWORKCLIENT_HPP
 
 #include "common/protocol/Packet.hpp"
+#include "common/protocol/ReliableChannel.hpp"
+#include "engine/network/Endpoint.hpp"
+#include "engine/network/IUdpSocket.hpp"
 
+#include <array>
 #include <chrono>
 #include <cstdint>
 #include <memory>
@@ -24,11 +28,12 @@ namespace client {
  *
  * The game calls update() then sendInput() once per frame. It handles the
  * protocol itself (Connect retries, Accept, Reject, Disconnect, acks,
- * timeout) and only hands the game what concerns it. No Asio type appears
- * in this header, so it can be included next to raylib.h.
+ * timeout) and only hands the game what concerns it. The socket is an
+ * engine::net::IUdpSocket, so no network library appears here.
  **/
 class NetworkClient {
   public:
+    /** @brief The clock of the connection's timers. */
     using TimePoint = std::chrono::steady_clock::time_point;
 
     /**
@@ -54,10 +59,20 @@ class NetworkClient {
      * socket. The first Connect is sent by the first update().
      * @param host The server's host name or IP address.
      * @param port The server's UDP port.
-     * @throws asio::system_error If the host cannot be resolved or the
-     * socket cannot be opened.
+     * @throws engine::net::NetworkError If the host cannot be resolved or
+     * the socket cannot be opened.
      **/
     NetworkClient(const std::string &host, std::uint16_t port);
+
+    /**
+     * @brief Uses an already opened socket (a fake one in tests). The first
+     * Connect is sent by the first update().
+     * @param socket The socket, polled without blocking.
+     * @param server The server's endpoint; datagrams from elsewhere are
+     * dropped.
+     **/
+    NetworkClient(std::unique_ptr<engine::net::IUdpSocket> socket,
+                  const engine::net::Endpoint &server);
 
     /**
      * @brief Sends Disconnect{Left} if connected, so the server frees the
@@ -81,13 +96,16 @@ class NetworkClient {
     [[nodiscard]] std::vector<rtype::protocol::Payload> update(TimePoint now);
 
     /**
-     * @brief Sends the actions held this frame, with a new sequence number.
-     * Must be called every frame, even with no key held: it keeps the
-     * connection alive and carries the ack. Does nothing until connected.
+     * @brief Sends the actions held this frame if they changed, or if the
+     * last Input is InputInterval old. Must be called every frame, even with
+     * no key held: it keeps the connection alive and carries the ack. Does
+     * nothing until connected.
      * @param actions The held actions, as Action bits.
      * @param now The current time.
+     * @return The sequence number of the Input that carries this frame: the
+     * one just sent, or the next one if nothing was sent. 0 until connected.
      **/
-    void sendInput(std::uint8_t actions, TimePoint now);
+    std::uint32_t sendInput(std::uint8_t actions, TimePoint now);
 
     /**
      * @brief Returns where the connection stands, for the status display.
@@ -95,21 +113,96 @@ class NetworkClient {
      **/
     [[nodiscard]] State state() const { return m_state; }
 
-  private:
-    struct Impl;
+    /**
+     * @brief Returns why the server refused the client.
+     * @return The reason, meaningful in the Rejected state.
+     **/
+    [[nodiscard]] rtype::protocol::RejectReason rejectReason() const
+    {
+        return m_rejectReason;
+    }
 
+    /**
+     * @brief Returns why the server ended the connection.
+     * @return The reason, meaningful in the Closed state.
+     **/
+    [[nodiscard]] rtype::protocol::DisconnectReason disconnectReason() const
+    {
+        return m_disconnectReason;
+    }
+
+    /**
+     * @brief Asks to enter a room, answered by RoomJoined or RoomRefused.
+     * Does nothing until connected.
+     * @param room The room, or AnyRoom or NewRoom.
+     * @param now The current time.
+     **/
+    void joinRoom(std::uint32_t room, TimePoint now);
+
+    /**
+     * @brief Leaves the current room and goes back to the lobby.
+     * @param now The current time.
+     **/
+    void leaveRoom(TimePoint now);
+
+    /**
+     * @brief Asks to start the game of the current room.
+     * @param now The current time.
+     * @param settings The settings of the game: difficulty, starting level
+     * and boss.
+     **/
+    void startGame(const rtype::protocol::StartGame &settings, TimePoint now);
+
+    /**
+     * @brief Sends a line of chat to the players of the room, if connected.
+     * The server sends it back with its author, to this client too.
+     * @param text From 1 to MaxChatLength chat characters.
+     * @param now The current time.
+     **/
+    void sendChat(const std::string &text, TimePoint now);
+
+    /**
+     * @brief Returns the bytes of every datagram received from the server
+     * since the start, for the network benchmark.
+     * @return The number of bytes received.
+     **/
+    [[nodiscard]] std::uint64_t bytesReceived() const
+    {
+        return m_bytesReceived;
+    }
+
+    /**
+     * @brief Returns the bytes of every datagram sent since the start, for
+     * the network benchmark.
+     * @return The number of bytes sent.
+     **/
+    [[nodiscard]] std::uint64_t bytesSent() const { return m_bytesSent; }
+
+  private:
     void receivePending(TimePoint now,
                         std::vector<rtype::protocol::Payload> &received);
     void handlePacket(const rtype::protocol::Packet &packet,
                       std::vector<rtype::protocol::Payload> &received);
     void send(const rtype::protocol::Payload &payload, TimePoint now);
+    void sendPacket(const rtype::protocol::Packet &packet, TimePoint now);
 
-    std::unique_ptr<Impl> m_impl;
+    std::unique_ptr<engine::net::IUdpSocket> m_socket;
+    engine::net::Endpoint m_server;
+    rtype::protocol::ReliableChannel m_channel;
+    std::array<std::uint8_t, rtype::protocol::MaxPacketSize> m_buffer{};
     State m_state = State::Connecting;
     TimePoint m_lastHeard;
     TimePoint m_lastSent;
     TimePoint m_nextConnect;
+    TimePoint m_nextInput;
     std::uint32_t m_inputSequence = 0;
+    std::uint8_t m_lastActions = 0;
+    rtype::protocol::RejectReason m_rejectReason =
+        rtype::protocol::RejectReason::ServerFull;
+    rtype::protocol::DisconnectReason m_disconnectReason =
+        rtype::protocol::DisconnectReason::ServerClosing;
+    std::uint64_t m_bytesReceived = 0;
+    std::uint64_t m_bytesSent = 0;
 };
 
 } // namespace client

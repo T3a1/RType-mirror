@@ -23,9 +23,19 @@ namespace rtype::protocol {
  * @param Disconnect Either side ends the connection.
  * @param Ack Acknowledges reliable packets when nothing else is sent.
  * @param Input The actions a player holds (client to server).
+ * @param ChatSend A player writes to its room (client to server, reliable).
  * @param Snapshot One part of the world state at a tick (server to client).
  * @param Welcome The slot and ship of a new player (reliable).
  * @param GameEvent A one-off game fact, such as a destruction (reliable).
+ * @param ChatMessage A line of the chat of the room (server to client,
+ * reliable).
+ * @param RoomList The rooms of the server, for a client in the lobby.
+ * @param JoinRoom A client asks to enter a room (reliable).
+ * @param LeaveRoom A client goes back to the lobby (reliable).
+ * @param StartGame A player starts the game of its room (reliable).
+ * @param RoomJoined The server put the client in a room (reliable).
+ * @param RoomRefused The server refused JoinRoom (reliable).
+ * @param RoomClosed An administrator closed the client's room (reliable).
  **/
 enum class PacketType : std::uint8_t {
     Connect = 0x01,
@@ -34,15 +44,28 @@ enum class PacketType : std::uint8_t {
     Disconnect = 0x04,
     Ack = 0x05,
     Input = 0x10,
+    ChatSend = 0x11,
     Snapshot = 0x20,
     Welcome = 0x21,
     GameEvent = 0x22,
+    ChatMessage = 0x23,
+    RoomList = 0x30,
+    JoinRoom = 0x31,
+    LeaveRoom = 0x32,
+    StartGame = 0x33,
+    RoomJoined = 0x34,
+    RoomRefused = 0x35,
+    RoomClosed = 0x36,
 };
 
+/** @brief Every packet type, to check a byte read from the network. */
 inline constexpr std::array AllPacketTypes{
-    PacketType::Connect,    PacketType::Accept,  PacketType::Reject,
-    PacketType::Disconnect, PacketType::Ack,     PacketType::Input,
-    PacketType::Snapshot,   PacketType::Welcome, PacketType::GameEvent,
+    PacketType::Connect,    PacketType::Accept,     PacketType::Reject,
+    PacketType::Disconnect, PacketType::Ack,        PacketType::Input,
+    PacketType::Snapshot,   PacketType::Welcome,    PacketType::GameEvent,
+    PacketType::RoomList,   PacketType::JoinRoom,   PacketType::LeaveRoom,
+    PacketType::StartGame,  PacketType::RoomJoined, PacketType::RoomRefused,
+    PacketType::RoomClosed, PacketType::ChatSend,   PacketType::ChatMessage,
 };
 
 /**
@@ -82,12 +105,21 @@ enum class Side : std::uint8_t {
         return true;
     case PacketType::Connect:
     case PacketType::Input:
+    case PacketType::ChatSend:
+    case PacketType::JoinRoom:
+    case PacketType::LeaveRoom:
+    case PacketType::StartGame:
         return side == Side::Client;
     case PacketType::Accept:
     case PacketType::Reject:
     case PacketType::Snapshot:
     case PacketType::Welcome:
     case PacketType::GameEvent:
+    case PacketType::ChatMessage:
+    case PacketType::RoomList:
+    case PacketType::RoomJoined:
+    case PacketType::RoomRefused:
+    case PacketType::RoomClosed:
         return side == Side::Server;
     }
     return false;
@@ -97,12 +129,27 @@ enum class Side : std::uint8_t {
  * @brief Tells whether a packet type is sent reliably (numbered,
  * acknowledged and resent until acknowledged).
  * @param type The type of the packet.
- * @return `true` for Accept, Welcome and GameEvent.
+ * @return `true` for every type but the ones repeated anyway: Connect,
+ * Reject, Disconnect, Ack, Input, Snapshot and RoomList.
  **/
 [[nodiscard]] constexpr bool isReliable(PacketType type)
 {
-    return type == PacketType::Accept || type == PacketType::Welcome ||
-           type == PacketType::GameEvent;
+    switch (type) {
+    case PacketType::Accept:
+    case PacketType::Welcome:
+    case PacketType::GameEvent:
+    case PacketType::ChatSend:
+    case PacketType::ChatMessage:
+    case PacketType::JoinRoom:
+    case PacketType::LeaveRoom:
+    case PacketType::StartGame:
+    case PacketType::RoomJoined:
+    case PacketType::RoomRefused:
+    case PacketType::RoomClosed:
+        return true;
+    default:
+        return false;
+    }
 }
 
 } // namespace rtype::protocol

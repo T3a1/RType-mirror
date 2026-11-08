@@ -54,6 +54,15 @@ std::vector<Bytes> validPackets()
         encodeBytes(laterPart),
         encodeBytes(GameEvent{.kind = GameEventKind::EntityDestroyed}),
         encodeBytes(GameEvent{.kind = GameEventKind::PlayerJoined, .slot = 1}),
+        encodeBytes(RoomList{.rooms = {{.room = 1, .players = 2}}}),
+        encodeBytes(JoinRoom{.room = 3}),
+        encodeBytes(LeaveRoom{}),
+        encodeBytes(StartGame{}),
+        encodeBytes(RoomJoined{.room = 3}),
+        encodeBytes(RoomRefused{}),
+        encodeBytes(RoomClosed{}),
+        encodeBytes(ChatSend{.text = "hello"}),
+        encodeBytes(ChatMessage{.slot = 1, .text = "hello"}),
     };
 }
 

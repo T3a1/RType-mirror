@@ -8,36 +8,71 @@
 #include "systems/InputSystem.hpp"
 #include "common/components/InputState.hpp"
 
-#include <raylib.h>
-
+#include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdint>
 
 namespace client {
 
 namespace {
 
-struct KeyBinding {
-    KeyboardKey key;
+/**
+ * @struct ActionBinding
+ * @brief The action a control gives to the server.
+ * @param control The control.
+ * @param action Its Action bit.
+ **/
+struct ActionBinding {
+    Control control;
     std::uint8_t action;
 };
 
-constexpr std::array bindings{
-    KeyBinding{.key = KEY_UP, .action = rtype::Action::Up},
-    KeyBinding{.key = KEY_DOWN, .action = rtype::Action::Down},
-    KeyBinding{.key = KEY_LEFT, .action = rtype::Action::Left},
-    KeyBinding{.key = KEY_RIGHT, .action = rtype::Action::Right},
-    KeyBinding{.key = KEY_SPACE, .action = rtype::Action::Fire},
+/** @brief The controls that are sent to the server. */
+constexpr std::array ActionBindings{
+    ActionBinding{.control = Control::Up, .action = rtype::Action::Up},
+    ActionBinding{.control = Control::Down, .action = rtype::Action::Down},
+    ActionBinding{.control = Control::Left, .action = rtype::Action::Left},
+    ActionBinding{.control = Control::Right, .action = rtype::Action::Right},
+    ActionBinding{.control = Control::Fire, .action = rtype::Action::Fire},
 };
 
 } // namespace
 
-std::uint8_t inputSystem()
+bool isHeld(const gfx::IGraphics &graphics, const PlayerControls &controls,
+            Control control)
 {
+    const auto down = [&graphics](gfx::Key key) {
+        return graphics.isKeyDown(key);
+    };
+    const auto index = static_cast<std::size_t>(control);
+    return std::ranges::any_of(controls.keyboard.at(index), down) ||
+           std::ranges::any_of(controls.gamepad.at(index), down);
+}
+
+std::uint8_t inputSystem(const gfx::IGraphics &graphics,
+                         const PlayerControls &controls, AutoFire &autoFire,
+                         engine::Duration dt)
+{
+    const bool toggle = isHeld(graphics, controls, Control::AutoFire);
+    if (toggle && !autoFire.keyHeld) {
+        autoFire.enabled = !autoFire.enabled;
+        autoFire.elapsed = 0.0F;
+    }
+    autoFire.keyHeld = toggle;
+
     std::uint8_t actions = 0;
-    for (const KeyBinding &binding : bindings) {
-        if (IsKeyDown(binding.key)) {
+    for (const ActionBinding &binding : ActionBindings) {
+        if (isHeld(graphics, controls, binding.control)) {
             actions |= binding.action;
+        }
+    }
+    if (autoFire.enabled) {
+        // Press, release, press...: the server fires once per press.
+        autoFire.elapsed =
+            std::fmod(autoFire.elapsed + dt.count(), AutoFirePeriod);
+        if (autoFire.elapsed < AutoFirePeriod / 2.0F) {
+            actions |= rtype::Action::Fire;
         }
     }
     return actions;

@@ -10,6 +10,11 @@
 
 namespace rtype {
 
+/**
+ * @struct Damage
+ * @brief What an entity deals to what it collides with.
+ * @param points The health points removed.
+ **/
 struct Damage {
     int points = 1;
 };

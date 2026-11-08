@@ -22,7 +22,9 @@ namespace rtype::protocol {
  * @brief Every payload a packet can carry, one alternative per PacketType.
  **/
 using Payload = std::variant<Connect, Accept, Reject, Disconnect, Ack, Input,
-                             Welcome, SnapshotPart, GameEvent>;
+                             Welcome, SnapshotPart, GameEvent, RoomList,
+                             JoinRoom, LeaveRoom, StartGame, RoomJoined,
+                             RoomRefused, RoomClosed, ChatSend, ChatMessage>;
 
 /**
  * @struct Packet

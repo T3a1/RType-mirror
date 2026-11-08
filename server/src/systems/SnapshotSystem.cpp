@@ -10,16 +10,26 @@
 #include "common/components/Health.hpp"
 #include "common/components/NetworkId.hpp"
 #include "common/components/Player.hpp"
+#include "common/components/Projectile.hpp"
 #include "common/components/Transform.hpp"
+#include "common/components/Weapon.hpp"
 #include "common/protocol/Messages.hpp"
+#include "components/PowerUp.hpp"
+#include "components/ShotStyles.hpp"
 
 #include <algorithm>
+#include <array>
+#include <cmath>
 #include <limits>
 #include <vector>
 
 namespace server {
 
 namespace {
+
+/** @brief How long a player holds the fire key before the clients see it
+ * charge, in seconds. */
+constexpr engine::Duration ChargingFlagDelay{0.3F};
 
 /**
  * @brief Returns the health of an entity as sent in a snapshot.
@@ -38,6 +48,32 @@ std::uint16_t healthOf(engine::Registry &registry, engine::Entity entity)
 }
 
 /**
+ * @brief Returns the flags of an entity as sent in a snapshot.
+ * @param registry The registry holding the entity.
+ * @param entity The entity.
+ * @return The Owner bits of a projectile fired by a player still alive,
+ * Charging for a player's ship whose fire key is held for a while, the
+ * Boost bits of a power-up, 0 otherwise.
+ **/
+std::uint8_t flagsOf(engine::Registry &registry, engine::Entity entity)
+{
+    if (const auto *powerUp = registry.tryGet<PowerUp>(entity)) {
+        return rtype::protocol::EntityFlag::boost(powerUp->kind);
+    }
+    const auto *projectile = registry.tryGet<rtype::Projectile>(entity);
+    if (projectile == nullptr) {
+        const auto *weapon = registry.tryGet<rtype::Weapon>(entity);
+        const bool charging = weapon != nullptr &&
+                              registry.has<rtype::Player>(entity) &&
+                              weapon->charge >= ChargingFlagDelay;
+        return charging ? rtype::protocol::EntityFlag::Charging : 0;
+    }
+    const auto *player = registry.tryGet<rtype::Player>(projectile->owner);
+    return player != nullptr ? rtype::protocol::EntityFlag::owner(player->slot)
+                             : 0;
+}
+
+/**
  * @brief Builds the snapshot record of every networked entity.
  * @param registry The registry to read.
  * @return One record per entity with a NetworkId, an EntityType and a
@@ -53,6 +89,7 @@ entityStates(engine::Registry &registry)
             states.push_back({
                 .networkId = networkId.value,
                 .type = type,
+                .flags = flagsOf(registry, entity),
                 .health = healthOf(registry, entity),
                 .x = transform.position.x,
                 .y = transform.position.y,
@@ -62,20 +99,45 @@ entityStates(engine::Registry &registry)
 }
 
 /**
+ * @brief Returns the boost timers of a ship as sent in a snapshot.
+ * @param registry The registry holding the ship.
+ * @param ship The ship.
+ * @return The seconds left of each boost, rounded up, 0 for none.
+ **/
+std::array<std::uint8_t, rtype::PowerUpKindCount>
+boostsOf(engine::Registry &registry, engine::Entity ship)
+{
+    std::array<std::uint8_t, rtype::PowerUpKindCount> seconds{};
+    const auto *boosts = registry.tryGet<Boosts>(ship);
+    if (boosts == nullptr) {
+        return seconds;
+    }
+    for (std::size_t i = 0; i < seconds.size(); ++i) {
+        seconds.at(i) = static_cast<std::uint8_t>(
+            std::clamp(std::ceil(boosts->left.at(i).count()), 0.0F,
+                       float{std::numeric_limits<std::uint8_t>::max()}));
+    }
+    return seconds;
+}
+
+/**
  * @brief Builds the players block of a snapshot.
- * @param registry The registry holding the ships, for the scores.
+ * @param registry The registry holding the ships.
  * @param players The connected players.
- * @return One record per player; the score is 0 if its ship is gone.
+ * @return One record per player; the ship id is 0 if its ship is gone.
  **/
 std::vector<rtype::protocol::PlayerInfo> playerInfos(engine::Registry &registry,
                                                      const Players &players)
 {
     std::vector<rtype::protocol::PlayerInfo> infos;
     for (const auto &[clientId, player] : players) {
-        const auto *component = registry.tryGet<rtype::Player>(player.ship);
+        const auto *networkId = registry.tryGet<rtype::NetworkId>(player.ship);
         infos.push_back({
             .slot = player.slot,
-            .score = component != nullptr ? component->score : 0,
+            .score = player.score,
+            .lastInput = player.lastSequence,
+            .shipId = networkId != nullptr ? networkId->value : 0,
+            .boosts = boostsOf(registry, player.ship),
         });
     }
     return infos;

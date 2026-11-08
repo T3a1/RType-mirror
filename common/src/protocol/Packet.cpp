@@ -86,12 +86,30 @@ decodePacket(std::span<const std::uint8_t> datagram, Side sender)
         return decodePayload<Ack>(header, in);
     case PacketType::Input:
         return decodePayload<Input>(header, in);
+    case PacketType::ChatSend:
+        return decodePayload<ChatSend>(header, in);
+    case PacketType::ChatMessage:
+        return decodePayload<ChatMessage>(header, in);
     case PacketType::Snapshot:
         return decodePayload<SnapshotPart>(header, in);
     case PacketType::Welcome:
         return decodePayload<Welcome>(header, in);
     case PacketType::GameEvent:
         return decodePayload<GameEvent>(header, in);
+    case PacketType::RoomList:
+        return decodePayload<RoomList>(header, in);
+    case PacketType::JoinRoom:
+        return decodePayload<JoinRoom>(header, in);
+    case PacketType::LeaveRoom:
+        return decodePayload<LeaveRoom>(header, in);
+    case PacketType::StartGame:
+        return decodePayload<StartGame>(header, in);
+    case PacketType::RoomJoined:
+        return decodePayload<RoomJoined>(header, in);
+    case PacketType::RoomRefused:
+        return decodePayload<RoomRefused>(header, in);
+    case PacketType::RoomClosed:
+        return decodePayload<RoomClosed>(header, in);
     }
     return DecodeError::UnknownType;
 }

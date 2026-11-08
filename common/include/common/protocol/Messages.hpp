@@ -9,11 +9,14 @@
 #define COMMON_PROTOCOL_MESSAGES_HPP
 
 #include "common/components/EntityType.hpp"
+#include "common/components/PowerUpKind.hpp"
 #include "common/protocol/PacketType.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <string>
 #include <vector>
 
 namespace rtype::protocol {
@@ -21,18 +24,44 @@ namespace rtype::protocol {
 class ByteReader;
 class ByteWriter;
 
+/** @brief How many players a room holds, at most. */
 inline constexpr std::uint8_t MaxPlayers = 4;
+/** @brief How many rooms a server runs at the same time, at most. */
+inline constexpr std::uint8_t MaxRooms = 16;
+/** @brief Asks for the first room with a free slot, or a new one if none. */
+inline constexpr std::uint32_t AnyRoom = 0;
+/** @brief Asks for a new room. */
+inline constexpr std::uint32_t NewRoom = 0xFFFFFFFF;
 
-// Sizes on the wire, used to split snapshots.
+/** @brief The size of the fixed part of a snapshot on the wire, in bytes. */
 inline constexpr std::size_t SnapshotHeaderSize = 8;
+/** @brief The size of the number of players on the wire, in bytes. */
 inline constexpr std::size_t PlayerCountSize = 1;
-inline constexpr std::size_t PlayerRecordSize = 5;
+/** @brief The size of one player on the wire, in bytes. */
+inline constexpr std::size_t PlayerRecordSize = 13 + PowerUpKindCount;
+/** @brief The size of one entity on the wire, in bytes. */
 inline constexpr std::size_t EntityRecordSize = 16;
+/** @brief How many parts one snapshot can be split into, at most. */
 inline constexpr std::size_t MaxSnapshotParts = 255;
+/** @brief The longest line of chat, in characters. */
+inline constexpr std::size_t MaxChatLength = 80;
+
+/**
+ * @brief Tells whether a character may be part of a line of chat: printable
+ * ASCII, the characters every graphics backend can draw. It also keeps control
+ * characters out of the server's logs.
+ * @param character The character.
+ * @return `true` if it is between ' ' and '~'.
+ **/
+constexpr bool isChatCharacter(char character)
+{
+    return character >= ' ' && character <= '~';
+}
 
 /**
  * @struct Connect
- * @brief A client asks to join; repeated until Accept or Reject. Empty.
+ * @brief A client asks to enter the lobby; repeated until Accept or Reject.
+ * Empty.
  * @param Type The packet type that carries this payload.
  **/
 struct Connect {
@@ -42,7 +71,7 @@ struct Connect {
 
 /**
  * @struct Accept
- * @brief The server accepts the client and opens its session. Empty.
+ * @brief The server accepts the client, which is now in the lobby. Empty.
  * @param Type The packet type that carries this payload.
  **/
 struct Accept {
@@ -53,12 +82,17 @@ struct Accept {
 /**
  * @enum RejectReason
  * @brief Why the server refuses a client.
- * @param ServerFull MaxPlayers players are already connected.
+ * @param ServerFull The server has as many clients as all its rooms can
+ * hold.
  * @param VersionMismatch The client speaks another protocol version.
+ * @param Banned The address of the client is banned.
+ * @param NotWhitelisted The server only accepts listed addresses.
  **/
 enum class RejectReason : std::uint8_t {
     ServerFull,
     VersionMismatch,
+    Banned,
+    NotWhitelisted,
 };
 
 /**
@@ -78,7 +112,7 @@ struct Reject {
  * @brief Why a connection ended.
  * @param Left The player quit.
  * @param Timeout Nothing was received from the peer for PeerTimeout.
- * @param Kicked The peer broke the protocol.
+ * @param Kicked The peer broke the protocol, or an administrator removed it.
  * @param ServerClosing The server is shutting down.
  **/
 enum class DisconnectReason : std::uint8_t {
@@ -148,17 +182,84 @@ struct Welcome {
  * @brief One player in the players block of a snapshot.
  * @param slot The player's slot, from 1 to MaxPlayers.
  * @param score The player's score, in points.
+ * @param lastInput The sequence of the player's last Input applied by the
+ * server at this tick, 0 if none, for client-side prediction.
+ * @param shipId The NetworkId of the player's ship, 0 if it has none, so
+ * that clients can tell which ship belongs to which player.
+ * @param boosts The seconds left of each boost of the player, by
+ * PowerUpKind, rounded up; 0 when it does not have it.
  **/
 struct PlayerInfo {
     std::uint8_t slot = 0;
     std::uint32_t score = 0;
+    std::uint32_t lastInput = 0;
+    std::uint32_t shipId = 0;
+    std::array<std::uint8_t, PowerUpKindCount> boosts{};
     bool operator==(const PlayerInfo &) const = default;
 };
 
+/** @brief The bits of the flags of an entity in a snapshot. */
 namespace EntityFlag {
+/** @brief The entity cannot be hurt. */
 inline constexpr std::uint8_t Invincible = 1U << 0U;
+/** @brief The player's ship is charging a shot. */
 inline constexpr std::uint8_t Charging = 1U << 1U;
-inline constexpr std::uint8_t All = Invincible | Charging;
+/** @brief The position of the Owner bits. */
+inline constexpr unsigned OwnerShift = 2U;
+/** @brief The bits holding the slot of the player who owns the entity. */
+inline constexpr std::uint8_t Owner = 0x7U << OwnerShift;
+/** @brief The position of the Boost bits. */
+inline constexpr unsigned BoostShift = 5U;
+/** @brief The bits holding the PowerUpKind of a power-up. */
+inline constexpr std::uint8_t Boost = 0x3U << BoostShift;
+/** @brief Every known bit. */
+inline constexpr std::uint8_t All = unsigned{Invincible} | unsigned{Charging} |
+                                    unsigned{Owner} | unsigned{Boost};
+
+/**
+ * @brief Returns the flag bits naming the player who owns an entity.
+ * @param slot The owner's slot, from 1 to MaxPlayers, or 0 for none.
+ * @return The Owner bits.
+ **/
+constexpr std::uint8_t owner(std::uint8_t slot)
+{
+    return static_cast<std::uint8_t>((unsigned{slot} << OwnerShift) &
+                                     unsigned{Owner});
+}
+
+/**
+ * @brief Returns the slot of the player who owns an entity.
+ * @param flags The entity's flags.
+ * @return The owner's slot, or 0 if no player owns it.
+ **/
+constexpr std::uint8_t ownerOf(std::uint8_t flags)
+{
+    return static_cast<std::uint8_t>((unsigned{flags} & unsigned{Owner}) >>
+                                     OwnerShift);
+}
+
+/**
+ * @brief Returns the flag bits naming the boost of a power-up.
+ * @param kind The power-up's kind.
+ * @return The Boost bits.
+ **/
+constexpr std::uint8_t boost(PowerUpKind kind)
+{
+    return static_cast<std::uint8_t>(
+        (unsigned{static_cast<std::uint8_t>(kind)} << BoostShift) &
+        unsigned{Boost});
+}
+
+/**
+ * @brief Returns the boost of a power-up.
+ * @param flags The power-up's flags.
+ * @return Its kind; may be Count or more in a packet that was not checked.
+ **/
+constexpr PowerUpKind boostOf(std::uint8_t flags)
+{
+    return static_cast<PowerUpKind>((unsigned{flags} & unsigned{Boost}) >>
+                                    BoostShift);
+}
 } // namespace EntityFlag
 
 /**
@@ -166,7 +267,8 @@ inline constexpr std::uint8_t All = Invincible | Charging;
  * @brief One entity in a snapshot (EntityRecordSize bytes on the wire).
  * @param networkId The id shared by the server and the clients.
  * @param type What the entity is, to pick its sprite.
- * @param flags EntityFlag bits.
+ * @param flags EntityFlag bits: Invincible, Charging, the Owner slot of a
+ * player's missile and the Boost kind of a power-up.
  * @param health The entity's health points, 0 if it has none.
  * @param x The horizontal position of its center, in playfield units.
  * @param y The vertical position of its center, in playfield units.
@@ -209,6 +311,8 @@ struct SnapshotPart {
  * @param PlayerLeft A player left; sends slot.
  * @param PlayerHit A player was hit; sends slot.
  * @param GameOver The game is over; sends nothing.
+ * @param GameStarted The game of the room started; sends nothing.
+ * @param LevelStarted A level is about to start; sends level.
  **/
 enum class GameEventKind : std::uint8_t {
     EntityDestroyed,
@@ -216,6 +320,8 @@ enum class GameEventKind : std::uint8_t {
     PlayerLeft,
     PlayerHit,
     GameOver,
+    GameStarted,
+    LevelStarted,
 };
 
 /**
@@ -226,13 +332,183 @@ enum class GameEventKind : std::uint8_t {
  * @param kind What happened.
  * @param networkId The destroyed entity, for EntityDestroyed.
  * @param slot The player concerned, for the player events.
+ * @param level The level that starts, from 1, or 0 for the endless mode,
+ * for LevelStarted.
  **/
 struct GameEvent {
     static constexpr PacketType Type = PacketType::GameEvent;
     GameEventKind kind = GameEventKind::GameOver;
     std::uint32_t networkId = 0;
     std::uint8_t slot = 0;
+    std::uint8_t level = 0;
     bool operator==(const GameEvent &) const = default;
+};
+
+/**
+ * @enum RoomStatus
+ * @brief Where the game of a room stands.
+ * @param Waiting The players wait for one of them to start it.
+ * @param Playing The game runs; new players may still join.
+ * @param Over The game is over; nobody can join.
+ **/
+enum class RoomStatus : std::uint8_t {
+    Waiting,
+    Playing,
+    Over,
+};
+
+/**
+ * @struct RoomInfo
+ * @brief One room in a RoomList.
+ * @param room The room's number, at least 1.
+ * @param players How many players are in it, at most MaxPlayers.
+ * @param status Where its game stands.
+ **/
+struct RoomInfo {
+    std::uint32_t room = 0;
+    std::uint8_t players = 0;
+    RoomStatus status = RoomStatus::Waiting;
+    bool operator==(const RoomInfo &) const = default;
+};
+
+/**
+ * @struct RoomList
+ * @brief The rooms of the server, sent regularly to the clients in the lobby.
+ * @param Type The packet type that carries this payload.
+ * @param rooms The rooms, at most MaxRooms.
+ **/
+struct RoomList {
+    static constexpr PacketType Type = PacketType::RoomList;
+    std::vector<RoomInfo> rooms;
+    bool operator==(const RoomList &) const = default;
+};
+
+/**
+ * @struct JoinRoom
+ * @brief A client in the lobby asks to enter a room (reliable).
+ * @param Type The packet type that carries this payload.
+ * @param room The room, created if it does not exist, or AnyRoom or NewRoom.
+ **/
+struct JoinRoom {
+    static constexpr PacketType Type = PacketType::JoinRoom;
+    std::uint32_t room = AnyRoom;
+    bool operator==(const JoinRoom &) const = default;
+};
+
+/**
+ * @struct LeaveRoom
+ * @brief A client leaves its room and goes back to the lobby (reliable).
+ * Empty.
+ * @param Type The packet type that carries this payload.
+ **/
+struct LeaveRoom {
+    static constexpr PacketType Type = PacketType::LeaveRoom;
+    bool operator==(const LeaveRoom &) const = default;
+};
+
+/**
+ * @enum Difficulty
+ * @brief How hard a game is: enemy health, fire rate and, in endless mode,
+ * how often they come.
+ * @param Easy Enemies with less health, which fire less often.
+ * @param Normal The stats of the enemy file.
+ * @param Hard Enemies with more health, which fire more often.
+ **/
+enum class Difficulty : std::uint8_t { Easy, Normal, Hard };
+
+/**
+ * @enum BossChoice
+ * @brief Which boss ends the levels that have one.
+ * @param LevelBoss The boss written in each level file.
+ * @param Warship The warship, in every level that has a boss.
+ * @param Hive The hive, in every level that has a boss.
+ **/
+enum class BossChoice : std::uint8_t { LevelBoss, Warship, Hive };
+
+/** @brief StartGame::level to skip the levels and play the endless mode. */
+inline constexpr std::uint8_t EndlessLevel = 0;
+
+/**
+ * @struct StartGame
+ * @brief A player starts the game of its room, with its settings
+ * (reliable).
+ * @param Type The packet type that carries this payload.
+ * @param difficulty How hard the game is.
+ * @param level The level it starts at, from 1, or EndlessLevel; a level
+ * past the last one starts the last one.
+ * @param boss Which boss ends the levels.
+ **/
+struct StartGame {
+    static constexpr PacketType Type = PacketType::StartGame;
+    Difficulty difficulty = Difficulty::Normal;
+    std::uint8_t level = 1;
+    BossChoice boss = BossChoice::LevelBoss;
+    bool operator==(const StartGame &) const = default;
+};
+
+/**
+ * @struct RoomJoined
+ * @brief The server put the client in a room (reliable).
+ * @param Type The packet type that carries this payload.
+ * @param room The room's number, at least 1.
+ * @param levels How many levels the server has, for the choice of the
+ * starting level; 0 if it only has the endless mode.
+ **/
+struct RoomJoined {
+    static constexpr PacketType Type = PacketType::RoomJoined;
+    std::uint32_t room = 1;
+    std::uint8_t levels = 0;
+    bool operator==(const RoomJoined &) const = default;
+};
+
+/**
+ * @struct RoomRefused
+ * @brief The room is full or its game is over, or the server cannot open
+ * another room; the client stays in the lobby (reliable). Empty.
+ * @param Type The packet type that carries this payload.
+ **/
+struct RoomRefused {
+    static constexpr PacketType Type = PacketType::RoomRefused;
+    bool operator==(const RoomRefused &) const = default;
+};
+
+/**
+ * @struct RoomClosed
+ * @brief An administrator closed the room of the client, which is back in the
+ * lobby (reliable). Empty.
+ * @param Type The packet type that carries this payload.
+ **/
+struct RoomClosed {
+    static constexpr PacketType Type = PacketType::RoomClosed;
+    bool operator==(const RoomClosed &) const = default;
+};
+
+/**
+ * @struct ChatSend
+ * @brief A player writes to the players of its room (reliable). The server
+ * adds the author: a client cannot speak for another one.
+ * @param Type The packet type that carries this payload.
+ * @param text From 1 to MaxChatLength chat characters.
+ **/
+struct ChatSend {
+    static constexpr PacketType Type = PacketType::ChatSend;
+    std::string text;
+    bool operator==(const ChatSend &) const = default;
+};
+
+/**
+ * @struct ChatMessage
+ * @brief A line of the chat of the room, sent to all its players, the author
+ * included (reliable).
+ * @param Type The packet type that carries this payload.
+ * @param slot The author's slot, from 1 to MaxPlayers.
+ * @param text From 1 to MaxChatLength chat characters.
+ **/
+struct ChatMessage {
+    static constexpr PacketType Type = PacketType::ChatMessage;
+    std::uint8_t slot = 1;
+    std::string text;
+    bool operator==(const ChatMessage &) const = default;
 };
 
 /**
@@ -278,6 +554,48 @@ void encode(const Input &message, ByteWriter &out);
  **/
 void encode(const Welcome &message, ByteWriter &out);
 /**
+ * @brief Writes the payload of a RoomList.
+ * @param message The message.
+ * @param out Where to write.
+ **/
+void encode(const RoomList &message, ByteWriter &out);
+/**
+ * @brief Writes the payload of a JoinRoom.
+ * @param message The message.
+ * @param out Where to write.
+ **/
+void encode(const JoinRoom &message, ByteWriter &out);
+/**
+ * @brief Writes the payload of a LeaveRoom.
+ * @param message The message.
+ * @param out Where to write.
+ **/
+void encode(const LeaveRoom &message, ByteWriter &out);
+/**
+ * @brief Writes the payload of a StartGame.
+ * @param message The message.
+ * @param out Where to write.
+ **/
+void encode(const StartGame &message, ByteWriter &out);
+/**
+ * @brief Writes the payload of a RoomJoined.
+ * @param message The message.
+ * @param out Where to write.
+ **/
+void encode(const RoomJoined &message, ByteWriter &out);
+/**
+ * @brief Writes the payload of a RoomRefused.
+ * @param message The message.
+ * @param out Where to write.
+ **/
+void encode(const RoomRefused &message, ByteWriter &out);
+/**
+ * @brief Writes the payload of a RoomClosed.
+ * @param message The message.
+ * @param out Where to write.
+ **/
+void encode(const RoomClosed &message, ByteWriter &out);
+/**
  * @brief Writes the payload of a SnapshotPart.
  * @param message The payload to write; writes its fields.
  * @param out The writer to append to.
@@ -291,6 +609,19 @@ void encode(const SnapshotPart &message, ByteWriter &out);
 void encode(const GameEvent &message, ByteWriter &out);
 
 /**
+ * @brief Writes the payload of a ChatSend.
+ * @param message The message.
+ * @param out Where to write.
+ **/
+void encode(const ChatSend &message, ByteWriter &out);
+/**
+ * @brief Writes the payload of a ChatMessage.
+ * @param message The message.
+ * @param out Where to write.
+ **/
+void encode(const ChatMessage &message, ByteWriter &out);
+
+/**
  * @brief Reads and validates the payload of a Connect.
  * @param in The reader positioned at the start of the payload.
  * @param message Filled with the decoded fields.
@@ -298,6 +629,24 @@ void encode(const GameEvent &message, ByteWriter &out);
  * in.ok() and that no byte is left.
  **/
 [[nodiscard]] bool decode(ByteReader &in, Connect &message);
+/**
+ * @brief Reads and validates the payload of a ChatSend. Fails on an empty or
+ * too long text, or on a character that is not a chat character.
+ * @param in The reader positioned at the start of the payload.
+ * @param message Filled with the decoded fields.
+ * @return `true` if the fields are valid; the caller still checks
+ * in.ok() and that no byte is left.
+ **/
+[[nodiscard]] bool decode(ByteReader &in, ChatSend &message);
+/**
+ * @brief Reads and validates the payload of a ChatMessage. Fails on an invalid
+ * slot, like ChatSend on its text.
+ * @param in The reader positioned at the start of the payload.
+ * @param message Filled with the decoded fields.
+ * @return `true` if the fields are valid; the caller still checks
+ * in.ok() and that no byte is left.
+ **/
+[[nodiscard]] bool decode(ByteReader &in, ChatMessage &message);
 /**
  * @brief Reads and validates the payload of a Accept.
  * @param in The reader positioned at the start of the payload.
@@ -350,6 +699,55 @@ void encode(const GameEvent &message, ByteWriter &out);
  * in.ok() and that no byte is left.
  **/
 [[nodiscard]] bool decode(ByteReader &in, Welcome &message);
+/**
+ * @brief Reads and validates the payload of a RoomList.
+ * @param in Where to read.
+ * @param message The message to fill.
+ * @return Whether the values are valid.
+ **/
+[[nodiscard]] bool decode(ByteReader &in, RoomList &message);
+/**
+ * @brief Reads the payload of a JoinRoom.
+ * @param in Where to read.
+ * @param message The message to fill.
+ * @return Whether the values are valid.
+ **/
+[[nodiscard]] bool decode(ByteReader &in, JoinRoom &message);
+/**
+ * @brief Reads the payload of a LeaveRoom, which is empty.
+ * @param in Where to read.
+ * @param message The message to fill.
+ * @return Always true.
+ **/
+[[nodiscard]] bool decode(ByteReader &in, LeaveRoom &message);
+/**
+ * @brief Reads the payload of a StartGame, which is empty.
+ * @param in Where to read.
+ * @param message The message to fill.
+ * @return Always true.
+ **/
+[[nodiscard]] bool decode(ByteReader &in, StartGame &message);
+/**
+ * @brief Reads and validates the payload of a RoomJoined.
+ * @param in Where to read.
+ * @param message The message to fill.
+ * @return Whether the room is not 0.
+ **/
+[[nodiscard]] bool decode(ByteReader &in, RoomJoined &message);
+/**
+ * @brief Reads the payload of a RoomRefused, which is empty.
+ * @param in Where to read.
+ * @param message The message to fill.
+ * @return Always true.
+ **/
+[[nodiscard]] bool decode(ByteReader &in, RoomRefused &message);
+/**
+ * @brief Reads the payload of a RoomClosed, which is empty.
+ * @param in Where to read.
+ * @param message The message to fill.
+ * @return Always true.
+ **/
+[[nodiscard]] bool decode(ByteReader &in, RoomClosed &message);
 /**
  * @brief Reads and validates the payload of a SnapshotPart. Fails on a part
  * index out of range, more than MaxPlayers players, players outside part

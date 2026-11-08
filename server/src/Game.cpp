@@ -6,62 +6,246 @@
 */
 
 #include "Game.hpp"
+#include "components/LevelProgress.hpp"
+
+#include <utility>
 
 namespace server {
 
+Game::Game(Inbound &inbound, Outbound &outbound, bool invinciblePlayers,
+           std::shared_ptr<const std::vector<Level>> levels,
+           WeaponStats weapons)
+    : m_inbound(inbound), m_outbound(outbound),
+      m_invinciblePlayers(invinciblePlayers), m_weapons(weapons)
+{
+    const engine::Entity world = m_registry.create();
+    m_registry.emplace<rtype::Spawner>(world,
+                                       rtype::Spawner{
+                                           .minDelay = engine::Duration{2.5F},
+                                           .maxDelay = engine::Duration{4.5F},
+                                       });
+    m_registry.emplace<SpawnQueue>(world);
+    if (levels && !levels->empty()) {
+        m_registry.emplace<LevelProgress>(
+            world, LevelProgress{.levels = std::move(levels)});
+    }
+    registerSystems();
+}
+
+void Game::registerSystems()
+{
+    using engine::Duration;
+    using engine::Registry;
+    using engine::Stage;
+
+    const engine::SystemOptions playing{.when = [this] {
+        return m_status != rtype::protocol::RoomStatus::Waiting;
+    }};
+    const engine::SystemOptions spawning{.when = [this] {
+        return m_status == rtype::protocol::RoomStatus::Playing;
+    }};
+
+    m_scheduler.add(Stage::Input, "drainInbound", [this](Registry &, Duration) {
+        m_messages = m_inbound.drain();
+    });
+    m_scheduler.add(Stage::Input, "session", [this](Registry &r, Duration) {
+        server::sessionSystem(r, m_messages, m_players, m_factory, m_outbound,
+                              m_tick);
+    });
+    m_scheduler.add(Stage::Input, "networkInput",
+                    [this](Registry &r, Duration) {
+                        server::networkInputSystem(r, m_messages, m_players);
+                    });
+    m_scheduler.add(Stage::Input, "chat", [this](Registry &, Duration) {
+        server::chatSystem(m_messages, m_players, m_outbound);
+    });
+    m_scheduler.add(Stage::Input, "roomPhase", [this](Registry &, Duration) {
+        if (const auto settings =
+                server::roomPhaseSystem(m_messages, m_status, m_outbound)) {
+            applySettings(*settings);
+        }
+    });
+    m_scheduler.add(
+        Stage::Input, "playerFire",
+        [](Registry &r, Duration) { rtype::playerFireSystem(r); }, playing);
+    m_scheduler.add(
+        Stage::Input, "enemyAI",
+        [](Registry &r, Duration) { server::enemyAISystem(r); }, playing);
+
+    m_scheduler.add(
+        Stage::Simulation, "level",
+        [this](Registry &r, Duration dt) {
+            if (const auto level = server::levelSystem(r, dt)) {
+                m_outbound.push(OutboundMessage{
+                    .to = Recipient::All,
+                    .payload =
+                        rtype::protocol::GameEvent{
+                            .kind =
+                                rtype::protocol::GameEventKind::LevelStarted,
+                            .level = *level,
+                        },
+                });
+            }
+        },
+        spawning);
+    m_scheduler.add(
+        Stage::Simulation, "obstacles",
+        [this](Registry &r, Duration) {
+            server::obstacleSystem(r, m_commands);
+        },
+        spawning);
+    m_scheduler.add(
+        Stage::Simulation, "spawn",
+        [this](Registry &r, Duration dt) {
+            server::spawnSystem(r, m_commands, dt);
+        },
+        spawning);
+    m_scheduler.add(
+        Stage::Simulation, "shoot",
+        [this](Registry &r, Duration dt) {
+            server::shootSystem(r, m_commands, dt, m_weapons);
+        },
+        playing);
+    m_scheduler.add(
+        Stage::Simulation, "burstShot",
+        [this](Registry &r, Duration dt) {
+            server::burstShotSystem(r, dt, m_weapons);
+        },
+        playing);
+    m_scheduler.add(
+        Stage::Simulation, "spreadShot",
+        [this](Registry &r, Duration) {
+            server::spreadShotSystem(r, m_commands, m_weapons);
+        },
+        playing);
+    m_scheduler.add(
+        Stage::Simulation, "aimedShot",
+        [this](Registry &r, Duration) {
+            server::aimedShotSystem(r, m_commands, m_weapons);
+        },
+        playing);
+    m_scheduler.add(
+        Stage::Simulation, "playerControl",
+        [](Registry &r, Duration) { rtype::playerControlSystem(r); }, playing);
+    m_scheduler.add(Stage::Simulation, "pattern", rtype::patternSystem,
+                    playing);
+    m_scheduler.add(
+        Stage::Simulation, "boss",
+        [this](Registry &r, Duration dt) {
+            server::bossSystem(r, m_commands, dt);
+        },
+        playing);
+    m_scheduler.add(Stage::Simulation, "movement", rtype::movementSystem,
+                    playing);
+    m_scheduler.add(
+        Stage::Simulation, "collision",
+        [this](Registry &r, Duration) {
+            m_collisions = server::collisionSystem(r);
+        },
+        playing);
+    m_scheduler.add(
+        Stage::Simulation, "damage",
+        [this](Registry &r, Duration) {
+            server::damageSystem(r, m_collisions, m_outbound,
+                                 m_invinciblePlayers);
+        },
+        playing);
+    m_scheduler.add(
+        Stage::Simulation, "pickup",
+        [this](Registry &r, Duration) {
+            server::pickupSystem(r, m_collisions, m_outbound, m_weapons);
+        },
+        playing);
+    m_scheduler.add(Stage::Simulation, "boost", server::boostSystem, playing);
+    m_scheduler.add(
+        Stage::Simulation, "powerUpDrop",
+        [this](Registry &r, Duration) {
+            server::powerUpDropSystem(r, m_commands, m_random);
+        },
+        playing);
+    m_scheduler.add(
+        Stage::Simulation, "death",
+        [this](Registry &r, Duration) { server::deathSystem(r, m_outbound); },
+        playing);
+    m_scheduler.add(
+        Stage::Simulation, "lifetime",
+        [this](Registry &r, Duration dt) {
+            server::lifetimeSystem(r, dt, m_outbound);
+        },
+        playing);
+    m_scheduler.add(
+        Stage::Simulation, "boundary",
+        [this](Registry &r, Duration) {
+            server::boundarySystem(r, m_outbound);
+        },
+        playing);
+    m_scheduler.add(
+        Stage::Simulation, "gameOver",
+        [this](Registry &r, Duration) {
+            server::gameOverSystem(r, m_players, m_outbound, m_gameOver);
+            if (m_gameOver) {
+                m_status = rtype::protocol::RoomStatus::Over;
+            }
+        },
+        playing);
+
+    m_scheduler.add(Stage::Cleanup, "spawnCommands",
+                    [this](Registry &r, Duration) {
+                        server::spawnCommandSystem(r, m_commands, m_factory);
+                    });
+
+    m_scheduler.add(Stage::Output, "snapshot",
+                    [this](Registry &r, Duration) {
+                        server::snapshotSystem(r, m_players, m_outbound,
+                                               m_tick);
+                    },
+                    {.every = 3});
+}
+
+void Game::applySettings(const rtype::protocol::StartGame &settings)
+{
+    const DifficultyStats difficulty = difficultyStats(settings.difficulty);
+    m_factory.setDifficulty(difficulty);
+    m_registry.each<rtype::Spawner>(
+        [&difficulty](engine::Entity, rtype::Spawner &spawner) {
+            spawner.minDelay *= difficulty.spawnDelay;
+            spawner.maxDelay *= difficulty.spawnDelay;
+        });
+
+    std::vector<engine::Entity> endless;
+    m_registry.each<LevelProgress>(
+        [&](engine::Entity world, LevelProgress &progress) {
+            if (settings.level == rtype::protocol::EndlessLevel) {
+                endless.push_back(world);
+                return;
+            }
+            progress.level = std::min<std::size_t>(settings.level - 1U,
+                                                   progress.levels->size() - 1);
+            switch (settings.boss) {
+            case rtype::protocol::BossChoice::LevelBoss:
+                break;
+            case rtype::protocol::BossChoice::Warship:
+                progress.boss = rtype::EnemyType::Boss;
+                break;
+            case rtype::protocol::BossChoice::Hive:
+                progress.boss = rtype::EnemyType::Hive;
+                break;
+            }
+        });
+    for (const engine::Entity world : endless) {
+        m_registry.remove<LevelProgress>(world);
+    }
+    BB_INFO("Game settings: difficulty "
+            << static_cast<int>(settings.difficulty) << ", level "
+            << static_cast<int>(settings.level) << ", boss "
+            << static_cast<int>(settings.boss));
+}
+
 void Game::tick(engine::Duration dt)
 {
-    const auto messages = m_inbound.drain();
-    server::sessionSystem(m_registry, messages, m_players, m_factory,
-                          m_outbound, m_tick);
-    server::networkInputSystem(m_registry, messages, m_players);
-    rtype::playerFireSystem(m_registry);
-    server::enemyAISystem(m_registry);
-    server::spawnSystem(m_registry, m_factory, dt);
-    server::shootSystem(m_registry, m_factory, dt);
-    rtype::playerControlSystem(m_registry);
-    rtype::movementSystem(m_registry, dt);
-    const std::vector<Collision> collisions =
-        server::collisionSystem(m_registry);
-    server::damageSystem(m_registry, collisions, m_outbound);
-    server::deathSystem(m_registry, m_outbound);
-    server::lifetimeSystem(m_registry, dt, m_outbound);
-    server::boundarySystem(m_registry, m_outbound);
-    m_registry.flush();
-    if (m_tick % 3 == 0) {
-        server::snapshotSystem(m_registry, m_players, m_outbound, m_tick);
-    }
+    m_scheduler.run(m_registry, dt);
+    m_publicStatus = static_cast<std::uint8_t>(m_status);
     ++m_tick;
 }
-
-void Game::run()
-{
-    using Clock = std::chrono::steady_clock;
-    constexpr Clock::duration tickStep =
-        std::chrono::duration_cast<Clock::duration>(
-            std::chrono::duration<double>(1.0 / 60.0));
-    constexpr Clock::duration maxCatchUp = std::chrono::milliseconds(250);
-
-    Clock::duration accumulator{0};
-    Clock::time_point previous = Clock::now();
-
-    const engine::Entity world = m_registry.create();
-    m_registry.emplace<rtype::Spawner>(world);
-
-    while (m_running) {
-        const Clock::time_point now = Clock::now();
-        accumulator = std::min(accumulator + (now - previous), maxCatchUp);
-        previous = now;
-
-        while (accumulator >= tickStep) {
-            tick(engine::Duration{tickStep});
-            accumulator -= tickStep;
-        }
-
-        std::this_thread::sleep_until(now + (tickStep - accumulator));
-    }
-}
-
-void Game::stop() { m_running = false; }
 
 } // namespace server
