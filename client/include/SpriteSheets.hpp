@@ -117,9 +117,11 @@ void attachSprite(engine::Registry &registry, engine::Entity entity,
  * @param registry The client's registry.
  * @param sheets The loaded sprite sheets.
  * @param graphics The graphics backend to draw with.
+ * @param animated Whether the glow is animated; when false it stays on one
+ * frame (the Reduce flashing setting).
  **/
 void chargeGlowSystem(engine::Registry &registry, const SpriteSheets &sheets,
-                      gfx::IGraphics &graphics);
+                      gfx::IGraphics &graphics, bool animated = true);
 
 /**
  * @brief Shows a destroyable tile cracked once it has lost half of its
@@ -136,10 +138,13 @@ void tileCrackSystem(engine::Registry &registry, engine::Duration dt);
  * @param entity The destroyed entity, still holding its EntityType and
  * Transform.
  * @param sheets The loaded sprite sheets.
- * @return Whether an explosion was created.
+ * @param drawn Whether the explosion is created; when false nothing is
+ * created but the result is the same, so its sound still plays (the Reduce
+ * flashing setting).
+ * @return Whether the entity explodes.
  **/
 bool spawnExplosion(engine::Registry &registry, engine::Entity entity,
-                    const SpriteSheets &sheets);
+                    const SpriteSheets &sheets, bool drawn = true);
 
 } // namespace client
 
