@@ -25,6 +25,15 @@ namespace rtype {
  * @param Large A slow, tough and shooting enemy, drops a power-up.
  * @param Boss The first end-level boss, moved by bossSystem().
  * @param Hive The second end-level boss, moved by bossSystem().
+ * @param Spinner A spinning ring that shoots, following a sine wave.
+ * @param Bubble A fast bubble following a wide sine wave.
+ * @param Spore A slow and tough spore, following a zigzag.
+ * @param Jelly A jellyfish that rushes at the nearest player.
+ * @param Crab A shooting crab, drops a power-up.
+ * @param Walker A boss walking left and right on the ground.
+ * @param Twin A boss in two halves, one on the ground and one on the
+ * ceiling.
+ * @param Behemoth A boss made of a body, a head (its weak point) and a tail.
  **/
 enum class EnemyType : std::uint8_t {
     Basic,
@@ -35,6 +44,14 @@ enum class EnemyType : std::uint8_t {
     Large,
     Boss,
     Hive,
+    Spinner,
+    Bubble,
+    Spore,
+    Jelly,
+    Crab,
+    Walker,
+    Twin,
+    Behemoth,
 };
 
 /**
@@ -45,7 +62,9 @@ enum class EnemyType : std::uint8_t {
  **/
 constexpr bool isBoss(EnemyType type)
 {
-    return type == EnemyType::Boss || type == EnemyType::Hive;
+    return type == EnemyType::Boss || type == EnemyType::Hive ||
+           type == EnemyType::Walker || type == EnemyType::Twin ||
+           type == EnemyType::Behemoth;
 }
 
 /** @brief Health of the end-level boss; the clients draw its health bar from

@@ -33,6 +33,20 @@ namespace rtype {
  * ships that touch it.
  * @param DestroyableTile A block of the level that stops shots like a wall
  * but breaks after a few hits.
+ * @param EnemySpinner An EnemyType::Spinner.
+ * @param EnemyBubble An EnemyType::Bubble.
+ * @param EnemySpore An EnemyType::Spore.
+ * @param EnemyJelly An EnemyType::Jelly.
+ * @param EnemyCrab An EnemyType::Crab.
+ * @param BossWalker An EnemyType::Walker, the boss walking on the ground.
+ * @param BossTwin An EnemyType::Twin: the half of the twin boss on the
+ * ground.
+ * @param BossTwinTop The half of the twin boss on the ceiling.
+ * @param BossBehemoth An EnemyType::Behemoth: the body of the last boss.
+ * @param BehemothHead The head of the behemoth, its weak point.
+ * @param BehemothTail A segment of the behemoth's tail.
+ * @param BehemothTailTip The end of the behemoth's tail.
+ * @param BossFireball A shot of the walker.
  **/
 enum class EntityType : std::uint8_t {
     PlayerShip,
@@ -50,16 +64,35 @@ enum class EntityType : std::uint8_t {
     BossHive,
     Obstacle,
     DestroyableTile,
+    EnemySpinner,
+    EnemyBubble,
+    EnemySpore,
+    EnemyJelly,
+    EnemyCrab,
+    BossWalker,
+    BossTwin,
+    BossTwinTop,
+    BossBehemoth,
+    BehemothHead,
+    BehemothTail,
+    BehemothTailTip,
+    BossFireball,
 };
 
+/** @brief The last EntityType, for the checks of the protocol. */
+inline constexpr EntityType LastEntityType = EntityType::BossFireball;
+
 /**
- * @brief Tells whether an entity type is an end-level boss.
+ * @brief Tells whether an entity type is an end-level boss: the entity that
+ * holds its health, not one of its other parts.
  * @param type The entity type.
  * @return `true` for a boss.
  **/
 constexpr bool isBossEntity(EntityType type)
 {
-    return type == EntityType::Boss || type == EntityType::BossHive;
+    return type == EntityType::Boss || type == EntityType::BossHive ||
+           type == EntityType::BossWalker || type == EntityType::BossTwin ||
+           type == EntityType::BossBehemoth;
 }
 
 /**
