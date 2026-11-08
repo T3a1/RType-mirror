@@ -163,7 +163,6 @@ class Game {
     PlayerControls m_controls;
     std::string m_controlsPath;
     Settings m_settings;
-    AutoFire m_autoFire;
     NetworkClient::TimePoint m_now;
     std::vector<rtype::protocol::Payload> m_payloads;
     std::uint8_t m_actions = 0;

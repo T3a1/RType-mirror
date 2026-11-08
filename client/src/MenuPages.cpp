@@ -45,10 +45,10 @@ constexpr std::array CreditsLines{
 
 /** @brief The text of each control in the menus, in the order of Control. */
 constexpr std::array<const char *, ControlCount> ControlLabels{
-    "Up", "Down", "Left", "Right", "Fire", "Auto-fire", "Chat",
+    "Up", "Down", "Left", "Right", "Fire", "Chat",
 };
-/** @brief How many keys of each control the Controls tab shows: one per hand.
- */
+/** @brief How many keys of each control the Keyboard and Gamepad tabs show:
+ * one per hand. */
 constexpr std::size_t KeysPerRow = 2;
 /** @brief The index of the Audio tab. */
 constexpr std::size_t AudioTab = 0;
@@ -381,7 +381,7 @@ SettingsResult accessibilityPage(const MenuContext &context, MenuCursor &cursor,
     return result;
 }
 
-std::array<std::string, 6> howToPlayLines(const Controls &controls)
+std::array<std::string, 5> howToPlayLines(const Controls &controls)
 {
     return {
         "Shoot the enemies and survive, alone or as a team.",
@@ -389,9 +389,9 @@ std::array<std::string, 6> howToPlayLines(const Controls &controls)
             keysOf(controls, Control::Down) + " / " +
             keysOf(controls, Control::Left) + " / " +
             keysOf(controls, Control::Right),
-        "Shoot: " + keysOf(controls, Control::Fire),
-        "Charged shot: hold Shoot for 1 second, then release",
-        "Auto-fire on or off: " + keysOf(controls, Control::AutoFire),
+        "Normal shots: the ship fires them on its own",
+        "Charged shot: hold " + keysOf(controls, Control::Fire) +
+            " for 1 second, then release",
         "Write to your room: " + keysOf(controls, Control::Chat) +
             ", then Enter to send",
     };

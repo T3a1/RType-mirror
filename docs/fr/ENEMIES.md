@@ -64,7 +64,7 @@ Chaque clé de `enemies` est le nom d'un type, utilisé par les fichiers de nive
 | `medium` | Suit un zigzag et tire, laisse un bonus. | 150 de vie, vitesse 150, 200 points |
 | `large` | Lent et résistant, tire, laisse un bonus. | 500 de vie, vitesse 70, 500 points |
 | `warship` | **Boss** : entre, s'arrête, monte et descend, trois phases d'attaque. | 2500 de vie, 5000 points |
-| `hive` | **Boss** : plus grand et plus lent, mêmes trois phases. | 2500 de vie, 5000 points |
+| `hive` | **Boss** : plus grand et plus lent, posé au sol et immobile une fois en place, mêmes trois phases. | 2500 de vie, 5000 points |
 
 Un type basé sur `warship` ou `hive` est un boss : il ne peut être que le `boss` d'un
 niveau, et les autres types n'arrivent qu'en vagues.

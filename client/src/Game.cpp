@@ -131,12 +131,10 @@ Game::Game(const std::string &host, std::uint16_t port,
         m_menu.page = MenuPage::Lobby;
     }
     applyVolumes();
-    m_autoFire.enabled = m_settings.autoFire;
     if (options.bench) {
         m_bench.emplace(*options.bench);
         m_audio->setSoundVolume(0.0F);
         m_audio->setMusicVolume(0.0F);
-        m_autoFire.enabled = false;
     }
     spawnBackground();
     registerSystems();
@@ -199,12 +197,11 @@ void Game::registerSystems()
             networkSyncSystem(r, m_payloads, m_sync, m_sheets, m_sounds);
         },
         playing);
-    m_scheduler.add(Stage::Input, "sendInput", [this](Registry &, Duration dt) {
+    m_scheduler.add(Stage::Input, "sendInput", [this](Registry &, Duration) {
         m_actions = 0;
         if (inRoom() && m_sync.started && !m_sync.chat.open) {
-            m_actions =
-                m_bench ? m_bench->input(m_now)
-                        : inputSystem(*m_graphics, m_controls, m_autoFire, dt);
+            m_actions = m_bench ? m_bench->input(m_now)
+                                : inputSystem(*m_graphics, m_controls);
         }
         m_sequence = m_network.sendInput(m_actions, m_now);
     });
@@ -482,17 +479,11 @@ void Game::drawSettings()
 
 /**
  * @brief Draws the Accessibility page, and applies and saves what changed.
- * Auto-fire only follows its own checkbox, so that changing another option
- * keeps what the player chose with its key.
  **/
 void Game::drawAccessibility()
 {
-    const bool autoFire = m_settings.autoFire;
     const SettingsResult result = accessibilityPage(
         menuContext(), m_menu.accessibilityCursor, m_settings);
-    if (m_settings.autoFire != autoFire) {
-        m_autoFire.enabled = m_settings.autoFire;
-    }
     m_sync.explosions = !m_settings.reduceFlashing;
     finishSettingsPage(result);
 }
@@ -562,7 +553,7 @@ void Game::drawWaitingRoom()
  **/
 void Game::drawGame()
 {
-    hudSystem(m_sync, m_autoFire.enabled, *m_graphics);
+    hudSystem(m_sync, *m_graphics);
     if (!m_sync.gameOver) {
         bossHealthBar(m_registry, *m_graphics);
         levelBannerScreen(m_sync, *m_graphics);

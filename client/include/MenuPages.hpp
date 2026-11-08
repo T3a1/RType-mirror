@@ -154,7 +154,7 @@ struct SettingsResult {
  * @param controls The keys bound to each control.
  * @return The lines, in order.
  **/
-[[nodiscard]] std::array<std::string, 6>
+[[nodiscard]] std::array<std::string, 5>
 howToPlayLines(const Controls &controls);
 
 /**

@@ -25,11 +25,11 @@ namespace server {
 
 /**
  * @brief Fires the weapons. An enemy fires one shot to the left whenever
- * its cooldown is over. A player fires when the fire key is pressed (at
- * most once per stats.fireInterval): Weapon::fired is set, and the system
- * of its shot style (ShotStyleSystems.hpp) makes the shots. While the key
- * is held, it only charges; releasing it after stats.chargeTime fires a
- * charged shot that goes through enemies.
+ * its cooldown is over. A player fires once every stats.fireInterval while
+ * it holds the Fire action: Weapon::fired is set, and the system of its
+ * shot style (ShotStyleSystems.hpp) makes the shots. While it holds the
+ * Charge action, it only charges; releasing it after stats.chargeTime
+ * fires a charged shot that goes through enemies.
  * @param registry The registry holding the weapons.
  * @param commands Where the shots are requested.
  * @param dt The time since the last tick.

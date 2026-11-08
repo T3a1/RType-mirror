@@ -36,7 +36,6 @@ inline constexpr const char *DefaultControlsPath = "controls.cfg";
  * @param Left Moves the ship to the left.
  * @param Right Moves the ship to the right.
  * @param Fire Fires, or charges a shot while held.
- * @param AutoFire Turns auto-fire on or off: the ship fires without a key held.
  * @param Chat Opens the chat of the room.
  * @param Count The number of controls, not a control.
  **/
@@ -46,7 +45,6 @@ enum class Control : std::uint8_t {
     Left,
     Right,
     Fire,
-    AutoFire,
     Chat,
     Count,
 };
@@ -107,7 +105,7 @@ struct PlayerControls {
 
 /**
  * @brief Finds a control by its name, ignoring case: "up", "down",
- * "left", "right", "fire", "autofire", "chat".
+ * "left", "right", "fire", "chat".
  * @param name The name of the control.
  * @return The control, or nothing if no control has this name.
  **/

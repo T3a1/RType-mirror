@@ -7,6 +7,7 @@
 
 #include "common/components/InputState.hpp"
 #include "common/components/Velocity.hpp"
+#include "common/components/Weapon.hpp"
 #include "common/systems/PlayerControlSystem.hpp"
 #include "engine/Entity.hpp"
 #include "engine/Registry.hpp"
@@ -76,4 +77,22 @@ TEST(PlayerControlSystem, FireDoesNotMove)
 
     EXPECT_FLOAT_EQ(velocity.x, 0.0F);
     EXPECT_FLOAT_EQ(velocity.y, 0.0F);
+}
+
+TEST(PlayerFireSystem, FireShootsAndChargeCharges)
+{
+    engine::Registry registry;
+    const engine::Entity player = registry.create();
+    registry.emplace<rtype::Weapon>(player);
+    registry.emplace<rtype::InputState>(
+        player, rtype::InputState{.actions = rtype::Action::Charge});
+
+    rtype::playerFireSystem(registry);
+    EXPECT_FALSE(registry.get<rtype::Weapon>(player).triggered);
+    EXPECT_TRUE(registry.get<rtype::Weapon>(player).charging);
+
+    registry.get<rtype::InputState>(player).actions = rtype::Action::Fire;
+    rtype::playerFireSystem(registry);
+    EXPECT_TRUE(registry.get<rtype::Weapon>(player).triggered);
+    EXPECT_FALSE(registry.get<rtype::Weapon>(player).charging);
 }

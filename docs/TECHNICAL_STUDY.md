@@ -265,7 +265,7 @@ the rest is tracked in the project's issues.
 
 | Category | What exists | Inspired by | Still to do |
 |----------|-------------|-------------|-------------|
-| **Physical and motor** | All keys remappable in the Settings page or in `controls.cfg`, with two keys per action. Default keys for either hand, so the game can be played with one hand. Auto-fire, on by default, so firing needs no repeated presses. Menus work with the keyboard alone, the mouse or a gamepad. An Xbox or PlayStation gamepad also plays the game, with its own remappable buttons. | Remapping and toggle options of most PC games | Game speed |
+| **Physical and motor** | All keys remappable in the Settings page or in `controls.cfg`, with two keys per action. Default keys for either hand, so the game can be played with one hand. Auto-fire, always on, so firing needs no repeated presses. Menus work with the keyboard alone, the mouse or a gamepad. An Xbox or PlayStation gamepad also plays the game, with its own remappable buttons. | Remapping and toggle options of most PC games | Game speed |
 | **Visual** | Player colors from the Okabe-Ito palette, which color-blind players can tell apart. Not color alone: by default, each ship shows "P1" and "(you)", an option the player can turn off, and notices name the player. The keyboard selection is marked with `>`, not only by a color. | Color-blind modes of multiplayer games | Scalable game UI, high contrast |
 | **Audio** | Sound is never the only cue: shots, explosions, the charge glow, the level banner and the game over screen show on screen what the sounds tell. Separate volumes for the music and the sounds, saved between sessions; a volume of 0 turns it off. | Volume settings and visual cues in most action games | Nothing planned |
 | **Mental and cognitive** | Short menus, a few clear actions, a "Level 2" banner and final scores. A How to play page shows the rules and the player's own keys. Three difficulty levels and the choice of the starting level, picked in the waiting room. | Difficulty settings of most action games | Reducing flashing effects |
@@ -293,14 +293,14 @@ later would have touched every input and drawing system.
 
 ## 9. Before and after: the Part 1 prototype and the final version
 
-Measured on 2026-11-06, against the `v1.0` tag (2026-10-18).
+Measured on 2026-11-07, against the `v1.0` tag (2026-10-18).
 
 | | Part 1 (`v1.0`) | Now |
 |---|----------------|-----|
-| C++ code (lines, with headers) | 8,210 | 30,000 |
-| Unit tests | 86 | 375 |
-| ECS systems (source files) | 20 | 33 |
-| Protocol version | 1 | 12 |
+| C++ code (lines, with headers) | 8,210 | 32,500 |
+| Unit tests | 86 | 424 |
+| ECS systems (source files) | 20 | 34 |
+| Protocol version | 1 | 13 |
 | Games on one server | 1 | Up to 16 rooms, with a lobby |
 | Graphics libraries | Raylib, called directly | Raylib, SFML, ncurses, behind an interface |
 | Network library | Asio, visible in the code | Hidden behind an interface, tested on a fake network |
@@ -326,9 +326,9 @@ types with movement patterns; levels, weapons and enemies in JSON files; two
 end-level bosses; obstacles and destroyable tiles; charged shot and power-ups; game
 over and final scores; difficulty, starting level and boss chosen in the waiting
 room; sound effects and music; lobby, rooms and a waiting room; administration
-console with bans and a white list; key remapping and auto-fire; a main menu
-with settings, accessibility options, how to play and credits; a graphical
-launcher; a Windows build in the CI.
+console with bans and a white list; a text chat between players; key remapping
+and auto-fire; a main menu with settings, accessibility options, how to play and
+credits; gamepad support; a graphical launcher; a Windows build in the CI.
 
 ## 10. What we would do differently
 

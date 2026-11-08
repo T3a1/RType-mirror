@@ -53,7 +53,6 @@ inline constexpr std::array FrameLimits{15, 30, 60, 120, 0};
  * @brief What the player chooses in the menus, kept in settings.cfg.
  * @param musicVolume The volume of the music, from 0 to 1.
  * @param soundVolume The volume of the sounds, from 0 to 1.
- * @param autoFire Whether auto-fire is on when the game starts.
  * @param playerLabels Whether the name of each player is shown above the ship.
  * @param background Whether the scrolling background is drawn. Off, the game
  * is drawn on a still black screen, for players bothered by the motion.
@@ -68,7 +67,6 @@ inline constexpr std::array FrameLimits{15, 30, 60, 120, 0};
 struct Settings {
     float musicVolume = 0.4F;
     float soundVolume = 1.0F;
-    bool autoFire = true;
     bool playerLabels = true;
     bool background = true;
     bool reduceFlashing = false;
@@ -101,8 +99,6 @@ struct ToggleDef {
 /** @brief Every accessibility setting that is on or off: the file and the menu
  * read this table, so adding a line here is enough to have one more. */
 inline constexpr std::array Toggles{
-    ToggleDef{
-        .key = "auto_fire", .label = "Auto-fire", .field = &Settings::autoFire},
     ToggleDef{.key = "player_labels",
               .label = "Player labels",
               .field = &Settings::playerLabels},
@@ -116,8 +112,8 @@ inline constexpr std::array Toggles{
 
 /**
  * @brief Reads a settings file. Each line is `name = value` (`music_volume =
- * 0.4`, `auto_fire = on`); empty lines and lines starting with `#` are ignored.
- * A bad line is skipped and reported, and its setting keeps its value.
+ * 0.4`, `player_labels = on`); empty lines and lines starting with `#` are
+ *ignored. A bad line is skipped and reported, and its setting keeps its value.
  * @param in The file to read.
  * @param settings The settings to change, usually the default ones.
  * @return One message per line that could not be read, with its number.

@@ -192,7 +192,8 @@ Le jeu n'a **ni base de données ni compte** : une partie vit en mémoire et se 
 | Réglages des armes | `server/weapons.json` | JSON | Les développeurs |
 | Types d'ennemis et de boss | `server/enemies.json` | JSON | Les développeurs |
 | Adresses bannies et autorisées | Fichiers `--banlist`, `--whitelist` | Texte, une adresse par ligne | Le serveur (commandes de console) |
-| Touches | `controls.cfg` | Texte, `action = touches` | Le joueur |
+| Touches | `controls.cfg` | Texte, `action = touches` | Le client (page Settings), ou le joueur à la main |
+| Volumes, vidéo et options d'accessibilité | `settings.cfg` | Texte, `nom = valeur` | Le client (pages de menu), ou le joueur à la main |
 | Résultats du benchmark | `build/netbench/*.csv` | CSV | Le client, avec `--bench` |
 
 ### Comparaison
@@ -260,10 +261,10 @@ suivi dans les issues du projet.
 
 | Catégorie | Ce qui existe | Inspiré de | Reste à faire |
 |-----------|---------------|------------|---------------|
-| **Physique et moteur** | Toutes les touches sont configurables (`controls.cfg`). Des touches par défaut pour chaque main : le jeu se joue d'une seule main. Tir automatique, actif par défaut, pour ne pas avoir à appuyer sans cesse. | Options de configuration de la plupart des jeux PC | Vitesse du jeu, manette |
-| **Visuel** | Couleurs des joueurs tirées de la palette Okabe-Ito, que les daltoniens distinguent. Jamais la couleur seule : chaque vaisseau affiche « P1 » et « (you) », et les notifications nomment le joueur. | Modes daltoniens des jeux multijoueurs | Interface du jeu redimensionnable, contraste élevé |
-| **Audio** | Le son n'est jamais le seul indice : les tirs, les explosions, la lueur de charge, la bannière de niveau et l'écran de fin montrent à l'écran ce que disent les sons. | Indices visuels de la plupart des jeux d'action | Réglages de volume, coupure du son |
-| **Mental et cognitif** | Des menus d'une page, quelques actions claires, une bannière « Level 2 » et les scores finaux. Trois niveaux de difficulté et le choix du niveau de départ, dans la salle d'attente. | Réglages de difficulté de la plupart des jeux d'action | Un rappel des commandes, la réduction des effets clignotants |
+| **Physique et moteur** | Toutes les touches sont configurables dans la page Settings ou dans `controls.cfg`, avec deux touches par action. Des touches par défaut pour chaque main : le jeu se joue d'une seule main. Tir automatique, toujours actif, pour ne pas avoir à appuyer sans cesse. Les menus se pilotent au clavier seul, à la souris ou à la manette. Une manette Xbox ou PlayStation permet aussi de jouer, avec ses propres boutons configurables. | Options de configuration de la plupart des jeux PC | Vitesse du jeu |
+| **Visuel** | Couleurs des joueurs tirées de la palette Okabe-Ito, que les daltoniens distinguent. Pas la couleur seule : par défaut, chaque vaisseau affiche « P1 » et « (you) », une option que le joueur peut couper, et les notifications nomment le joueur. La sélection au clavier est marquée par `>`, pas seulement par une couleur. | Modes daltoniens des jeux multijoueurs | Interface du jeu redimensionnable, contraste élevé |
+| **Audio** | Le son n'est jamais le seul indice : les tirs, les explosions, la lueur de charge, la bannière de niveau et l'écran de fin montrent à l'écran ce que disent les sons. Des volumes séparés pour la musique et les sons, conservés d'une session à l'autre ; un volume à 0 le coupe. | Réglages de volume et indices visuels de la plupart des jeux d'action | Rien de prévu |
+| **Mental et cognitif** | Des menus courts, quelques actions claires, une bannière « Level 2 » et les scores finaux. Une page How to play montre les règles et les touches du joueur. Trois niveaux de difficulté et le choix du niveau de départ, dans la salle d'attente. | Réglages de difficulté de la plupart des jeux d'action | La réduction des effets clignotants |
 
 **La documentation** : des pages en ligne avec une barre de recherche et un plan ; un thème clair ou sombre qui suit le
 système du lecteur ; des images avec une légende visible ; des titres dans l'ordre pour les lecteurs d'écran ; une
@@ -288,14 +289,14 @@ d'entrée et de dessin.
 
 ## 9. Avant et après : le prototype de la partie 1 et la version finale
 
-Mesuré le 6 novembre 2026, par rapport au tag `v1.0` (18 octobre 2026).
+Mesuré le 7 novembre 2026, par rapport au tag `v1.0` (18 octobre 2026).
 
 | | Partie 1 (`v1.0`) | Maintenant |
 |---|-------------------|------------|
-| Code C++ (lignes, en-têtes compris) | 8 210 | 26 600 |
-| Tests unitaires | 86 | 290 |
+| Code C++ (lignes, en-têtes compris) | 8 210 | 32 500 |
+| Tests unitaires | 86 | 424 |
 | Systèmes ECS (fichiers source) | 20 | 34 |
-| Version du protocole | 1 | 11 |
+| Version du protocole | 1 | 13 |
 | Parties sur un serveur | 1 | Jusqu'à 16 salles, avec un lobby |
 | Bibliothèques graphiques | Raylib, appelée directement | Raylib, SFML, ncurses, derrière une interface |
 | Bibliothèque réseau | Asio, visible dans le code | Cachée derrière une interface, testée sur un faux réseau |
@@ -320,7 +321,8 @@ jeu sont devenues une liste de systèmes.
 trajectoires ; niveaux, armes et ennemis en fichiers JSON ; deux boss de fin de niveau ; obstacles et blocs destructibles ;
 tir chargé et bonus ; fin de partie et scores finaux ; difficulté, niveau de départ et boss choisis dans la salle d'attente ;
 effets sonores et musique ; lobby, salles et salle d'attente ; console d'administration avec bannissements et liste blanche ;
-configuration des touches et tir automatique ; un launcher graphique ; un build Windows en CI.
+un chat textuel entre joueurs ; configuration des touches et tir automatique ; un menu principal avec réglages, options
+d'accessibilité, règles du jeu et crédits ; la prise en charge des manettes ; un launcher graphique ; un build Windows en CI.
 
 ## 10. Ce que nous ferions autrement
 

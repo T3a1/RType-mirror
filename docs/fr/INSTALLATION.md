@@ -267,6 +267,14 @@ passez son adresse IP et vérifiez que le port UDP 4242 est ouvert sur le pare-f
 
 Les clients Raylib et SFML jouent des effets sonores et de la musique. Le client ncurses n'a pas de son.
 
+Les clients Raylib et SFML lisent aussi une manette Xbox ou PlayStation, branchée avant ou pendant la partie. Pour voir ce que
+le client SFML lit d'une manette, définissez `RTYPE_PAD_DEBUG` : il journalise alors la manette trouvée, son fabricant, et
+chaque bouton et axe qui change.
+
+```bash
+RTYPE_PAD_DEBUG=1 ./rtype.py --native --graphics sfml
+```
+
 ### Client terminal (ncurses)
 
 Compilé avec `--graphics ncurses`, le client dessine le jeu dans le terminal depuis lequel il a été lancé. Cela
@@ -349,6 +357,12 @@ et le port correspondent, et qu'aucun pare-feu ne bloque le port UDP 4242.
 normalement. Si un fichier ne peut pas être lu, il affiche `Cannot load the sound` ou `Cannot load the music` avec son nom :
 recompilez le client pour copier `client/assets/` à côté de lui. Le client ncurses ne joue jamais de son, et `--bench` coupe
 le son du jeu.
+
+**Un bouton de la manette ne fait rien avec le client SFML.** SFML numérote les boutons comme le fait le système, et seule la
+correspondance d'une DualSense sous Linux a été vérifiée. Lancez le client avec `RTYPE_PAD_DEBUG=1`, appuyez sur le bouton, et
+corrigez son numéro dans le `PadLayout` de `client/src/graphics/sfml/SfmlGraphics.cpp`. Avec une manette Xbox sous Windows,
+SFML peut donner les deux gâchettes sur un seul axe, si bien qu'appuyées ensemble elles s'annulent : ce point n'a pas été
+vérifié.
 
 **Windows : MSVC toujours introuvable.** Ouvrez Visual Studio Installer et ajoutez la charge de travail « Desktop development
 with C++ » à Build Tools 2022.
