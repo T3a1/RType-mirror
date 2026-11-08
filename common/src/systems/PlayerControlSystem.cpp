@@ -66,6 +66,7 @@ void playerFireSystem(engine::Registry &registry)
     registry.each<Weapon, rtype::InputState>(
         [](engine::Entity, Weapon &weapon, const rtype::InputState &input) {
             weapon.triggered = (input.actions & rtype::Action::Fire) != 0;
+            weapon.charging = (input.actions & rtype::Action::Charge) != 0;
         });
 }
 

@@ -28,6 +28,8 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
+
 #include <cstddef>
 #include <random>
 #include <set>
@@ -59,11 +61,19 @@ class WeaponTest : public testing::Test {
     {
     }
 
-    /** @brief Holds the fire key (or not) for some ticks. */
-    void hold(bool fire, int ticks)
+    /** @brief Holds the Fire action (or not) for some ticks. */
+    void hold(bool fire, int ticks) { run(fire, false, ticks); }
+
+    /** @brief Holds the Charge action (or not) for some ticks. */
+    void charge(bool held, int ticks) { run(false, held, ticks); }
+
+    /** @brief Runs the weapon systems for some ticks with these actions. */
+    void run(bool fire, bool charging, int ticks)
     {
         for (int i = 0; i < ticks; ++i) {
-            m_registry.get<rtype::Weapon>(m_ship).triggered = fire;
+            auto &weapon = m_registry.get<rtype::Weapon>(m_ship);
+            weapon.triggered = fire;
+            weapon.charging = charging;
             server::shootSystem(m_registry, m_commands, Tick, m_stats);
             server::burstShotSystem(m_registry, Tick, m_stats);
             server::spreadShotSystem(m_registry, m_commands, m_stats);
@@ -147,7 +157,7 @@ TEST(Weapons, ShippedFileIsValid)
     EXPECT_TRUE(error.empty()) << error;
 }
 
-TEST_F(WeaponTest, EachPressFiresAndEachLevelAddsTwoShots)
+TEST_F(WeaponTest, FireFiresAndEachLevelAddsTwoShots)
 {
     hold(true, 1);
     EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 1U);
@@ -158,29 +168,32 @@ TEST_F(WeaponTest, EachPressFiresAndEachLevelAddsTwoShots)
     EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 6U);
 }
 
-TEST_F(WeaponTest, HoldingTheKeyChargesWithoutFiring)
+TEST_F(WeaponTest, ChargingNeverFiresANormalShot)
 {
-    hold(true, static_cast<int>(stats().chargeTime / Tick) / 2);
-    EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 1U);
+    charge(true, static_cast<int>(stats().chargeTime / Tick) / 2);
+    EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 0U);
 }
 
-TEST_F(WeaponTest, PressesFasterThanTheFireRateAreIgnored)
+TEST_F(WeaponTest, HoldingFireFiresOncePerInterval)
 {
-    const int presses = static_cast<int>(stats().fireInterval / Tick) / 2;
-    ASSERT_GE(presses, 2);
-    for (int i = 0; i < presses; ++i) {
-        hold(true, 1);
-        hold(false, 1);
-    }
+    const int interval = static_cast<int>(stats().fireInterval / Tick) + 1;
+    hold(true, (interval * 3) - 1);
+    EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 3U);
+}
+
+TEST_F(WeaponTest, ChargingStopsTheNormalShots)
+{
+    hold(true, 1);
+    run(true, true, static_cast<int>(stats().fireInterval / Tick) * 3);
     EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 1U);
 }
 
 TEST_F(WeaponTest, ReleasingAfterTheChargeTimeFiresAChargedShot)
 {
-    hold(true, static_cast<int>(stats().chargeTime / Tick) + 2);
-    EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 1U);
+    charge(true, static_cast<int>(stats().chargeTime / Tick) + 2);
+    EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 0U);
     EXPECT_EQ(countType(registry(), rtype::EntityType::ChargedShot), 0U);
-    hold(false, 1);
+    charge(false, 1);
     EXPECT_EQ(countType(registry(), rtype::EntityType::ChargedShot), 1U);
     registry().each<server::Piercing, rtype::Projectile>(
         [this](engine::Entity, const server::Piercing &,
@@ -191,8 +204,8 @@ TEST_F(WeaponTest, ReleasingAfterTheChargeTimeFiresAChargedShot)
 
 TEST_F(WeaponTest, ReleasingTooEarlyFiresNoChargedShot)
 {
-    hold(true, static_cast<int>(stats().chargeTime / Tick) / 2);
-    hold(false, 1);
+    charge(true, static_cast<int>(stats().chargeTime / Tick) / 2);
+    charge(false, 1);
     EXPECT_EQ(countType(registry(), rtype::EntityType::ChargedShot), 0U);
 }
 
@@ -205,7 +218,9 @@ TEST(Weapons, ReadsTheBoostDurations)
     ASSERT_TRUE(stats.has_value()) << error;
     const server::WeaponStats read = stats.value_or(server::WeaponStats{});
     EXPECT_FLOAT_EQ(read.durationOf(rtype::PowerUpKind::Spread).count(), 20.0F);
-    EXPECT_FLOAT_EQ(read.durationOf(rtype::PowerUpKind::Aimed).count(), 45.0F);
+    EXPECT_FLOAT_EQ(
+        read.durationOf(rtype::PowerUpKind::Aimed).count(),
+        server::WeaponStats{}.durationOf(rtype::PowerUpKind::Aimed).count());
     EXPECT_EQ(read.burstShots, 3);
     EXPECT_FALSE(
         server::parseWeapons(R"({ "aimedDuration": 300 })", error).has_value());
@@ -293,21 +308,23 @@ TEST_F(WeaponTest, TakingABoostAgainRestartsItsTimer)
 
 TEST_F(WeaponTest, BoostsStackAndEndEachAtItsOwnTime)
 {
-    // Spread taken at 5:02, aimed at 5:22: both fire until the spread ends.
+    const float spread = stats().durationOf(rtype::PowerUpKind::Spread).count();
+    const float aimed = stats().durationOf(rtype::PowerUpKind::Aimed).count();
+    const float gap = std::min(spread, aimed) / 3.0F;
     pick(rtype::PowerUpKind::Spread);
-    wait(20.0F);
+    wait(gap);
     pick(rtype::PowerUpKind::Aimed);
     hold(true, 1);
     EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 4U);
 
-    wait(stats().durationOf(rtype::PowerUpKind::Spread).count() - 20.0F);
-    EXPECT_EQ(registry().get<server::SpreadShot>(ship()).level, 1);
-    EXPECT_TRUE(registry().has<server::AimedShot>(ship()));
-    cool();
-    hold(true, 1);
-    EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 6U);
+    const float spreadLeft = spread - gap;
+    wait(std::min(spreadLeft, aimed));
+    EXPECT_EQ(registry().get<server::SpreadShot>(ship()).level == 1,
+              spreadLeft <= aimed);
+    EXPECT_EQ(registry().has<server::AimedShot>(ship()), spreadLeft < aimed);
 
-    wait(stats().durationOf(rtype::PowerUpKind::Aimed).count());
+    wait(std::max(spreadLeft, aimed) - std::min(spreadLeft, aimed));
+    EXPECT_EQ(registry().get<server::SpreadShot>(ship()).level, 1);
     EXPECT_FALSE(registry().has<server::AimedShot>(ship()));
 }
 
@@ -335,8 +352,8 @@ TEST_F(WeaponTest, ABurstFiresEachShotAgainRightAfterIt)
     pick(rtype::PowerUpKind::Burst);
     hold(true, 1);
     EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 1U);
-    hold(true, static_cast<int>(stats().burstDelay / Tick) *
-                   (stats().burstShots + 1));
+    hold(false, static_cast<int>(stats().burstDelay / Tick) *
+                    (stats().burstShots + 1));
     EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile),
               1U + stats().burstShots);
 }

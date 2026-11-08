@@ -30,8 +30,7 @@ Chaque action a une touche pour chaque main, donc le jeu se joue d'une seule mai
 | Main gauche | Main droite | Action |
 |-------------|-------------|--------|
 | W A S D | Flèches | Déplacer le vaisseau |
-| Espace | Ctrl droit | Tirer : un tir par appui. Maintenu 1 seconde puis relâché : un tir chargé qui traverse les ennemis |
-| F | Maj droite | Tir automatique, actif par défaut : le vaisseau tire seul, 10 fois par seconde |
+| Espace | Ctrl droit | Tir chargé : maintenir 1 seconde, puis relâcher. Un rayon qui traverse les ennemis |
 | Échap | Échap | Quitter la salle. Dans la liste des salles : retour au menu principal |
 | T | T | Écrire à votre salle, en salle d'attente ou en jeu : Entrée envoie, Échap annule. Le vaisseau s'arrête pendant la saisie |
 
@@ -43,8 +42,7 @@ partie. Elle fonctionne en même temps que le clavier :
 | Xbox | PlayStation | Action |
 |------|-------------|--------|
 | Croix directionnelle ou stick gauche | Croix directionnelle ou stick gauche | Déplacer le vaisseau. Dans les menus : déplacer la sélection |
-| A ou RT | Croix ou R2 | Tirer, et tir chargé. Dans les menus : A (Croix) choisit |
-| RB | R1 | Activer ou couper le tir automatique |
+| A ou RT | Croix ou R2 | Tir chargé. Dans les menus : A (Croix) choisit |
 | B | Rond | Dans les menus : revenir en arrière. Ferme le chat. Ne quitte jamais une partie |
 | Back | Create | Quitter la salle |
 
@@ -68,11 +66,11 @@ boutons de manette :
 ```text
 # action = touche touche...
 fire = Enter Space
-autofire = Tab
+chat = Tab
 pad_fire = PadA PadRT
 ```
 
-- Actions : `up`, `down`, `left`, `right`, `fire`, `autofire`, `chat`, et les mêmes
+- Actions : `up`, `down`, `left`, `right`, `fire`, `chat`, et les mêmes
   noms après `pad_` pour la manette.
 - Touches : `Up`, `Down`, `Left`, `Right`, `Space`, `Enter`, `Tab`, `LeftShift`,
   `RightShift`, `LeftCtrl`, `RightCtrl`, `LeftAlt`, `RightAlt`, les lettres `A` à `Z`
@@ -102,7 +100,6 @@ fullscreen = off
 window_size = 1280x720
 vsync = on
 frame_limit = 0
-auto_fire = on
 player_labels = on
 ```
 
@@ -113,9 +110,6 @@ enregistrement remplace tout le fichier, donc vos commentaires ne sont pas conse
 
 **Options d'accessibilité** : ouvrez Accessibility dans le menu principal.
 
-- **Auto-fire** : le tir automatique est actif au début de la partie, par défaut. La
-  touche du tir automatique l'active ou le coupe toujours pendant une session, sans
-  changer cette option.
 - **Player labels** : affiche « P1 » et « (you) » au-dessus des vaisseaux. Sans ces
   étiquettes, seule la couleur distingue les vaisseaux pendant une partie.
 

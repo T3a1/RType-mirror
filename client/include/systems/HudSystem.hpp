@@ -38,14 +38,13 @@ void powerUpLabelSystem(engine::Registry &registry, gfx::IGraphics &graphics);
 /**
  * @brief Draws the score of every player in the top-left corner, each in
  * the player's color, the local player marked "(you)", then the local
- * player's boosts with their seconds left, each in its color, and
- * "Auto-fire ON" below them while auto-fire is on. It is drawn in screen
+ * player's boosts with their seconds left, each in its color. It is drawn
+ * in screen
  *pixels: call it after endWorld().
  * @param state The sync state, for the players and the local slot.
- * @param autoFire Whether auto-fire is on.
  * @param graphics The graphics backend to draw with.
  **/
-void hudSystem(const SyncState &state, bool autoFire, gfx::IGraphics &graphics);
+void hudSystem(const SyncState &state, gfx::IGraphics &graphics);
 
 /**
  * @brief Draws the chat at the bottom left of the window, in screen pixels:

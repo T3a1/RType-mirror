@@ -1,5 +1,5 @@
 {
-    "fireInterval": 0.08,
+    "fireInterval": 0.22,
     "shotSpeed": 1400,
     "shotDamage": 50,
     "enemyShotSpeed": 450,
@@ -8,9 +8,9 @@
     "beamDamage": 300,
     "spreadAngle": 0.12,
     "maxLevel": 3,
-    "spreadDuration": 30,
-    "aimedDuration": 45,
-    "burstDuration": 30,
+    "spreadDuration": 10,
+    "aimedDuration": 8,
+    "burstDuration": 5,
     "burstShots": 2,
     "burstDelay": 0.08
 }
