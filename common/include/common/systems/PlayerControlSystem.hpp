@@ -37,7 +37,8 @@ engine::Vec2f shipVelocity(std::uint8_t actions);
 void playerControlSystem(engine::Registry &registry);
 
 /**
- * @brief Arms the Weapon of each player holding the Fire action.
+ * @brief Arms the Weapon of each player holding the Fire action, and
+ * charges it while the player holds the Charge action.
  *
  * Runs in the Input stage, on the server.
  * @param registry The registry holding the ships.

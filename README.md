@@ -26,8 +26,8 @@ hand only.
 | Left hand | Right hand | Action |
 |-----------|------------|--------|
 | W A S D | Arrow keys | Move the ship |
-| Space | Right Ctrl | Shoot: one shot per press. Held for 1 second, then released: a charged shot that goes through enemies |
-| F | Right Shift | Auto-fire, on by default: the ship shoots on its own, 10 times per second |
+| Space | Right Ctrl | Charged shot: hold for 1 second, then release. A beam that goes through enemies |
+| F | Right Shift | Auto-fire, on by default: the ship fires its normal shots on its own, about 4 times per second. It is the only way to fire them |
 | Escape | Escape | Leave the room. In the room list: back to the main menu |
 | T | T | Write to your room, in the waiting room or during the game: Enter sends, Escape cancels. The ship stops while you type |
 
@@ -39,7 +39,7 @@ during the game. It works at the same time as the keyboard:
 | Xbox | PlayStation | Action |
 |------|-------------|--------|
 | D-pad or left stick | D-pad or left stick | Move the ship. In the menus: move the selection |
-| A or RT | Cross or R2 | Shoot, and charged shot. In the menus: A (Cross) chooses |
+| A or RT | Cross or R2 | Charged shot. In the menus: A (Cross) chooses |
 | RB | R1 | Auto-fire on or off |
 | B | Circle | In the menus: go back. Closes the chat. It never leaves a game |
 | Back | Create | Leave the room |
@@ -108,6 +108,7 @@ starts, and that setting keeps its value. Saving replaces the whole file, so you
 
 - **Auto-fire**: auto-fire is on when the game starts, by default. The auto-fire
   key still turns it on or off during a session, without changing this option.
+  Without auto-fire, the ship only fires charged shots.
 - **Player labels**: shows "P1" and "(you)" above the ships. Without them, only
   the color tells the ships apart during a game.
 

@@ -1,4 +1,4 @@
-# R-Type network protocol (version 13)
+# R-Type network protocol (version 14)
 
 This document specifies the binary protocol spoken between the R-Type server
 and its clients. It is precise enough to write a compatible client or server
@@ -73,7 +73,7 @@ Every packet starts with this 12-byte header:
 | Offset | Size | Field | Value |
 |-------:|-----:|-------|-------|
 | 0 | 2 | magic | `52 54` (ASCII `"RT"`). Recognizes our packets: a random datagram almost never starts with these bytes |
-| 2 | 1 | version | `13`. See [Versioning](#12-versioning) |
+| 2 | 1 | version | `14`. See [Versioning](#12-versioning) |
 | 3 | 1 | type | Which payload follows. See [Packet types](#5-packet-types) |
 | 4 | 1 | flags | Bit 0: **Reliable**. Bits 1 to 7 are reserved and **MUST** be 0 |
 | 5 | 1 | reserved | **MUST** be 0 |
@@ -94,7 +94,7 @@ The names are the `DecodeError` values of the reference implementation.
 | 1 | At most 1200 bytes | `TooLarge` |
 | 2 | At least 12 bytes | `TooShort` |
 | 3 | Magic is `"RT"` | `BadMagic` |
-| 4 | Version is 13 | `BadVersion` |
+| 4 | Version is 14 | `BadVersion` |
 | 5 | Type is listed in section 5 | `UnknownType` |
 | 6 | No reserved flag bit, and Reliable set exactly on reliable types | `BadFlags` |
 | 7 | Reserved byte is 0 | `BadReserved` |
@@ -215,7 +215,8 @@ link.
 | 1 | `0x02` | Down |
 | 2 | `0x04` | Left |
 | 3 | `0x08` | Right |
-| 4 | `0x10` | Fire |
+| 4 | `0x10` | Fire: normal shots while held (auto-fire) |
+| 5 | `0x20` | Charge: charges a shot while held, fired when released |
 
 ### `Welcome` (0x21)
 
@@ -564,7 +565,7 @@ All bytes in hexadecimal.
 Unreliable sequence 298, acknowledging reliable packet 17, input number 1000:
 
 ```text
-52 54 0D 10 00 00 2A 01 11 00 05 00   header: "RT", v13, Input, no flags,
+52 54 0E 10 00 00 2A 01 11 00 05 00   header: "RT", v14, Input, no flags,
                                               sequence 298, ack 17, size 5
 E8 03 00 00                           sequence 1000
 11                                    actions 0x11 = Up | Fire
@@ -575,7 +576,7 @@ E8 03 00 00                           sequence 1000
 Reliable sequence 2, slot 2, ship 58, tick 1200:
 
 ```text
-52 54 0D 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
+52 54 0E 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
                                               sequence 2, ack 0, size 9
 02                                    slot 2
 3A 00 00 00                           shipId 58
@@ -585,7 +586,7 @@ B0 04 00 00                           tick 1200
 ### `Snapshot` with one player and one entity
 
 ```text
-52 54 0D 20 00 00 2B 01 11 00 29 00   header: Snapshot, size 41
+52 54 0E 20 00 00 2B 01 11 00 29 00   header: Snapshot, size 41
 2C 01 00 00                           tick 300
 00 01                                 part 0 of 1
 01 00                                 1 entity
@@ -625,3 +626,4 @@ B0 04 00 00                           tick 1200
 | 11 | New entity types `Obstacle` and `DestroyableTile` (obstacles read from the level files, [LEVELS.md](LEVELS.md)). |
 | 12 | Power-ups give timed boosts of a random kind: Boost flag bits (5 and 6) on a `PowerUp`, players block `boosts` added (16 bytes per player) ([WEAPONS.md](WEAPONS.md)). |
 | 13 | Text chat of a room: new `ChatSend` and `ChatMessage`. |
+| 14 | `Input` action `Charge` (bit 5): the fire key only charges, normal shots come from `Fire`. |

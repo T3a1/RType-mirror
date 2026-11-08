@@ -2,16 +2,16 @@
 
 ## Dans le jeu
 
-- **Tir normal** : chaque appui sur la touche de tir tire une fois (environ 12 fois par
-  seconde au maximum). Tapotez pour tirer vite.
-- **Tir chargé** : maintenez la touche de tir. Tant qu'elle est maintenue, le vaisseau
-  cesse de tirer et se charge : une lueur apparaît devant lui. Relâché après 1 seconde,
+- **Tir normal** : tiré uniquement par le **tir automatique**, actif par défaut, environ
+  4 fois par seconde. F ou Maj droite le coupe ou le réactive ; sans lui, le vaisseau
+  ne tire que des tirs chargés.
+- **Tir chargé** : maintenez la touche de tir (Espace ou Ctrl droit). Elle ne tire jamais
+  de tir normal : tant qu'elle est maintenue, le vaisseau cesse de tirer et se charge,
+  et une lueur apparaît devant lui. Relâché après 1 seconde,
   un large rayon traverse l'écran, passe **à travers** tous les ennemis sur son chemin
   et inflige à chacun de lourds dégâts (300, contre 50 pour un tir normal). Relâché plus
   tôt, rien de plus n'est tiré.
-- **Tir automatique** : actif par défaut, il appuie sur la touche de tir pour vous 10 fois
-  par seconde. F ou Maj droite le coupe ou le réactive. Maintenir la touche de tir charge
-  toujours un tir, et le tir automatique reprend quand vous la relâchez.
+- **Tir automatique** : il reprend quand la touche de tir est relâchée.
 - **Bonus** : les ennemis moyens et grands, ainsi que les boss, laissent un orbe quand
   ils sont détruits. Il flotte lentement vers la gauche ; le vaisseau qui le touche
   obtient son **boost** pour un temps limité. Chaque orbe a un type tiré au hasard,
@@ -19,9 +19,9 @@
 
   | Lettre | Boost | Effet | Durée |
   |:------:|-------|-------|------:|
-  | S (jaune) | Éventail | 3 tirs en éventail ; repris pendant qu'il est actif, 5 en éventail plus large | 30 s |
-  | A (bleu) | Visée | Un tir de plus, qui part vers l'ennemi le plus proche | 45 s |
-  | B (orange) | Rafale | Chaque tir est tiré deux fois de plus, juste après lui | 30 s |
+  | S (jaune) | Éventail | 3 tirs en éventail ; repris pendant qu'il est actif, 5 en éventail plus large | 10 s |
+  | A (bleu) | Visée | Un tir de plus, qui part vers l'ennemi le plus proche | 8 s |
+  | B (orange) | Rafale | Chaque tir est tiré deux fois de plus, juste après lui | 5 s |
 
   Les boosts **se cumulent** : chacun a son propre minuteur. Par exemple, un éventail
   pris à 5:02 et une visée prise à 5:22 tirent ensemble jusqu'à 5:32, quand l'éventail
@@ -39,7 +39,7 @@ sortie du serveur et les valeurs par défaut s'appliquent ; il n'arrête jamais 
 
 ```json
 {
-    "fireInterval": 0.08,
+    "fireInterval": 0.22,
     "shotSpeed": 1400,
     "shotDamage": 50,
     "enemyShotSpeed": 450,
@@ -48,9 +48,9 @@ sortie du serveur et les valeurs par défaut s'appliquent ; il n'arrête jamais 
     "beamDamage": 300,
     "spreadAngle": 0.12,
     "maxLevel": 3,
-    "spreadDuration": 30,
-    "aimedDuration": 45,
-    "burstDuration": 30,
+    "spreadDuration": 10,
+    "aimedDuration": 8,
+    "burstDuration": 5,
     "burstShots": 2,
     "burstDelay": 0.08
 }
@@ -58,7 +58,7 @@ sortie du serveur et les valeurs par défaut s'appliquent ; il n'arrête jamais 
 
 | Clé | Défaut | Plage | Signification |
 |-----|-------:|-------|---------------|
-| `fireInterval` | 0.08 | 0.05 à 5 | Le temps minimal entre deux tirs d'un joueur : les appuis plus rapides sont ignorés |
+| `fireInterval` | 0.22 | 0.05 à 5 | Le temps entre deux tirs normaux du tir automatique d'un joueur |
 | `shotSpeed` | 1400 | 100 à 5000 | La vitesse d'un tir de joueur, en unités de l'aire de jeu par seconde (l'aire fait 1920 de large) |
 | `shotDamage` | 50 | 1 à 10000 | Les dégâts d'un tir de joueur (un ennemi basique a 100 points de vie) |
 | `enemyShotSpeed` | 450 | 100 à 5000 | La vitesse d'un tir ennemi |
@@ -67,9 +67,9 @@ sortie du serveur et les valeurs par défaut s'appliquent ; il n'arrête jamais 
 | `beamDamage` | 300 | 1 à 10000 | Les dégâts d'un tir chargé à chaque ennemi traversé |
 | `spreadAngle` | 0.12 | 0 à 1 | L'angle entre deux tirs d'un éventail, en radians |
 | `maxLevel` | 3 | 1 à 5 | Le niveau maximal de l'éventail ; un éventail de niveau N tire 2N - 1 tirs (le premier boost Éventail donne le niveau 2) |
-| `spreadDuration` | 30 | 1 à 255 | Les secondes que dure un boost Éventail |
-| `aimedDuration` | 45 | 1 à 255 | Les secondes que dure un boost Visée |
-| `burstDuration` | 30 | 1 à 255 | Les secondes que dure un boost Rafale |
+| `spreadDuration` | 10 | 1 à 255 | Les secondes que dure un boost Éventail |
+| `aimedDuration` | 8 | 1 à 255 | Les secondes que dure un boost Visée |
+| `burstDuration` | 5 | 1 à 255 | Les secondes que dure un boost Rafale |
 | `burstShots` | 2 | 1 à 5 | Le nombre de fois qu'un boost Rafale retire chaque tir |
 | `burstDelay` | 0.08 | 0.02 à 1 | Les secondes entre deux tirs d'une rafale |
 

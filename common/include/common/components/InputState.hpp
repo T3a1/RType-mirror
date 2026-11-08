@@ -22,10 +22,12 @@ inline constexpr std::uint8_t Down = 1U << 1U;
 inline constexpr std::uint8_t Left = 1U << 2U;
 /** @brief Moves the ship to the right. */
 inline constexpr std::uint8_t Right = 1U << 3U;
-/** @brief Holds the fire key. */
+/** @brief Fires normal shots while held: sent by auto-fire. */
 inline constexpr std::uint8_t Fire = 1U << 4U;
+/** @brief Charges a shot while held, fired when released. */
+inline constexpr std::uint8_t Charge = 1U << 5U;
 /** @brief Every bit above. */
-inline constexpr std::uint8_t All = 0x1F;
+inline constexpr std::uint8_t All = 0x3F;
 } // namespace Action
 
 /**

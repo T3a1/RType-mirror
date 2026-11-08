@@ -2,16 +2,16 @@
 
 ## In the game
 
-- **Normal shot**: each press of the fire key fires once (at most about 12
-  times per second). Tap it to shoot fast.
-- **Charged shot**: hold the fire key. While it is held, the ship stops
-  shooting and charges: a glow appears in front of it. Released after 1
+- **Normal shot**: fired by **auto-fire** only, on by default, about 4
+  times per second. F or Right Shift turns it off or on; without it, the
+  ship only fires charged shots.
+- **Charged shot**: hold the fire key (Space or Right Ctrl). It never
+  fires a normal shot: while it is held, the ship stops shooting and
+  charges, and a glow appears in front of it. Released after 1
   second, a large beam flies across the screen, goes **through** every enemy
   on its way and deals each one heavy damage (300, against 50 for a normal
   shot). Released earlier, nothing more is fired.
-- **Auto-fire** is on by default: it presses the fire key for you 10 times
-  per second. F or Right Shift turns it off or on. Holding the fire key still
-  charges a shot, and auto-fire starts again when you release it.
+- **Auto-fire** starts again when the fire key is released.
 - **Power-ups**: medium and large enemies, and the bosses, leave an orb
   when they are destroyed. It slowly floats to the left; the ship that
   touches it gets its **boost** for a limited time. Each orb has a random
@@ -19,9 +19,9 @@
 
   | Letter | Boost | Effect | Lasts |
   |:------:|-------|--------|------:|
-  | S (yellow) | Spread | 3 shots in a spread; taken again while active, 5 in a wider spread | 30 s |
-  | A (blue) | Aimed | One more shot, flying towards the nearest enemy | 45 s |
-  | B (orange) | Burst | Each shot is fired again twice, right after it | 30 s |
+  | S (yellow) | Spread | 3 shots in a spread; taken again while active, 5 in a wider spread | 10 s |
+  | A (blue) | Aimed | One more shot, flying towards the nearest enemy | 8 s |
+  | B (orange) | Burst | Each shot is fired again twice, right after it | 5 s |
 
   Boosts **stack**: each has its own timer. For example, a spread taken at
   5:02 and an aimed boost taken at 5:22 both fire together until 5:32, when
@@ -41,7 +41,7 @@ the server.
 
 ```json
 {
-    "fireInterval": 0.08,
+    "fireInterval": 0.22,
     "shotSpeed": 1400,
     "shotDamage": 50,
     "enemyShotSpeed": 450,
@@ -50,9 +50,9 @@ the server.
     "beamDamage": 300,
     "spreadAngle": 0.12,
     "maxLevel": 3,
-    "spreadDuration": 30,
-    "aimedDuration": 45,
-    "burstDuration": 30,
+    "spreadDuration": 10,
+    "aimedDuration": 8,
+    "burstDuration": 5,
     "burstShots": 2,
     "burstDelay": 0.08
 }
@@ -60,7 +60,7 @@ the server.
 
 | Key | Default | Range | Meaning |
 |-----|--------:|-------|---------|
-| `fireInterval` | 0.08 | 0.05 to 5 | Shortest time between two shots of a player: faster presses are ignored |
+| `fireInterval` | 0.22 | 0.05 to 5 | Time between two normal shots of a player's auto-fire |
 | `shotSpeed` | 1400 | 100 to 5000 | Speed of a player's shot, in playfield units per second (the playfield is 1920 wide) |
 | `shotDamage` | 50 | 1 to 10000 | Damage of a player's shot (a basic enemy has 100 health points) |
 | `enemyShotSpeed` | 450 | 100 to 5000 | Speed of an enemy's shot |
@@ -69,9 +69,9 @@ the server.
 | `beamDamage` | 300 | 1 to 10000 | Damage of a charged shot to each enemy it goes through |
 | `spreadAngle` | 0.12 | 0 to 1 | Angle between two shots of a spread, in radians |
 | `maxLevel` | 3 | 1 to 5 | Highest spread level; a level N spread fires 2N - 1 shots (the first Spread boost gives level 2) |
-| `spreadDuration` | 30 | 1 to 255 | Seconds a Spread boost lasts |
-| `aimedDuration` | 45 | 1 to 255 | Seconds an Aimed boost lasts |
-| `burstDuration` | 30 | 1 to 255 | Seconds a Burst boost lasts |
+| `spreadDuration` | 10 | 1 to 255 | Seconds a Spread boost lasts |
+| `aimedDuration` | 8 | 1 to 255 | Seconds an Aimed boost lasts |
+| `burstDuration` | 5 | 1 to 255 | Seconds a Burst boost lasts |
 | `burstShots` | 2 | 1 to 5 | How many times a Burst boost fires each shot again |
 | `burstDelay` | 0.08 | 0.02 to 1 | Seconds between two shots of a burst |
 

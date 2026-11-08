@@ -28,12 +28,13 @@ inline constexpr std::uint8_t MaxWeaponLevel = 5;
  * @brief How the players' weapons and the enemies' shots behave, as read
  * from weapons.json (see docs/WEAPONS.md). The defaults are used for a
  * missing key or file.
- * @param fireInterval The time between two shots of a player.
+ * @param fireInterval The time between two shots of a player's auto-fire.
  * @param shotSpeed The speed of a player's shot, in playfield units per
  * second.
  * @param shotDamage The damage of a player's shot.
  * @param enemyShotSpeed The speed of an enemy's shot.
- * @param chargeTime How long the fire key must be held for a charged shot.
+ * @param chargeTime How long the charge key must be held for a charged
+ * shot.
  * @param beamSpeed The speed of a charged shot.
  * @param beamDamage The damage of a charged shot, dealt once to every
  * enemy it goes through.
@@ -45,7 +46,7 @@ inline constexpr std::uint8_t MaxWeaponLevel = 5;
  * @param burstDelay The time between two shots of a burst.
  **/
 struct WeaponStats {
-    engine::Duration fireInterval{0.08F};
+    engine::Duration fireInterval{0.22F};
     float shotSpeed = 1400.0F;
     int shotDamage = 50;
     float enemyShotSpeed = 450.0F;
@@ -55,8 +56,8 @@ struct WeaponStats {
     float spreadAngle = 0.12F;
     std::uint8_t maxLevel = 3;
     std::array<engine::Duration, rtype::PowerUpKindCount> boostDuration{
-        engine::Duration{30.0F}, engine::Duration{45.0F},
-        engine::Duration{30.0F}};
+        engine::Duration{10.0F}, engine::Duration{8.0F},
+        engine::Duration{5.0F}};
     std::uint8_t burstShots = 2;
     engine::Duration burstDelay{0.08F};
 

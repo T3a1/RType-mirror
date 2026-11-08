@@ -389,8 +389,9 @@ std::array<std::string, 6> howToPlayLines(const Controls &controls)
             keysOf(controls, Control::Down) + " / " +
             keysOf(controls, Control::Left) + " / " +
             keysOf(controls, Control::Right),
-        "Shoot: " + keysOf(controls, Control::Fire),
-        "Charged shot: hold Shoot for 1 second, then release",
+        "Normal shots: fired by auto-fire",
+        "Charged shot: hold " + keysOf(controls, Control::Fire) +
+            " for 1 second, then release",
         "Auto-fire on or off: " + keysOf(controls, Control::AutoFire),
         "Write to your room: " + keysOf(controls, Control::Chat) +
             ", then Enter to send",

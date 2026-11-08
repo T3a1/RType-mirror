@@ -1,4 +1,4 @@
-# Protocole réseau de R-Type (version 13)
+# Protocole réseau de R-Type (version 14)
 
 Ce document spécifie le protocole binaire parlé entre le serveur de R-Type et ses clients. Il est
 assez précis pour écrire un client ou un serveur compatible sans lire notre code. L'implémentation
@@ -71,7 +71,7 @@ Chaque paquet commence par cet en-tête de 12 octets :
 | Position | Taille | Champ | Valeur |
 |---------:|-------:|-------|--------|
 | 0 | 2 | magic | `52 54` (ASCII `"RT"`). Reconnaît nos paquets : un datagramme quelconque ne commence presque jamais par ces octets |
-| 2 | 1 | version | `13`. Voir [Gestion des versions](#12-gestion-des-versions) |
+| 2 | 1 | version | `14`. Voir [Gestion des versions](#12-gestion-des-versions) |
 | 3 | 1 | type | La charge utile qui suit. Voir [Types de paquets](#5-types-de-paquets) |
 | 4 | 1 | flags | Bit 0 : **Reliable**. Les bits 1 à 7 sont réservés et **MUST** valoir 0 |
 | 5 | 1 | reserved | **MUST** valoir 0 |
@@ -92,7 +92,7 @@ Un récepteur vérifie un datagramme dans cet ordre et le rejette au premier éc
 | 1 | 1200 octets au maximum | `TooLarge` |
 | 2 | 12 octets au minimum | `TooShort` |
 | 3 | Le magic est `"RT"` | `BadMagic` |
-| 4 | La version est 13 | `BadVersion` |
+| 4 | La version est 14 | `BadVersion` |
 | 5 | Le type figure à la section 5 | `UnknownType` |
 | 6 | Aucun bit de drapeau réservé, et Reliable mis exactement sur les types fiables | `BadFlags` |
 | 7 | L'octet réservé vaut 0 | `BadReserved` |
@@ -206,7 +206,8 @@ et sinon environ 30 fois par seconde, quelle que soit sa fréquence d'images, po
 | 1 | `0x02` | Bas |
 | 2 | `0x04` | Gauche |
 | 3 | `0x08` | Droite |
-| 4 | `0x10` | Tir |
+| 4 | `0x10` | Tir : tirs normaux tant qu'il est maintenu (tir automatique) |
+| 5 | `0x20` | Charge : charge un tir tant qu'il est maintenu, tiré au relâchement |
 
 ### `Welcome` (0x21)
 
@@ -519,7 +520,7 @@ Tous les octets sont en hexadécimal.
 Séquence non fiable 298, acquittant le paquet fiable 17, entrée numéro 1000 :
 
 ```text
-52 54 0D 10 00 00 2A 01 11 00 05 00   header: "RT", v13, Input, no flags,
+52 54 0E 10 00 00 2A 01 11 00 05 00   header: "RT", v14, Input, no flags,
                                               sequence 298, ack 17, size 5
 E8 03 00 00                           sequence 1000
 11                                    actions 0x11 = Up | Fire
@@ -530,7 +531,7 @@ E8 03 00 00                           sequence 1000
 Séquence fiable 2, numéro 2, vaisseau 58, tick 1200 :
 
 ```text
-52 54 0D 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
+52 54 0E 21 01 00 02 00 00 00 09 00   header: Welcome, Reliable,
                                               sequence 2, ack 0, size 9
 02                                    slot 2
 3A 00 00 00                           shipId 58
@@ -540,7 +541,7 @@ B0 04 00 00                           tick 1200
 ### `Snapshot` avec un joueur et une entité
 
 ```text
-52 54 0D 20 00 00 2B 01 11 00 29 00   header: Snapshot, size 41
+52 54 0E 20 00 00 2B 01 11 00 29 00   header: Snapshot, size 41
 2C 01 00 00                           tick 300
 00 01                                 part 0 of 1
 01 00                                 1 entity
@@ -579,3 +580,4 @@ B0 04 00 00                           tick 1200
 | 11 | Nouveaux types d'entité `Obstacle` et `DestroyableTile` (obstacles lus depuis les fichiers de niveau, [LEVELS.md](LEVELS.md)). |
 | 12 | Les bonus donnent des boosts temporaires d'un type tiré au hasard : bits Boost (5 et 6) des drapeaux d'un `PowerUp`, ajout de `boosts` au bloc des joueurs (16 octets par joueur) ([WEAPONS.md](WEAPONS.md)). |
 | 13 | Chat textuel d'une salle : nouveaux `ChatSend` et `ChatMessage`. |
+| 14 | Action `Charge` d'`Input` (bit 5) : la touche de tir ne fait que charger, les tirs normaux viennent de `Fire`. |

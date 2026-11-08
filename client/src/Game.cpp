@@ -198,12 +198,12 @@ void Game::registerSystems()
             networkSyncSystem(r, m_payloads, m_sync, m_sheets, m_sounds);
         },
         playing);
-    m_scheduler.add(Stage::Input, "sendInput", [this](Registry &, Duration dt) {
+    m_scheduler.add(Stage::Input, "sendInput", [this](Registry &, Duration) {
         m_actions = 0;
         if (inRoom() && m_sync.started && !m_sync.chat.open) {
-            m_actions =
-                m_bench ? m_bench->input(m_now)
-                        : inputSystem(*m_graphics, m_controls, m_autoFire, dt);
+            m_actions = m_bench
+                            ? m_bench->input(m_now)
+                            : inputSystem(*m_graphics, m_controls, m_autoFire);
         }
         m_sequence = m_network.sendInput(m_actions, m_now);
     });
