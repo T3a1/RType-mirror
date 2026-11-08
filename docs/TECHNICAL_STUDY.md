@@ -293,14 +293,14 @@ later would have touched every input and drawing system.
 
 ## 9. Before and after: the Part 1 prototype and the final version
 
-Measured on 2026-11-06, against the `v1.0` tag (2026-10-18).
+Measured on 2026-11-07, against the `v1.0` tag (2026-10-18).
 
 | | Part 1 (`v1.0`) | Now |
 |---|----------------|-----|
-| C++ code (lines, with headers) | 8,210 | 30,000 |
-| Unit tests | 86 | 375 |
-| ECS systems (source files) | 20 | 33 |
-| Protocol version | 1 | 12 |
+| C++ code (lines, with headers) | 8,210 | 32,500 |
+| Unit tests | 86 | 423 |
+| ECS systems (source files) | 20 | 34 |
+| Protocol version | 1 | 13 |
 | Games on one server | 1 | Up to 16 rooms, with a lobby |
 | Graphics libraries | Raylib, called directly | Raylib, SFML, ncurses, behind an interface |
 | Network library | Asio, visible in the code | Hidden behind an interface, tested on a fake network |
@@ -326,9 +326,9 @@ types with movement patterns; levels, weapons and enemies in JSON files; two
 end-level bosses; obstacles and destroyable tiles; charged shot and power-ups; game
 over and final scores; difficulty, starting level and boss chosen in the waiting
 room; sound effects and music; lobby, rooms and a waiting room; administration
-console with bans and a white list; key remapping and auto-fire; a main menu
-with settings, accessibility options, how to play and credits; a graphical
-launcher; a Windows build in the CI.
+console with bans and a white list; a text chat between players; key remapping
+and auto-fire; a main menu with settings, accessibility options, how to play and
+credits; gamepad support; a graphical launcher; a Windows build in the CI.
 
 ## 10. What we would do differently
 
