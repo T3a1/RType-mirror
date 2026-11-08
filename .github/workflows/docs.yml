@@ -26,8 +26,9 @@ jobs:
       - name: Install Graphviz
         run: sudo apt-get install --yes --no-install-recommends graphviz
       # Ubuntu's package is too old to draw the Mermaid diagrams of the pages.
-      # The download from GitHub sometimes answers 504: Doxygen is kept in the
-      # cache, and the download is tried again when it is needed.
+      # A download can fail for minutes (GitHub answers 504): Doxygen is kept in
+      # the cache, and otherwise taken from the first source that answers, then
+      # checked against the checksum of the release.
       - name: Restore Doxygen
         id: doxygen-cache
         uses: actions/cache@v4
@@ -37,8 +38,18 @@ jobs:
       - name: Install Doxygen
         if: steps.doxygen-cache.outputs.cache-hit != 'true'
         run: |
-          curl --fail --silent --show-error --location --retry 5 --retry-delay 10 --retry-all-errors --output "$RUNNER_TEMP/doxygen.tar.gz" "https://github.com/doxygen/doxygen/releases/download/Release_1_18_0/doxygen-1.18.0.linux.bin.tar.gz"
-          tar --extract --gzip --file "$RUNNER_TEMP/doxygen.tar.gz" --directory "$HOME"
+          archive="$RUNNER_TEMP/doxygen.tar.gz"
+          for url in \
+            "https://www.doxygen.nl/files/doxygen-1.18.0.linux.bin.tar.gz" \
+            "https://github.com/doxygen/doxygen/releases/download/Release_1_18_0/doxygen-1.18.0.linux.bin.tar.gz" \
+            "https://downloads.sourceforge.net/project/doxygen/rel-1.18.0/doxygen-1.18.0.linux.bin.tar.gz"; do
+            if curl --fail --silent --show-error --location --retry 3 --retry-delay 5 --retry-all-errors --output "$archive" "$url"; then
+              break
+            fi
+            rm -f "$archive"
+          done
+          echo "14fa81bdc34171edb5f1f02b1d60e74802f0439b77fa44e592565d517d72df90  $archive" | sha256sum --check
+          tar --extract --gzip --file "$archive" --directory "$HOME"
       - name: Use Doxygen
         run: echo "$HOME/doxygen-1.18.0/bin" >> "$GITHUB_PATH"
       - name: Build the website
