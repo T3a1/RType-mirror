@@ -6,6 +6,7 @@
 */
 
 #include "EntityFactory.hpp"
+#include "BossLayout.hpp"
 #include "common/Obstacles.hpp"
 #include "common/Playfield.hpp"
 #include "components/ShotStyles.hpp"
@@ -84,10 +85,78 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
                                           m_difficulty.enemyFireInterval});
     }
 
+    if (boss) {
+        createBossParts(registry, enemy, type, stat);
+    }
+
     BB_DEBUG("Enemy " << kind.name << " spawned with id " << networkId
                       << " at y=" << request.position.y);
 
     return enemy;
+}
+
+void EntityFactory::createBossParts(engine::Registry &registry,
+                                    engine::Entity boss, rtype::EnemyType type,
+                                    const EnemyDef &stat)
+{
+    if (type == rtype::EnemyType::Twin) {
+        // The boss stands on the ground, this half hangs from the ceiling.
+        createBossPart(
+            registry,
+            {.owner = boss,
+             .offset = {.x = 0.0F,
+                        .y = (TwinTopSize.y / 2.0F) -
+                             (rtype::PlayfieldHeight - (stat.size.y / 2.0F))}},
+            rtype::EntityType::BossTwinTop, TwinTopSize);
+        return;
+    }
+    if (type != rtype::EnemyType::Behemoth) {
+        return;
+    }
+    createBossPart(registry,
+                   {.owner = boss,
+                    .offset = BehemothHeadOffset,
+                    .damageFactor = BehemothHeadDamage},
+                   rtype::EntityType::BehemothHead, BehemothHeadSize);
+    for (std::size_t i = 0; i < BehemothTailSegments; ++i) {
+        const auto index = static_cast<float>(i);
+        const bool tip = i + 1 == BehemothTailSegments;
+        createBossPart(
+            registry,
+            {.owner = boss,
+             .offset = {.x = BehemothTailBase.x - (index * BehemothTailSpacing),
+                        .y = BehemothTailBase.y},
+             .damageFactor = BehemothTailDamage,
+             .swing = (index + 1.0F) * BehemothTailSwing,
+             .phase = -index * 0.5F},
+            tip ? rtype::EntityType::BehemothTailTip
+                : rtype::EntityType::BehemothTail,
+            tip ? BehemothTailTipSize : BehemothTailSize);
+    }
+}
+
+engine::Entity EntityFactory::createBossPart(engine::Registry &registry,
+                                             const BossPart &part,
+                                             rtype::EntityType look,
+                                             engine::Vec2f size)
+{
+    const engine::Entity entity = registry.create();
+    const auto &boss = registry.get<rtype::Transform>(part.owner);
+    registry.emplace<rtype::NetworkId>(
+        entity, rtype::NetworkId{.value = m_nextNetworkId++});
+    registry.emplace<rtype::Transform>(
+        entity, rtype::Transform{.position = boss.position + part.offset});
+    registry.emplace<rtype::EntityType>(entity, look);
+    registry.emplace<rtype::Damage>(entity);
+    registry.emplace<rtype::Collider>(
+        entity, rtype::Collider{
+                    .size = size,
+                    .layer = rtype::CollisionLayer::Enemy,
+                    .mask = rtype::CollisionLayer::Player |
+                            rtype::CollisionLayer::PlayerProjectile,
+                });
+    registry.emplace<BossPart>(entity, part);
+    return entity;
 }
 
 engine::Entity EntityFactory::create(engine::Registry &registry,
@@ -163,8 +232,7 @@ engine::Entity EntityFactory::create(engine::Registry &registry,
                         rtype::CollisionLayer::Obstacle,
             });
     } else {
-        registry.emplace<rtype::EntityType>(projectile,
-                                            rtype::EntityType::EnemyMissile);
+        registry.emplace<rtype::EntityType>(projectile, request.look);
         registry.emplace<rtype::Collider>(
             projectile, rtype::Collider{
                             .size = ShotSize,
