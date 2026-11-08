@@ -298,7 +298,7 @@ Measured on 2026-11-07, against the `v1.0` tag (2026-10-18).
 | | Part 1 (`v1.0`) | Now |
 |---|----------------|-----|
 | C++ code (lines, with headers) | 8,210 | 32,500 |
-| Unit tests | 86 | 423 |
+| Unit tests | 86 | 424 |
 | ECS systems (source files) | 20 | 34 |
 | Protocol version | 1 | 13 |
 | Games on one server | 1 | Up to 16 rooms, with a lobby |

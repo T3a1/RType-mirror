@@ -294,7 +294,7 @@ Mesuré le 7 novembre 2026, par rapport au tag `v1.0` (18 octobre 2026).
 | | Partie 1 (`v1.0`) | Maintenant |
 |---|-------------------|------------|
 | Code C++ (lignes, en-têtes compris) | 8 210 | 32 500 |
-| Tests unitaires | 86 | 423 |
+| Tests unitaires | 86 | 424 |
 | Systèmes ECS (fichiers source) | 20 | 34 |
 | Version du protocole | 1 | 13 |
 | Parties sur un serveur | 1 | Jusqu'à 16 salles, avec un lobby |
