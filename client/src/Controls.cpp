@@ -53,7 +53,7 @@ constexpr std::array<std::pair<std::string_view, Key>, 29> NamedKeys{{
 
 /** @brief The name of each control in the file, in the order of Control. */
 constexpr std::array<std::string_view, ControlCount> ControlNames{
-    "up", "down", "left", "right", "fire", "autofire", "chat",
+    "up", "down", "left", "right", "fire", "chat",
 };
 
 /** @brief The start of the name of a gamepad line in the file. */
@@ -185,7 +185,6 @@ Controls defaultControls()
     set(Control::Left, {Key::Left, Key::A});
     set(Control::Right, {Key::Right, Key::D});
     set(Control::Fire, {Key::Space, Key::RightControl});
-    set(Control::AutoFire, {Key::F, Key::RightShift});
     set(Control::Chat, {Key::T});
     return controls;
 }
@@ -201,7 +200,6 @@ Controls defaultPadControls()
     set(Control::Left, {Key::PadLeft, Key::PadStickLeft});
     set(Control::Right, {Key::PadRight, Key::PadStickRight});
     set(Control::Fire, {Key::PadA, Key::PadRT});
-    set(Control::AutoFire, {Key::PadRB});
     return controls;
 }
 

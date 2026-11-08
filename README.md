@@ -27,7 +27,6 @@ hand only.
 |-----------|------------|--------|
 | W A S D | Arrow keys | Move the ship |
 | Space | Right Ctrl | Charged shot: hold for 1 second, then release. A beam that goes through enemies |
-| F | Right Shift | Auto-fire, on by default: the ship fires its normal shots on its own, about 4 times per second. It is the only way to fire them |
 | Escape | Escape | Leave the room. In the room list: back to the main menu |
 | T | T | Write to your room, in the waiting room or during the game: Enter sends, Escape cancels. The ship stops while you type |
 
@@ -40,7 +39,6 @@ during the game. It works at the same time as the keyboard:
 |------|-------------|--------|
 | D-pad or left stick | D-pad or left stick | Move the ship. In the menus: move the selection |
 | A or RT | Cross or R2 | Charged shot. In the menus: A (Cross) chooses |
-| RB | R1 | Auto-fire on or off |
 | B | Circle | In the menus: go back. Closes the chat. It never leaves a game |
 | Back | Create | Leave the room |
 
@@ -63,11 +61,11 @@ line starting with `pad_` gives its gamepad buttons instead:
 ```text
 # action = key key...
 fire = Enter Space
-autofire = Tab
+chat = Tab
 pad_fire = PadA PadRT
 ```
 
-- Actions: `up`, `down`, `left`, `right`, `fire`, `autofire`, `chat`, and the
+- Actions: `up`, `down`, `left`, `right`, `fire`, `chat`, and the
   same names after `pad_` for the gamepad.
 - Keys: `Up`, `Down`, `Left`, `Right`, `Space`, `Enter`, `Tab`, `LeftShift`,
   `RightShift`, `LeftCtrl`, `RightCtrl`, `LeftAlt`, `RightAlt`, the letters
@@ -96,7 +94,6 @@ fullscreen = off
 window_size = 1280x720
 vsync = on
 frame_limit = 0
-auto_fire = on
 player_labels = on
 ```
 
@@ -106,9 +103,6 @@ starts, and that setting keeps its value. Saving replaces the whole file, so you
 
 **Accessibility options**: open Accessibility in the main menu.
 
-- **Auto-fire**: auto-fire is on when the game starts, by default. The auto-fire
-  key still turns it on or off during a session, without changing this option.
-  Without auto-fire, the ship only fires charged shots.
 - **Player labels**: shows "P1" and "(you)" above the ships. Without them, only
   the color tells the ships apart during a game.
 

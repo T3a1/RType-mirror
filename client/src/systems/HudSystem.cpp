@@ -136,7 +136,7 @@ void powerUpLabelSystem(engine::Registry &registry, gfx::IGraphics &graphics)
         });
 }
 
-void hudSystem(const SyncState &state, bool autoFire, gfx::IGraphics &graphics)
+void hudSystem(const SyncState &state, gfx::IGraphics &graphics)
 {
     float y = HudY;
     const rtype::protocol::PlayerInfo *you = nullptr;
@@ -163,10 +163,6 @@ void hudSystem(const SyncState &state, bool autoFire, gfx::IGraphics &graphics)
                               std::to_string(seconds) + "s",
                           {.x = HudX, .y = y}, HudFontSize, powerUpColor(kind));
         y += HudLineHeight;
-    }
-    if (autoFire) {
-        graphics.drawText("Auto-fire ON", {.x = HudX, .y = y}, HudFontSize,
-                          gfx::colors::OffWhite);
     }
 }
 

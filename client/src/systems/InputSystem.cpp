@@ -50,22 +50,13 @@ bool isHeld(const gfx::IGraphics &graphics, const PlayerControls &controls,
 }
 
 std::uint8_t inputSystem(const gfx::IGraphics &graphics,
-                         const PlayerControls &controls, AutoFire &autoFire)
+                         const PlayerControls &controls)
 {
-    const bool toggle = isHeld(graphics, controls, Control::AutoFire);
-    if (toggle && !autoFire.keyHeld) {
-        autoFire.enabled = !autoFire.enabled;
-    }
-    autoFire.keyHeld = toggle;
-
-    std::uint8_t actions = 0;
+    std::uint8_t actions = rtype::Action::Fire;
     for (const ActionBinding &binding : ActionBindings) {
         if (isHeld(graphics, controls, binding.control)) {
             actions |= binding.action;
         }
-    }
-    if (autoFire.enabled) {
-        actions |= rtype::Action::Fire;
     }
     return actions;
 }

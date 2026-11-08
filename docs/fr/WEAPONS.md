@@ -2,16 +2,16 @@
 
 ## Dans le jeu
 
-- **Tir normal** : tiré uniquement par le **tir automatique**, actif par défaut, environ
-  4 fois par seconde. F ou Maj droite le coupe ou le réactive ; sans lui, le vaisseau
-  ne tire que des tirs chargés.
+- **Tir normal** : le vaisseau le tire **tout seul**, environ 4 fois par seconde (tir
+  automatique, toujours actif). Aucune touche ne le tire.
 - **Tir chargé** : maintenez la touche de tir (Espace ou Ctrl droit). Elle ne tire jamais
   de tir normal : tant qu'elle est maintenue, le vaisseau cesse de tirer et se charge,
   et une lueur apparaît devant lui. Relâché après 1 seconde,
   un large rayon traverse l'écran, passe **à travers** tous les ennemis sur son chemin
   et inflige à chacun de lourds dégâts (300, contre 50 pour un tir normal). Relâché plus
   tôt, rien de plus n'est tiré.
-- **Tir automatique** : il reprend quand la touche de tir est relâchée.
+- **Tir automatique** : il s'arrête tant que la touche de tir est maintenue, et reprend
+  quand elle est relâchée.
 - **Bonus** : les ennemis moyens et grands, ainsi que les boss, laissent un orbe quand
   ils sont détruits. Il flotte lentement vers la gauche ; le vaisseau qui le touche
   obtient son **boost** pour un temps limité. Chaque orbe a un type tiré au hasard,

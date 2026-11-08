@@ -183,7 +183,7 @@ input per displayed frame, which is 4 kB/s at 240 frames per second, and about
 11 kB/s with the packet headers. It now sends one when the actions change, and
 otherwise every 30 ms. The keys still reach the server as soon as they change,
 and the upload is divided by 8. Interpolation and prediction add no packet:
-the received traffic does not depend on the mode. Auto-fire, on by default in the
+the received traffic does not depend on the mode. Auto-fire, always on in the
 game, only holds the fire action: it adds no input.
 
 **Duplication and loss: no effect beyond the lost data.** With 2 % duplication

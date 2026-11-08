@@ -17,20 +17,6 @@
 namespace client {
 
 /**
- * @struct AutoFire
- * @brief The auto-fire switch: while it is on, the client holds the Fire
- * action and the server fires at its own rate. It is the only way to fire
- * normal shots: the fire key only charges.
- * @param enabled Whether auto-fire is on.
- * @param keyHeld Whether an AutoFire key was held last frame, so that
- * holding it switches only once.
- **/
-struct AutoFire {
-    bool enabled = true;
-    bool keyHeld = false;
-};
-
-/**
  * @brief Tells whether one of the keys of a control is held, on the keyboard
  * or on the gamepad.
  * @param graphics The backend reading the keyboard.
@@ -45,14 +31,12 @@ struct AutoFire {
  * @brief Reads the keyboard through the player's controls.
  * @param graphics The graphics backend, for the keyboard.
  * @param controls The keys bound to each control.
- * @param autoFire The auto-fire switch, flipped when an AutoFire key is
- * pressed.
  * @return The actions held this frame, as Action bits: the fire key gives
- * Charge, and Fire is held while auto-fire is on.
+ * Charge, and Fire is always held, since auto-fire is always on: the server
+ * fires the normal shots at its own rate.
  **/
 [[nodiscard]] std::uint8_t inputSystem(const gfx::IGraphics &graphics,
-                                       const PlayerControls &controls,
-                                       AutoFire &autoFire);
+                                       const PlayerControls &controls);
 
 } // namespace client
 

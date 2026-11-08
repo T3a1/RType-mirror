@@ -555,8 +555,7 @@ TEST(MenuPages, HowToPlayShowsTheDefaultKeys)
     EXPECT_EQ(lines.at(1), "Move: Up, W / Down, S / Left, A / Right, D");
     EXPECT_EQ(lines.at(3),
               "Charged shot: hold Space, RightCtrl for 1 second, then release");
-    EXPECT_EQ(lines.at(4), "Auto-fire on or off: F, RightShift");
-    EXPECT_EQ(lines.at(5), "Write to your room: T, then Enter to send");
+    EXPECT_EQ(lines.at(4), "Write to your room: T, then Enter to send");
 }
 
 TEST(MenuPages, HowToPlayFollowsTheControls)
@@ -564,13 +563,13 @@ TEST(MenuPages, HowToPlayFollowsTheControls)
     client::Controls controls = client::defaultControls();
     controls.at(static_cast<std::size_t>(client::Control::Fire)) = {
         gfx::Key::Enter};
-    controls.at(static_cast<std::size_t>(client::Control::AutoFire)).clear();
+    controls.at(static_cast<std::size_t>(client::Control::Chat)).clear();
 
     const auto lines = client::howToPlayLines(controls);
 
     EXPECT_EQ(lines.at(3),
               "Charged shot: hold Enter for 1 second, then release");
-    EXPECT_EQ(lines.at(4), "Auto-fire on or off: no key");
+    EXPECT_EQ(lines.at(4), "Write to your room: no key, then Enter to send");
 }
 
 TEST(MenuPages, HowToPlayDrawsItsLines)
@@ -788,12 +787,12 @@ TEST(MenuPages, AKeyUsedElsewhereIsReported)
                            Device::Keyboard);
     static_cast<void>(rig.frame());
 
-    rig.graphics.held = {gfx::Key::F};
+    rig.graphics.held = {gfx::Key::T};
     EXPECT_TRUE(rig.frame().controlsChanged);
 
-    EXPECT_EQ(rig.page.notice, "F is also used by Auto-fire");
+    EXPECT_EQ(rig.page.notice, "T is also used by Chat");
     EXPECT_EQ(rig.keysOf(Control::Fire),
-              (std::vector<gfx::Key>{gfx::Key::Space, gfx::Key::F}));
+              (std::vector<gfx::Key>{gfx::Key::Space, gfx::Key::T}));
 }
 
 TEST(MenuPages, ResetKeysBringsBackTheDefaults)
@@ -848,15 +847,13 @@ TEST(MenuPages, AccessibilityChangesTheSelectedToggleOnly)
     MenuRig rig;
     client::Settings settings;
     const client::Settings before;
-    rig.cursor.selected = 1;
+    rig.cursor.selected = 0;
 
     const client::SettingsResult result = client::accessibilityPage(
         rig.context({.confirm = true}), rig.cursor, settings);
 
     EXPECT_TRUE(result.changed);
-    EXPECT_NE(settings.*client::Toggles.at(1).field,
-              before.*client::Toggles.at(1).field);
-    EXPECT_EQ(settings.*client::Toggles.at(0).field,
+    EXPECT_NE(settings.*client::Toggles.at(0).field,
               before.*client::Toggles.at(0).field);
     EXPECT_EQ(rig.played(), std::vector<std::string>{ConfirmSound});
 }

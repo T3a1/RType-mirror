@@ -181,7 +181,7 @@ TEST_F(WeaponTest, HoldingFireFiresOncePerInterval)
     EXPECT_EQ(countType(registry(), rtype::EntityType::PlayerMissile), 3U);
 }
 
-TEST_F(WeaponTest, ChargingStopsTheAutoFire)
+TEST_F(WeaponTest, ChargingStopsTheNormalShots)
 {
     hold(true, 1);
     run(true, true, static_cast<int>(stats().fireInterval / Tick) * 3);

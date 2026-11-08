@@ -2,16 +2,16 @@
 
 ## In the game
 
-- **Normal shot**: fired by **auto-fire** only, on by default, about 4
-  times per second. F or Right Shift turns it off or on; without it, the
-  ship only fires charged shots.
+- **Normal shot**: the ship fires it **on its own**, about 4 times per
+  second (auto-fire, always on). No key fires it.
 - **Charged shot**: hold the fire key (Space or Right Ctrl). It never
   fires a normal shot: while it is held, the ship stops shooting and
   charges, and a glow appears in front of it. Released after 1
   second, a large beam flies across the screen, goes **through** every enemy
   on its way and deals each one heavy damage (300, against 50 for a normal
   shot). Released earlier, nothing more is fired.
-- **Auto-fire** starts again when the fire key is released.
+- **Auto-fire** stops while the fire key is held, and starts again when it
+  is released.
 - **Power-ups**: medium and large enemies, and the bosses, leave an orb
   when they are destroyed. It slowly floats to the left; the ship that
   touches it gets its **boost** for a limited time. Each orb has a random

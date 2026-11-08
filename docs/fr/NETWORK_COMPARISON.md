@@ -182,7 +182,7 @@ par image affichée, soit 4 ko/s à 240 images par seconde, et environ 11 ko/s a
 paquets. Il en envoie maintenant une quand les actions changent, et sinon toutes les 30 ms. Les
 touches atteignent toujours le serveur dès qu'elles changent, et le débit montant est divisé par 8.
 L'interpolation et la prédiction n'ajoutent aucun paquet : le trafic reçu ne dépend pas du mode.
-Le tir automatique, actif par défaut dans le jeu, ne fait que maintenir l'action de tir : il
+Le tir automatique, toujours actif dans le jeu, ne fait que maintenir l'action de tir : il
 n'ajoute aucune entrée.
 
 **Duplication et perte : aucun effet au-delà des données perdues.** Avec 2 % de duplication, les
