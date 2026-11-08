@@ -47,8 +47,8 @@ constexpr std::array CreditsLines{
 constexpr std::array<const char *, ControlCount> ControlLabels{
     "Up", "Down", "Left", "Right", "Fire", "Auto-fire", "Chat",
 };
-/** @brief How many keys of each control the Controls tab shows: one per hand.
- */
+/** @brief How many keys of each control the Keyboard and Gamepad tabs show:
+ * one per hand. */
 constexpr std::size_t KeysPerRow = 2;
 /** @brief The index of the Audio tab. */
 constexpr std::size_t AudioTab = 0;
