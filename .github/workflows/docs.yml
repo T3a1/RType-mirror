@@ -26,10 +26,21 @@ jobs:
       - name: Install Graphviz
         run: sudo apt-get install --yes --no-install-recommends graphviz
       # Ubuntu's package is too old to draw the Mermaid diagrams of the pages.
+      # The download from GitHub sometimes answers 504: Doxygen is kept in the
+      # cache, and the download is tried again when it is needed.
+      - name: Restore Doxygen
+        id: doxygen-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/doxygen-1.18.0
+          key: doxygen-1.18.0-linux
       - name: Install Doxygen
+        if: steps.doxygen-cache.outputs.cache-hit != 'true'
         run: |
-          curl --fail --silent --show-error --location "https://github.com/doxygen/doxygen/releases/download/Release_1_18_0/doxygen-1.18.0.linux.bin.tar.gz" | tar --extract --gzip --directory "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/doxygen-1.18.0/bin" >> "$GITHUB_PATH"
+          curl --fail --silent --show-error --location --retry 5 --retry-delay 10 --retry-all-errors --output "$RUNNER_TEMP/doxygen.tar.gz" "https://github.com/doxygen/doxygen/releases/download/Release_1_18_0/doxygen-1.18.0.linux.bin.tar.gz"
+          tar --extract --gzip --file "$RUNNER_TEMP/doxygen.tar.gz" --directory "$HOME"
+      - name: Use Doxygen
+        run: echo "$HOME/doxygen-1.18.0/bin" >> "$GITHUB_PATH"
       - name: Build the website
         run: python3 rtype.py --docs
       - name: Keep the website for the deployment
